@@ -1,0 +1,160 @@
+import { app } from 'electron'
+import { join } from 'path'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let db: any = null
+let dbPath: string
+
+export async function initDb(): Promise<void> {
+  if (db) return
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const initSqlJs = require('sql.js')
+  const SQL = await initSqlJs()
+  dbPath = join(app.getPath('userData'), 'habitos.db')
+  if (existsSync(dbPath)) {
+    db = new SQL.Database(readFileSync(dbPath))
+  } else {
+    db = new SQL.Database()
+  }
+  db.run('PRAGMA foreign_keys = ON')
+  createTables()
+}
+
+function createTables(): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      name TEXT DEFAULT 'Herói',
+      total_xp INTEGER DEFAULT 0,
+      level INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS habits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      frequency TEXT DEFAULT 'daily',
+      target_time TEXT,
+      xp_reward INTEGER DEFAULT 10,
+      color TEXT DEFAULT '#7c3aed',
+      icon TEXT DEFAULT '⭐',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS habit_completions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      habit_id INTEGER,
+      completed_at DATE NOT NULL,
+      UNIQUE(habit_id, completed_at)
+    );
+
+    CREATE TABLE IF NOT EXISTS workouts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      name TEXT NOT NULL,
+      notes TEXT,
+      duration_min INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS exercises (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workout_id INTEGER,
+      name TEXT NOT NULL,
+      sets INTEGER,
+      reps INTEGER,
+      weight_kg REAL
+    );
+
+    CREATE TABLE IF NOT EXISTS bioimpedance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      weight_kg REAL,
+      body_fat_pct REAL,
+      muscle_mass_kg REAL,
+      bmr_kcal REAL
+    );
+
+    CREATE TABLE IF NOT EXISTS addictions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      started_free_at DATETIME NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS addiction_relapses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      addiction_id INTEGER,
+      relapsed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      note TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      target_date DATE,
+      xp_reward INTEGER DEFAULT 100,
+      is_completed INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS goal_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      goal_id INTEGER,
+      title TEXT NOT NULL,
+      is_completed INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      icon TEXT,
+      unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS xp_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      amount INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+  db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
+  save()
+}
+
+export function save(): void {
+  if (!db) return
+  try {
+    const data = db.export()
+    writeFileSync(dbPath, Buffer.from(data))
+  } catch (e) {
+    console.error('DB save error:', e)
+  }
+}
+
+export function dbAll(sql: string, params: unknown[] = []): Record<string, unknown>[] {
+  const stmt = db.prepare(sql)
+  stmt.bind(params)
+  const rows: Record<string, unknown>[] = []
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject())
+  }
+  stmt.free()
+  return rows
+}
+
+export function dbGet(sql: string, params: unknown[] = []): Record<string, unknown> | null {
+  return dbAll(sql, params)[0] ?? null
+}
+
+export function dbRun(sql: string, params: unknown[] = []): { lastInsertRowid: number } {
+  db.run(sql, params)
+  const row = dbAll('SELECT last_insert_rowid() as id')
+  return { lastInsertRowid: (row[0]?.id as number) ?? 0 }
+}
