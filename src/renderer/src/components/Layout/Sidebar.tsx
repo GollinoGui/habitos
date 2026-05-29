@@ -57,31 +57,39 @@ export default function Sidebar(): React.JSX.Element {
 
       <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
         {visibleItems.map(({ to, id, icon: Icon, label, color }, idx) => (
-          <NavLink
-            key={to}
-            to={to}
-            id={id}
-            end={to === '/'}
-            title={collapsed ? label : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group animate-slide-in-left
-              ${isActive
-                ? 'text-white shadow-lg'
-                : 'text-text-secondary hover:bg-bg-border hover:text-text-primary'
-              }`
-            }
-            style={({ isActive }) => ({
-              ...(isActive ? { backgroundColor: color, boxShadow: `0 4px 14px ${color}40` } : {}),
-              animationDelay: `${idx * 45}ms`
-            })}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon size={18} className="shrink-0" style={!isActive ? { color } : {}} />
-                {!collapsed && <span className="hidden lg:block text-sm font-medium">{label}</span>}
-              </>
+          <div key={to} className="relative group/nav">
+            <NavLink
+              to={to}
+              id={id}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 animate-slide-in-left
+                ${isActive
+                  ? 'text-white shadow-lg'
+                  : 'text-text-secondary hover:bg-bg-border hover:text-text-primary'
+                }`
+              }
+              style={({ isActive }) => ({
+                ...(isActive ? { backgroundColor: color, boxShadow: `0 4px 14px ${color}40` } : {}),
+                animationDelay: `${idx * 45}ms`
+              })}
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={18} className="shrink-0" style={!isActive ? { color } : {}} />
+                  {!collapsed && <span className="hidden lg:block text-sm font-medium">{label}</span>}
+                </>
+              )}
+            </NavLink>
+            {collapsed && (
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-bg-secondary border border-bg-border rounded-lg text-xs font-medium text-text-primary whitespace-nowrap shadow-xl
+                opacity-0 pointer-events-none translate-x-1
+                group-hover/nav:opacity-100 group-hover/nav:translate-x-0
+                transition-all duration-150 delay-300 z-50">
+                {label}
+              </div>
             )}
-          </NavLink>
+          </div>
         ))}
       </nav>
 

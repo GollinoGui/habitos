@@ -40,6 +40,15 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+
+.no-transition, .no-transition *, .no-transition *::before, .no-transition *::after {
+  transition: none !important;
 }
 
 ::-webkit-scrollbar {

@@ -125,7 +125,7 @@ function Modal({ onClose, onSave, initial, error }: {
   )
 }
 
-function HeatmapRow({ habitId }: { habitId: number }) {
+function HeatmapRow({ habitId, rangeDays = 30 }: { habitId: number; rangeDays?: number }) {
   const [completions, setCompletions] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -134,7 +134,7 @@ function HeatmapRow({ habitId }: { habitId: number }) {
     })
   }, [habitId])
 
-  const days = eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() })
+  const days = eachDayOfInterval({ start: subDays(new Date(), rangeDays - 1), end: new Date() })
 
   return (
     <div className="flex gap-0.5 mt-2 flex-wrap">
@@ -153,14 +153,14 @@ function HeatmapRow({ habitId }: { habitId: number }) {
 
 interface Completion { habit_id: number; completed_at: string }
 
-function Analytics({ habits, streaks }: { habits: Habit[]; streaks: Record<number, number> }) {
+function Analytics({ habits, streaks, rangeDays }: { habits: Habit[]; streaks: Record<number, number>; rangeDays: number }) {
   const [completions, setCompletions] = useState<Completion[]>([])
   const today = format(new Date(), 'yyyy-MM-dd')
-  const start = format(subDays(new Date(), 29), 'yyyy-MM-dd')
+  const start = format(subDays(new Date(), rangeDays - 1), 'yyyy-MM-dd')
 
   useEffect(() => {
     window.api.habits.completionsRange(start, today).then((c) => setCompletions(c as Completion[]))
-  }, [])
+  }, [rangeDays])
 
   const active = habits.filter(h => h.is_active)
   const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -174,13 +174,13 @@ function Analytics({ habits, streaks }: { habits: Habit[]; streaks: Record<numbe
 
   const habitStats = active.map(h => {
     const count = completions.filter(c => c.habit_id === h.id).length
-    return { habit: h, count, rate: Math.round((count / 30) * 100) }
+    return { habit: h, count, rate: Math.round((count / rangeDays) * 100) }
   }).sort((a, b) => b.rate - a.rate)
 
-  const totalDays = 30
+  const totalDays = rangeDays
   const perfectDays = (() => {
     if (active.length === 0) return 0
-    const days = eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() })
+    const days = eachDayOfInterval({ start: subDays(new Date(), rangeDays - 1), end: new Date() })
     return days.filter(d => {
       const key = format(d, 'yyyy-MM-dd')
       const done = completions.filter(c => c.completed_at === key)
@@ -194,7 +194,7 @@ function Analytics({ habits, streaks }: { habits: Habit[]; streaks: Record<numbe
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-accent-purple">{completions.length}</p>
-          <p className="text-xs text-text-muted">Conclusões em 30 dias</p>
+          <p className="text-xs text-text-muted">Conclusões em {rangeDays} dias</p>
         </div>
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-accent-green">{perfectDays}</p>
@@ -230,7 +230,7 @@ function Analytics({ habits, streaks }: { habits: Habit[]; streaks: Record<numbe
 
       {/* Per-habit rates */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Taxa de conclusão por hábito (30 dias)</h3>
+        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Taxa de conclusão por hábito ({rangeDays} dias)</h3>
         <div className="space-y-3">
           {habitStats.map(({ habit, count, rate }) => (
             <div key={habit.id}>
@@ -269,6 +269,7 @@ export default function Habits(): React.JSX.Element {
   const [showInactive, setShowInactive] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'habits' | 'analytics'>('habits')
+  const [rangeDays, setRangeDays] = useState(30)
 
   useEffect(() => { loadHabits() }, [])
 
@@ -364,7 +365,20 @@ export default function Habits(): React.JSX.Element {
         </button>
       </div>
 
-      {activeTab === 'analytics' && <Analytics habits={habits} streaks={streaks} />}
+      {activeTab === 'analytics' && (
+        <>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-muted">Período:</span>
+            {[30, 60, 90].map(n => (
+              <button key={n} onClick={() => setRangeDays(n)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${rangeDays === n ? 'bg-accent-purple text-white' : 'bg-bg-secondary border border-bg-border text-text-secondary hover:text-text-primary'}`}>
+                {n}d
+              </button>
+            ))}
+          </div>
+          <Analytics habits={habits} streaks={streaks} rangeDays={rangeDays} />
+        </>
+      )}
 
       {activeTab === 'habits' && <div className="space-y-3">
         {displayed.length === 0 && (
@@ -400,7 +414,7 @@ export default function Habits(): React.JSX.Element {
                     {habit.target_time && <span>⏰ {habit.target_time}</span>}
                     <span style={{ color: habit.color }}>+{habit.xp_reward} XP</span>
                   </div>
-                  <HeatmapRow habitId={habit.id} />
+                  <HeatmapRow habitId={habit.id} rangeDays={rangeDays} />
                 </div>
                 <div className="flex gap-1">
                   <button onClick={() => { setEditingHabit(habit); setShowModal(true) }}

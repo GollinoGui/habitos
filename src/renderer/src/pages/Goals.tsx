@@ -22,6 +22,7 @@ interface GoalCallbacks {
   onCompleteGoal: (goal: Goal) => void
   onLoad: () => Promise<void>
   onEditGoal: (goal: Goal) => void
+  onDeleteGoal: (goal: Goal) => void
   estimateXP: (goal: Goal) => number
 }
 
@@ -192,7 +193,7 @@ function CompleteGoalModal({ goal, xp, onConfirm, onClose }: {
 function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
-  const { newTask, setNewTask, toggleTask, addTask, onCompleteGoal, onLoad, onEditGoal, estimateXP } = cbs
+  const { newTask, setNewTask, toggleTask, addTask, onCompleteGoal, onLoad, onEditGoal, onDeleteGoal, estimateXP } = cbs
 
   const totalTasks = goal.tasks.length
   const doneTasks = goal.tasks.filter(t => t.is_completed).length
@@ -240,7 +241,7 @@ function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
                 <Pencil size={13} />
               </button>
             )}
-            <button onClick={async () => { if (confirm('Excluir meta?')) { await window.api.goals.delete(goal.id); onLoad() } }}
+            <button onClick={() => onDeleteGoal(goal)}
               className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded-lg">
               <Trash2 size={13} />
             </button>
@@ -380,6 +381,14 @@ function FolderSection({
   )
 }
 
+interface UndoToast {
+  id: number
+  message: string
+  onUndo: () => void
+}
+
+let undoIdCounter = 0
+
 export default function Goals(): React.JSX.Element {
   const { fetchProfile } = useProfileStore()
   const [goals, setGoals] = useState<Goal[]>([])
@@ -392,6 +401,17 @@ export default function Goals(): React.JSX.Element {
   const [newTask, setNewTask] = useState<Record<number, string>>({})
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [confirmGoal, setConfirmGoal] = useState<Goal | null>(null)
+  const [undoToasts, setUndoToasts] = useState<UndoToast[]>([])
+
+  function showUndo(message: string, onUndo: () => void) {
+    const id = ++undoIdCounter
+    setUndoToasts(prev => [...prev, { id, message, onUndo }])
+    setTimeout(() => setUndoToasts(prev => prev.filter(t => t.id !== id)), 5000)
+  }
+
+  function dismissUndo(id: number) {
+    setUndoToasts(prev => prev.filter(t => t.id !== id))
+  }
 
   useEffect(() => { load() }, [])
 
@@ -427,10 +447,18 @@ export default function Goals(): React.JSX.Element {
   }
 
   async function deleteFolder(folder: GoalFolder) {
-    if (confirm(`Excluir a pasta "${folder.name}"? As metas dentro dela ficarão sem pasta.`)) {
-      await window.api.goalFolders.delete(folder.id)
+    setFolders(prev => prev.filter(f => f.id !== folder.id))
+    let undone = false
+    showUndo(`Pasta "${folder.name}" excluída`, () => {
+      undone = true
       load()
-    }
+    })
+    setTimeout(async () => {
+      if (!undone) {
+        await window.api.goalFolders.delete(folder.id)
+        load()
+      }
+    }, 5100)
   }
 
   async function handleConfirmComplete() {
@@ -476,6 +504,20 @@ export default function Goals(): React.JSX.Element {
     onCompleteGoal: (goal) => setConfirmGoal(goal),
     onLoad: load,
     onEditGoal: (goal) => { setEditGoal(goal); setShowGoalModal(true) },
+    onDeleteGoal: (goal) => {
+      setGoals(prev => prev.filter(g => g.id !== goal.id))
+      let undone = false
+      showUndo(`Meta "${goal.title}" excluída`, () => {
+        undone = true
+        load()
+      })
+      setTimeout(async () => {
+        if (!undone) {
+          await window.api.goals.delete(goal.id)
+          load()
+        }
+      }, 5100)
+    },
     estimateXP
   }
 
@@ -589,6 +631,21 @@ export default function Goals(): React.JSX.Element {
           onClose={() => setConfirmGoal(null)}
         />
       )}
+
+      {/* Undo toasts */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-50 pointer-events-none">
+        {undoToasts.map(toast => (
+          <div key={toast.id} className="pointer-events-auto flex items-center gap-3 px-4 py-3 bg-bg-secondary border border-bg-border rounded-xl shadow-2xl animate-slide-up text-sm">
+            <span className="text-text-primary">{toast.message}</span>
+            <button
+              onClick={() => { toast.onUndo(); dismissUndo(toast.id) }}
+              className="px-3 py-1 bg-accent-purple hover:bg-purple-600 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Desfazer
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

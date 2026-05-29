@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { format, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Moon, Save, Star, Trash2 } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 
 interface SleepLog {
   id: number; date: string; bedtime: string; wake_time: string; quality: number; notes: string
@@ -98,6 +99,23 @@ export default function Sleep(): React.JSX.Element {
     return recent.find(l => l.date === d)
   })
 
+  function calcMins(bedtime: string, wake_time: string): number {
+    const [bh, bm] = bedtime.split(':').map(Number)
+    const [wh, wm] = wake_time.split(':').map(Number)
+    let m = (wh * 60 + wm) - (bh * 60 + bm)
+    if (m < 0) m += 24 * 60
+    return m
+  }
+
+  const chartData = Array.from({ length: 14 }, (_, i) => {
+    const d = format(subDays(new Date(), 13 - i), 'yyyy-MM-dd')
+    const log = recent.find(l => l.date === d)
+    const label = format(subDays(new Date(), 13 - i), 'dd/MM')
+    if (!log) return { date: label, horas: null }
+    const mins = calcMins(log.bedtime, log.wake_time)
+    return { date: label, horas: parseFloat((mins / 60).toFixed(1)) }
+  })
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
@@ -120,27 +138,23 @@ export default function Sleep(): React.JSX.Element {
         ))}
       </div>
 
-      {/* Last 7 days bar */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-        <p className="text-sm font-medium text-text-secondary mb-3">Últimos 7 dias</p>
-        <div className="flex gap-2">
-          {last7.map((log, i) => {
-            const d = subDays(new Date(), 6 - i)
-            return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className={`w-full rounded-md transition-all ${log ? 'bg-accent-purple' : 'bg-bg-border'}`}
-                  style={{ height: log ? `${(log.quality / 5) * 48 + 8}px` : '8px' }}
-                  title={log ? `${log.bedtime}→${log.wake_time} (${log.quality}/5)` : 'Sem registro'}
-                />
-                <span className="text-xs text-text-muted">
-                  {format(d, 'EEE', { locale: ptBR }).slice(0, 3)}
-                </span>
-              </div>
-            )
-          })}
+      {/* Duration chart - last 14 days */}
+      {chartData.some(d => d.horas !== null) && (
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+          <p className="text-sm font-medium text-text-secondary mb-3">Duração do sono — últimos 14 dias</p>
+          <ResponsiveContainer width="100%" height={140}>
+            <LineChart data={chartData} margin={{ left: -10, right: 8, top: 4, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a4a" />
+              <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={1} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 12]} tickFormatter={v => `${v}h`} />
+              <Tooltip formatter={(v: number) => [`${v}h`, 'Horas']} contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8 }} />
+              <ReferenceLine y={8} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} label={{ value: '8h', position: 'right', fill: '#10b981', fontSize: 10 }} />
+              <Line type="monotone" dataKey="horas" stroke="#06b6d4" strokeWidth={2} dot={{ fill: '#06b6d4', r: 3 }} connectNulls={false} />
+            </LineChart>
+          </ResponsiveContainer>
+          <p className="text-xs text-text-muted mt-1">Linha verde = meta de 8h</p>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}

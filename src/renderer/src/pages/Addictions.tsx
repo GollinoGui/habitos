@@ -24,7 +24,10 @@ function getMilestones(seconds: number) {
     { label: '7 dias', days: 7, icon: '🌿' },
     { label: '30 dias', days: 30, icon: '🏆' },
     { label: '90 dias', days: 90, icon: '💎' },
-    { label: '1 ano', days: 365, icon: '👑' }
+    { label: '1 ano', days: 365, icon: '👑' },
+    { label: '2 anos', days: 730, icon: '⚡' },
+    { label: '3 anos', days: 1095, icon: '🌟' },
+    { label: '5 anos', days: 1825, icon: '🦋' }
   ]
   const next = milestones.find(m => m.days > days)
   const prev = [...milestones].reverse().find(m => m.days <= days)
@@ -86,6 +89,71 @@ function RelapseModal({ addictionId, onClose, onRelapse }: {
   )
 }
 
+function AddictionsStats({ addictions }: { addictions: Addiction[] }) {
+  const totalRelapses = addictions.reduce((s, a) => s + a.relapses.length, 0)
+
+  const longestStreak = addictions.reduce((best, a) => {
+    const allDates = [
+      a.started_free_at,
+      ...a.relapses.map(r => r.relapsed_at)
+    ].sort()
+
+    let maxStreak = 0
+    for (let i = 0; i < allDates.length; i++) {
+      const start = new Date(allDates[i])
+      const end = i + 1 < allDates.length ? new Date(allDates[i + 1]) : new Date()
+      const days = Math.floor((end.getTime() - start.getTime()) / 86400000)
+      if (days > maxStreak) maxStreak = days
+    }
+    return Math.max(best, maxStreak)
+  }, 0)
+
+  const dowCounts = Array(7).fill(0)
+  const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  addictions.forEach(a => a.relapses.forEach(r => {
+    dowCounts[new Date(r.relapsed_at).getDay()]++
+  }))
+  const maxDow = Math.max(...dowCounts, 1)
+  const riskDay = totalRelapses > 0 ? DOW_LABELS[dowCounts.indexOf(Math.max(...dowCounts))] : null
+
+  if (addictions.length === 0) return null
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+        <p className="text-2xl font-bold text-accent-blue">{longestStreak}d</p>
+        <p className="text-xs text-text-muted">Maior streak</p>
+      </div>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+        <p className="text-2xl font-bold text-accent-red">{totalRelapses}</p>
+        <p className="text-xs text-text-muted">Recaídas totais</p>
+      </div>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+        <p className="text-2xl font-bold text-accent-gold">{riskDay || '—'}</p>
+        <p className="text-xs text-text-muted">Dia de maior risco</p>
+      </div>
+      {totalRelapses > 0 && (
+        <div className="lg:col-span-3 bg-bg-secondary border border-bg-border rounded-xl p-4">
+          <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-3">Recaídas por dia da semana</p>
+          <div className="flex items-end gap-2 h-16">
+            {DOW_LABELS.map((label, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex items-end justify-center" style={{ height: '48px' }}>
+                  <div
+                    className="w-full rounded-t-sm bg-accent-red transition-all"
+                    style={{ height: `${Math.max(3, (dowCounts[i] / maxDow) * 48)}px`, opacity: dowCounts[i] === 0 ? 0.15 : 1 }}
+                  />
+                </div>
+                <span className="text-[10px] text-text-muted">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Addictions(): React.JSX.Element {
   const [addictions, setAddictions] = useState<Addiction[]>([])
   const [showAdd, setShowAdd] = useState(false)
@@ -143,6 +211,8 @@ export default function Addictions(): React.JSX.Element {
           <button onClick={() => setShowAdd(false)} className="p-2 text-text-muted hover:text-text-primary"><X size={16} /></button>
         </div>
       )}
+
+      <AddictionsStats addictions={addictions} />
 
       <div className="space-y-4">
         {addictions.length === 0 && (

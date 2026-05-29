@@ -195,6 +195,9 @@ function ProgramsTab() {
   const [progName, setProgName] = useState('')
   const [progDesc, setProgDesc] = useState('')
   const [days, setDays] = useState([{ name: '', day_label: '', exercises: [{ name: '', sets: '', reps: '', weight: '' }] }])
+  const [lastApplied, setLastApplied] = useState<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('gym_last_applied_day') || '{}') } catch { return {} }
+  })
   const { fetchProfile } = useProfileStore()
 
   useEffect(() => { load() }, [])
@@ -255,6 +258,9 @@ function ProgramsTab() {
       }))
     })
     await fetchProfile()
+    const updated = { ...lastApplied, [day.program_id]: day.id }
+    setLastApplied(updated)
+    localStorage.setItem('gym_last_applied_day', JSON.stringify(updated))
     alert(`Treino "${day.name}" adicionado para hoje!`)
   }
 
@@ -348,12 +354,17 @@ function ProgramsTab() {
             </div>
             {isExp && prog.days.length > 0 && (
               <div className="border-t border-bg-border divide-y divide-bg-border">
-                {prog.days.map(day => (
-                  <div key={day.id} className="px-4 py-3">
+                {prog.days.map(day => {
+                  const isLastUsed = lastApplied[prog.id] === day.id
+                  return (
+                  <div key={day.id} className={`px-4 py-3 ${isLastUsed ? 'bg-accent-purple/5' : ''}`}>
                     <div className="flex items-center justify-between mb-2">
-                      <div>
-                        {day.day_label && <span className="text-xs bg-bg-border text-text-muted px-1.5 py-0.5 rounded mr-2">{day.day_label}</span>}
+                      <div className="flex items-center gap-2">
+                        {day.day_label && <span className="text-xs bg-bg-border text-text-muted px-1.5 py-0.5 rounded">{day.day_label}</span>}
                         <span className="text-sm font-medium text-text-primary">{day.name}</span>
+                        {isLastUsed && (
+                          <span className="text-[10px] bg-accent-purple/20 text-accent-purple border border-accent-purple/30 px-1.5 py-0.5 rounded font-bold">Último usado</span>
+                        )}
                       </div>
                       <button onClick={() => applyDay(day)}
                         className="text-xs px-2.5 py-1 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg hover:bg-accent-green/30 transition-colors">
@@ -368,7 +379,8 @@ function ProgramsTab() {
                       </div>
                     ))}
                   </div>
-                ))}
+                )
+                })}
               </div>
             )}
           </div>
@@ -501,6 +513,19 @@ export default function Gym(): React.JSX.Element {
                         </div>
                       )
                     })}
+                    {(() => {
+                      const tonnage = w.exercises.reduce((sum, ex) => {
+                        if (ex.sets && ex.reps && ex.weight_kg) return sum + ex.sets * ex.reps * ex.weight_kg
+                        return sum
+                      }, 0)
+                      return tonnage > 0 ? (
+                        <div className="mt-2 pt-2 border-t border-bg-border/50 flex justify-end">
+                          <span className="text-xs text-accent-purple font-semibold">
+                            Tonelagem: {tonnage >= 1000 ? `${(tonnage / 1000).toFixed(1)}t` : `${tonnage}kg`}
+                          </span>
+                        </div>
+                      ) : null
+                    })()}
                   </div>
                 )}
               </div>

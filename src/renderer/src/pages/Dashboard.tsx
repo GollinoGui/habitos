@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CheckCircle2, Circle, Dumbbell, Eye, EyeOff, Focus, ShieldOff, Trophy, Zap } from 'lucide-react'
+import { CheckCircle2, Circle, Dumbbell, Eye, EyeOff, Focus, Moon, ShieldOff, Trophy, Zap } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import CalendarSection from '../components/CalendarSection'
 
@@ -15,6 +15,7 @@ interface Achievement {
   id: number; key: string; name: string; description: string; icon: string; unlocked_at: string
 }
 interface XpFloat { id: number; x: number; y: number; amount: number }
+interface SleepLog { bedtime: string; wake_time: string; quality: number }
 
 export default function Dashboard(): React.JSX.Element {
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -29,6 +30,7 @@ export default function Dashboard(): React.JSX.Element {
   const [focusMode, setFocusMode] = useState(false)
   const [xpFloats, setXpFloats] = useState<XpFloat[]>([])
   const [todayReadingMins, setTodayReadingMins] = useState(0)
+  const [lastSleep, setLastSleep] = useState<SleepLog | null>(null)
   const xpIdRef = useRef(0)
   const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({})
 
@@ -39,13 +41,15 @@ export default function Dashboard(): React.JSX.Element {
   }, [])
 
   async function loadAll() {
-    const [h, comps, add, ach, workouts, readMins] = await Promise.all([
+    const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+    const [h, comps, add, ach, workouts, readMins, sleepRecent] = await Promise.all([
       window.api.habits.list(),
       window.api.habits.completionsRange(today, today),
       window.api.addictions.list(),
       window.api.achievements.list(),
       window.api.gym.listWorkouts(10),
-      window.api.media.todayMinutes(today)
+      window.api.media.todayMinutes(today),
+      window.api.sleep.recent(2)
     ])
     setHabits((h as Habit[]).filter(x => x.is_active))
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
@@ -53,6 +57,8 @@ export default function Dashboard(): React.JSX.Element {
     setAchievements(ach as Achievement[])
     setWorkoutToday((workouts as any[]).some(w => w.date === today))
     setTodayReadingMins(readMins as number)
+    const recentLogs = sleepRecent as SleepLog[]
+    setLastSleep(recentLogs.length > 0 ? recentLogs[0] : null)
   }
 
   async function toggleHabit(id: number, e: React.MouseEvent) {
@@ -255,6 +261,28 @@ export default function Dashboard(): React.JSX.Element {
                 </div>
               )
             })}
+
+            {/* Sleep widget */}
+            {lastSleep && (
+              <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '320ms' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Moon size={16} className="text-accent-blue" />
+                  <span className="text-sm font-semibold text-text-primary">Sono</span>
+                </div>
+                {(() => {
+                  const [bh, bm] = lastSleep.bedtime.split(':').map(Number)
+                  const [wh, wm] = lastSleep.wake_time.split(':').map(Number)
+                  let mins = (wh * 60 + wm) - (bh * 60 + bm)
+                  if (mins < 0) mins += 24 * 60
+                  const h = Math.floor(mins / 60)
+                  const m = mins % 60
+                  return (
+                    <p className="text-xl font-bold text-accent-blue">{h}h{m > 0 ? `${m}m` : ''}</p>
+                  )
+                })()}
+                <p className="text-xs text-text-muted">{lastSleep.quality}/5 ⭐</p>
+              </div>
+            )}
 
             {/* Recent achievements */}
             {achievements.length > 0 && (

@@ -8,29 +8,44 @@ interface Achievement {
 }
 
 const ALL_BADGES = [
-  { key: 'first_habit', name: 'Primeiro Hábito', description: 'Criou seu primeiro hábito', icon: '🌟' },
-  { key: 'streak_7', name: '7 Dias Seguidos', description: 'Completou um hábito por 7 dias consecutivos', icon: '🔥' },
-  { key: 'streak_30', name: '30 Dias Seguidos', description: 'Completou um hábito por 30 dias consecutivos', icon: '💎' },
-  { key: 'gym_10', name: '10 Treinos', description: 'Registrou 10 treinos', icon: '🏋️' },
-  { key: 'gym_50', name: '50 Treinos', description: 'Registrou 50 treinos', icon: '💪' },
-  { key: 'sober_7d', name: '7 Dias Livre', description: '7 dias livre de um vício', icon: '🌱' },
-  { key: 'sober_30d', name: '30 Dias Livre', description: '30 dias livre de um vício', icon: '🌿' },
-  { key: 'sober_90d', name: '90 Dias Livre', description: '90 dias livre de um vício', icon: '🏆' },
-  { key: 'goal_first', name: 'Primeira Meta!', description: 'Completou sua primeira meta', icon: '🎯' },
-  { key: 'first_bio', name: 'Primeira Medição', description: 'Registrou sua primeira bioimpedância', icon: '⚖️' },
-  { key: 'level_up_2', name: 'Nível 2: Aprendiz', description: 'Alcançou o rank Aprendiz', icon: '⬆️' },
-  { key: 'level_up_3', name: 'Nível 3: Guerreiro', description: 'Alcançou o rank Guerreiro', icon: '⚔️' },
-  { key: 'level_up_4', name: 'Nível 4: Herói', description: 'Alcançou o rank Herói', icon: '🦸' },
-  { key: 'level_up_5', name: 'Nível 5: Lendário', description: 'Alcançou o rank Lendário', icon: '🌟' },
-  { key: 'level_up_6', name: 'Nível 6: Imortal', description: 'Alcançou o rank Imortal', icon: '⚡' },
-  { key: 'level_up_7', name: 'Nível 7: Ascendente', description: 'Alcançou o rank Ascendente', icon: '👑' }
+  { key: 'first_habit', name: 'Primeiro Hábito', description: 'Criou seu primeiro hábito', icon: '🌟', category: 'Hábitos' },
+  { key: 'streak_7', name: '7 Dias Seguidos', description: 'Completou um hábito por 7 dias consecutivos', icon: '🔥', category: 'Hábitos' },
+  { key: 'streak_30', name: '30 Dias Seguidos', description: 'Completou um hábito por 30 dias consecutivos', icon: '💎', category: 'Hábitos' },
+  { key: 'streak_100', name: '100 Dias Seguidos', description: 'Completou um hábito por 100 dias consecutivos', icon: '🚀', category: 'Hábitos' },
+  { key: 'gym_10', name: '10 Treinos', description: 'Registrou 10 treinos', icon: '🏋️', category: 'Academia' },
+  { key: 'gym_50', name: '50 Treinos', description: 'Registrou 50 treinos', icon: '💪', category: 'Academia' },
+  { key: 'gym_100', name: '100 Treinos', description: 'Registrou 100 treinos', icon: '🥇', category: 'Academia' },
+  { key: 'sober_7d', name: '7 Dias Livre', description: '7 dias livre de um vício', icon: '🌱', category: 'Sobriedade' },
+  { key: 'sober_30d', name: '30 Dias Livre', description: '30 dias livre de um vício', icon: '🌿', category: 'Sobriedade' },
+  { key: 'sober_90d', name: '90 Dias Livre', description: '90 dias livre de um vício', icon: '🏆', category: 'Sobriedade' },
+  { key: 'sober_365d', name: '1 Ano Livre', description: '365 dias livre de um vício', icon: '👑', category: 'Sobriedade' },
+  { key: 'goal_first', name: 'Primeira Meta!', description: 'Completou sua primeira meta', icon: '🎯', category: 'Metas' },
+  { key: 'goal_5', name: '5 Metas Concluídas', description: 'Completou 5 metas', icon: '🎊', category: 'Metas' },
+  { key: 'first_bio', name: 'Primeira Medição', description: 'Registrou sua primeira bioimpedância', icon: '⚖️', category: 'Academia' },
+  { key: 'journal_7', name: 'Diário da Semana', description: 'Escreveu no diário por 7 dias', icon: '📔', category: 'Diário' },
+  { key: 'journal_30', name: 'Diário do Mês', description: 'Escreveu no diário por 30 dias', icon: '📗', category: 'Diário' },
+  { key: 'sleep_7', name: 'Sono Registrado', description: 'Registrou o sono por 7 dias seguidos', icon: '🌙', category: 'Sono' },
+  { key: 'sleep_quality', name: 'Sono de Qualidade', description: 'Registrou 5/5 de qualidade no sono', icon: '⭐', category: 'Sono' },
+  { key: 'reading_first', name: 'Primeiro Livro', description: 'Concluiu sua primeira leitura', icon: '📚', category: 'Leitura' },
+  { key: 'reading_5', name: 'Leitor Dedicado', description: 'Concluiu 5 livros', icon: '🔖', category: 'Leitura' },
+  { key: 'finance_first', name: 'Financeiro', description: 'Registrou sua primeira transação', icon: '💰', category: 'Finanças' },
+  { key: 'finance_positive', name: 'Saldo Positivo', description: 'Terminou um mês com saldo positivo', icon: '📈', category: 'Finanças' },
+  { key: 'level_up_2', name: 'Nível 2: Aprendiz', description: 'Alcançou o rank Aprendiz', icon: '⬆️', category: 'XP' },
+  { key: 'level_up_3', name: 'Nível 3: Guerreiro', description: 'Alcançou o rank Guerreiro', icon: '⚔️', category: 'XP' },
+  { key: 'level_up_4', name: 'Nível 4: Herói', description: 'Alcançou o rank Herói', icon: '🦸', category: 'XP' },
+  { key: 'level_up_5', name: 'Nível 5: Lendário', description: 'Alcançou o rank Lendário', icon: '🌟', category: 'XP' },
+  { key: 'level_up_6', name: 'Nível 6: Imortal', description: 'Alcançou o rank Imortal', icon: '⚡', category: 'XP' },
+  { key: 'level_up_7', name: 'Nível 7: Ascendente', description: 'Alcançou o rank Ascendente', icon: '👑', category: 'XP' }
 ]
+
+const CATEGORIES = ['Todos', 'Hábitos', 'Academia', 'Sobriedade', 'Metas', 'Diário', 'Sono', 'Leitura', 'Finanças', 'XP']
 
 export default function Achievements(): React.JSX.Element {
   const { profile, fetchProfile } = useProfileStore()
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [badgeFilter, setBadgeFilter] = useState('Todos')
 
   useEffect(() => {
     fetchProfile()
@@ -128,11 +143,23 @@ export default function Achievements(): React.JSX.Element {
 
       {/* Badges grid */}
       <div>
-        <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Trophy size={14} /> Badges ({unlockedCount}/{ALL_BADGES.length})
-        </h2>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2">
+            <Trophy size={14} /> Badges ({unlockedCount}/{ALL_BADGES.length})
+          </h2>
+          <div className="flex gap-1 flex-wrap">
+            {CATEGORIES.map(cat => (
+              <button key={cat} onClick={() => setBadgeFilter(cat)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  badgeFilter === cat ? 'bg-accent-purple text-white' : 'bg-bg-secondary border border-bg-border text-text-secondary hover:text-text-primary'
+                }`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
-          {ALL_BADGES.map(badge => {
+          {ALL_BADGES.filter(b => badgeFilter === 'Todos' || b.category === badgeFilter).map(badge => {
             const unlocked = unlockedKeys.has(badge.key)
             const achievement = achievements.find(a => a.key === badge.key)
             return (
