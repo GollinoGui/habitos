@@ -7,6 +7,7 @@ import { registerAddictionsHandlers } from './ipc/addictions'
 import { registerGoalsHandlers } from './ipc/goals'
 import { registerProfileHandlers } from './ipc/profile'
 import { registerCalendarHandlers } from './ipc/calendar'
+import { registerNotificationHandlers } from './ipc/notifications'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -58,7 +59,10 @@ function createWindow(): void {
 
 function createTray(): void {
   try {
-    const icon = nativeImage.createEmpty()
+    // 16x16 white circle icon encoded as 1x1 PNG scaled — a simple dot works as placeholder
+    const icon = nativeImage.createFromDataURL(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABMSURBVDiNY2AYBfQBExMT0////xm0XJL+z8DAMJqBgYGBhZmZGcXIyMiAYoCRkREmn5CQgGKAiYkJJp+UlIRigKmpKSaflJSEYgAAiPAHnXvCM3AAAAAASUVORK5CYII='
+    )
     tray = new Tray(icon)
     tray.setToolTip('Hábitos')
     const contextMenu = Menu.buildFromTemplate([
@@ -99,6 +103,7 @@ app.whenReady().then(async () => {
   registerAddictionsHandlers()
   registerGoalsHandlers()
   registerCalendarHandlers()
+  registerNotificationHandlers()
 
   createWindow()
   createTray()

@@ -6,7 +6,8 @@ import {
   Dumbbell,
   ShieldOff,
   Target,
-  Trophy
+  Trophy,
+  Settings
 } from 'lucide-react'
 
 const navItems = [
@@ -46,6 +47,21 @@ export default function Sidebar(): React.JSX.Element {
           </NavLink>
         ))}
       </nav>
+      <div className="px-2 pb-4">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150
+            ${isActive
+              ? 'bg-accent-purple text-white shadow-lg shadow-purple-900/30'
+              : 'text-text-secondary hover:bg-bg-border hover:text-text-primary'
+            }`
+          }
+        >
+          <Settings size={18} className="shrink-0" />
+          <span className="hidden lg:block text-sm font-medium">Configurações</span>
+        </NavLink>
+      </div>
     </aside>
   )
 }

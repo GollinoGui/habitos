@@ -23,7 +23,7 @@ export default function CalendarSection(): React.JSX.Element {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([])
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set())
-  const [selectedDate, setSelectedDate] = useState(todayStr)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [dayEvents, setDayEvents] = useState<CalendarEvent[]>([])
   const [note, setNote] = useState('')
   const [newTitle, setNewTitle] = useState('')
@@ -45,6 +45,11 @@ export default function CalendarSection(): React.JSX.Element {
   }, [year, month])
 
   useEffect(() => {
+    if (!selectedDate) {
+      setDayEvents([])
+      setNote('')
+      return
+    }
     setDayEvents(allEvents.filter(e => e.date === selectedDate))
     async function loadNote() {
       const n = await window.api.calendar.getNote(selectedDate)
@@ -118,7 +123,9 @@ export default function CalendarSection(): React.JSX.Element {
   while (cells.length % 7 !== 0) cells.push(null)
 
   const monthLabel = format(new Date(year, month - 1), 'MMMM yyyy', { locale: ptBR })
-  const selectedLabel = format(new Date(selectedDate + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR })
+  const selectedLabel = selectedDate
+    ? format(new Date(selectedDate + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR })
+    : ''
 
   return (
     <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
@@ -215,121 +222,123 @@ export default function CalendarSection(): React.JSX.Element {
           </div>
         </div>
 
-        {/* Day detail panel */}
-        <div className="xl:w-72 shrink-0 border border-bg-border rounded-xl p-4 bg-bg-primary space-y-4">
-          <h3 className="text-sm font-semibold text-text-primary capitalize">{selectedLabel}</h3>
+        {/* Day detail panel — only rendered after clicking a day */}
+        {selectedDate && (
+          <div className="xl:w-72 shrink-0 border border-bg-border rounded-xl p-4 bg-bg-primary space-y-4 animate-fadeIn">
+            <h3 className="text-sm font-semibold text-text-primary capitalize">{selectedLabel}</h3>
 
-          {/* Events & Tasks */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Eventos & Tarefas</span>
-              <button
-                onClick={() => setShowAddForm(f => !f)}
-                className="p-1 rounded hover:bg-bg-border text-text-muted hover:text-text-primary transition-colors"
-              >
-                {showAddForm ? <X size={14} /> : <Plus size={14} />}
-              </button>
-            </div>
-
-            {showAddForm && (
-              <div className="mb-3 p-3 bg-bg-secondary rounded-lg border border-bg-border space-y-2">
-                <input
-                  autoFocus
-                  value={newTitle}
-                  onChange={e => setNewTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') addEvent() }}
-                  placeholder="Título..."
-                  className="w-full bg-bg-primary border border-bg-border rounded px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent-purple"
-                />
-                <div className="flex gap-1.5">
-                  {(['event', 'task'] as const).map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setNewType(t)}
-                      className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${
-                        newType === t ? 'bg-accent-purple text-white' : 'bg-bg-border text-text-muted hover:text-text-primary'
-                      }`}
-                    >
-                      {t === 'event' ? 'Evento' : 'Tarefa'}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex gap-1.5 items-center">
-                  {EVENT_COLORS.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setNewColor(c)}
-                      style={{ backgroundColor: c }}
-                      className={`w-5 h-5 rounded-full transition-transform ${
-                        newColor === c
-                          ? 'scale-125 ring-2 ring-white/60 ring-offset-1 ring-offset-bg-secondary'
-                          : 'hover:scale-110'
-                      }`}
-                    />
-                  ))}
-                </div>
+            {/* Events & Tasks */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Eventos & Tarefas</span>
                 <button
-                  onClick={addEvent}
-                  disabled={!newTitle.trim()}
-                  className="w-full py-1.5 rounded bg-accent-purple hover:bg-accent-purple/80 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+                  onClick={() => setShowAddForm(f => !f)}
+                  className="p-1 rounded hover:bg-bg-border text-text-muted hover:text-text-primary transition-colors"
                 >
-                  Adicionar
+                  {showAddForm ? <X size={14} /> : <Plus size={14} />}
                 </button>
               </div>
-            )}
 
-            <div className="space-y-1.5">
-              {dayEvents.length === 0 && !showAddForm && (
-                <p className="text-xs text-text-muted italic">Nenhum evento neste dia.</p>
-              )}
-              {dayEvents.map(evt => (
-                <div
-                  key={evt.id}
-                  className={`flex items-center gap-2 p-2 rounded-lg border border-bg-border bg-bg-secondary transition-opacity ${evt.is_done ? 'opacity-55' : ''}`}
-                >
-                  {evt.type === 'task' ? (
-                    <button
-                      onClick={() => toggleDone(evt.id)}
-                      className="shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors"
-                      style={{ borderColor: evt.color, backgroundColor: evt.is_done ? evt.color : 'transparent' }}
-                    >
-                      {!!evt.is_done && <span className="text-white text-[9px] leading-none">✓</span>}
-                    </button>
-                  ) : (
-                    <div className="shrink-0 w-2 h-2 rounded-full mt-0.5" style={{ backgroundColor: evt.color }} />
-                  )}
-                  <span className={`flex-1 text-xs ${evt.is_done ? 'line-through text-text-muted' : 'text-text-primary'}`}>
-                    {evt.title}
-                  </span>
+              {showAddForm && (
+                <div className="mb-3 p-3 bg-bg-secondary rounded-lg border border-bg-border space-y-2">
+                  <input
+                    autoFocus
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addEvent() }}
+                    placeholder="Título..."
+                    className="w-full bg-bg-primary border border-bg-border rounded px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent-purple"
+                  />
+                  <div className="flex gap-1.5">
+                    {(['event', 'task'] as const).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setNewType(t)}
+                        className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${
+                          newType === t ? 'bg-accent-purple text-white' : 'bg-bg-border text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        {t === 'event' ? 'Evento' : 'Tarefa'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5 items-center">
+                    {EVENT_COLORS.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setNewColor(c)}
+                        style={{ backgroundColor: c }}
+                        className={`w-5 h-5 rounded-full transition-transform ${
+                          newColor === c
+                            ? 'scale-125 ring-2 ring-white/60 ring-offset-1 ring-offset-bg-secondary'
+                            : 'hover:scale-110'
+                        }`}
+                      />
+                    ))}
+                  </div>
                   <button
-                    onClick={() => deleteEvent(evt.id)}
-                    className="shrink-0 text-text-muted hover:text-red-400 transition-colors"
+                    onClick={addEvent}
+                    disabled={!newTitle.trim()}
+                    className="w-full py-1.5 rounded bg-accent-purple hover:bg-accent-purple/80 disabled:opacity-40 text-white text-xs font-medium transition-colors"
                   >
-                    <Trash2 size={12} />
+                    Adicionar
                   </button>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Notes */}
-          <div>
-            <div className="flex items-center gap-1.5 mb-2">
-              <StickyNote size={12} className="text-accent-gold" />
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Observações</span>
+              <div className="space-y-1.5">
+                {dayEvents.length === 0 && !showAddForm && (
+                  <p className="text-xs text-text-muted italic">Nenhum evento neste dia.</p>
+                )}
+                {dayEvents.map(evt => (
+                  <div
+                    key={evt.id}
+                    className={`flex items-center gap-2 p-2 rounded-lg border border-bg-border bg-bg-secondary transition-opacity ${evt.is_done ? 'opacity-55' : ''}`}
+                  >
+                    {evt.type === 'task' ? (
+                      <button
+                        onClick={() => toggleDone(evt.id)}
+                        className="shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors"
+                        style={{ borderColor: evt.color, backgroundColor: evt.is_done ? evt.color : 'transparent' }}
+                      >
+                        {!!evt.is_done && <span className="text-white text-[9px] leading-none">✓</span>}
+                      </button>
+                    ) : (
+                      <div className="shrink-0 w-2 h-2 rounded-full mt-0.5" style={{ backgroundColor: evt.color }} />
+                    )}
+                    <span className={`flex-1 text-xs ${evt.is_done ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                      {evt.title}
+                    </span>
+                    <button
+                      onClick={() => deleteEvent(evt.id)}
+                      className="shrink-0 text-text-muted hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <textarea
-              value={note}
-              onChange={e => handleNoteChange(e.target.value)}
-              placeholder="Escreva suas observações do dia..."
-              rows={5}
-              className="w-full bg-bg-secondary border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-accent-purple resize-none transition-colors"
-            />
-            {note.trim() && (
-              <p className="text-[10px] text-text-muted mt-1">Salvo automaticamente</p>
-            )}
+
+            {/* Notes */}
+            <div>
+              <div className="flex items-center gap-1.5 mb-2">
+                <StickyNote size={12} className="text-accent-gold" />
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Observações</span>
+              </div>
+              <textarea
+                value={note}
+                onChange={e => handleNoteChange(e.target.value)}
+                placeholder="Escreva suas observações do dia..."
+                rows={5}
+                className="w-full bg-bg-secondary border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-accent-purple resize-none transition-colors"
+              />
+              {note.trim() && (
+                <p className="text-[10px] text-text-muted mt-1">Salvo automaticamente</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -140,6 +140,14 @@ function createTables(): void {
       content TEXT NOT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS goal_folders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      icon TEXT DEFAULT '📁',
+      color TEXT DEFAULT '#7c3aed',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
   runMigrations()
@@ -150,6 +158,10 @@ function runMigrations(): void {
   const cols = dbAll('PRAGMA table_info(exercises)')
   if (!cols.find((c: Record<string, unknown>) => c.name === 'is_superset')) {
     db.run('ALTER TABLE exercises ADD COLUMN is_superset INTEGER DEFAULT 0')
+  }
+  const goalCols = dbAll('PRAGMA table_info(goals)')
+  if (!goalCols.find((c: Record<string, unknown>) => c.name === 'folder_id')) {
+    db.run('ALTER TABLE goals ADD COLUMN folder_id INTEGER DEFAULT NULL')
   }
 }
 

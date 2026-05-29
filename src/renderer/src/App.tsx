@@ -8,6 +8,7 @@ import Gym from './pages/Gym'
 import Addictions from './pages/Addictions'
 import Goals from './pages/Goals'
 import Achievements from './pages/Achievements'
+import Settings from './pages/Settings'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 
@@ -47,6 +48,7 @@ export default function App(): React.JSX.Element {
               <Route path="/addictions" element={<Addictions />} />
               <Route path="/goals" element={<Goals />} />
               <Route path="/achievements" element={<Achievements />} />
+              <Route path="/settings" element={<Settings />} />
             </Routes>
           </main>
         </div>

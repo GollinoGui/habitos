@@ -65,6 +65,26 @@ declare global {
         deleteTask: (taskId: number) => Promise<void>
         complete: (id: number) => Promise<void>
       }
+      goalFolders: {
+        list: () => Promise<unknown[]>
+        create: (data: object) => Promise<unknown>
+        update: (id: number, data: object) => Promise<void>
+        delete: (id: number) => Promise<void>
+      }
+      calendar: {
+        eventsByMonth: (year: number, month: number) => Promise<unknown[]>
+        createEvent: (data: object) => Promise<unknown>
+        toggleDone: (id: number) => Promise<void>
+        deleteEvent: (id: number) => Promise<void>
+        getNote: (date: string) => Promise<{ content: string } | null>
+        saveNote: (date: string, content: string) => Promise<void>
+        notesByMonth: (year: number, month: number) => Promise<unknown[]>
+      }
+      notifications: {
+        getSettings: () => Promise<{ enabled: boolean; hour: number; minute: number }>
+        saveSettings: (s: { enabled: boolean; hour: number; minute: number }) => Promise<boolean>
+        test: () => Promise<{ sent: boolean }>
+      }
     }
   }
 }

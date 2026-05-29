@@ -47,6 +47,12 @@ const api = {
     deleteTask: (taskId: number) => ipcRenderer.invoke('goals:delete-task', taskId),
     complete: (id: number) => ipcRenderer.invoke('goals:complete', id)
   },
+  goalFolders: {
+    list: () => ipcRenderer.invoke('goals:folders:list'),
+    create: (data: object) => ipcRenderer.invoke('goals:folders:create', data),
+    update: (id: number, data: object) => ipcRenderer.invoke('goals:folders:update', id, data),
+    delete: (id: number) => ipcRenderer.invoke('goals:folders:delete', id)
+  },
   calendar: {
     eventsByMonth: (year: number, month: number) => ipcRenderer.invoke('calendar:events-by-month', year, month),
     createEvent: (data: object) => ipcRenderer.invoke('calendar:create-event', data),
@@ -55,6 +61,12 @@ const api = {
     getNote: (date: string) => ipcRenderer.invoke('calendar:get-note', date),
     saveNote: (date: string, content: string) => ipcRenderer.invoke('calendar:save-note', date, content),
     notesByMonth: (year: number, month: number) => ipcRenderer.invoke('calendar:notes-by-month', year, month)
+  },
+  notifications: {
+    getSettings: () => ipcRenderer.invoke('notifications:get-settings'),
+    saveSettings: (s: { enabled: boolean; hour: number; minute: number }) =>
+      ipcRenderer.invoke('notifications:save-settings', s),
+    test: () => ipcRenderer.invoke('notifications:test')
   }
 }
 

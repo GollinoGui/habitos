@@ -11,10 +11,11 @@ interface Habit {
 const ICONS = ['⭐', '💪', '🏃', '🛏', '📚', '🥗', '💧', '🧘', '🎯', '🎸', '✍️', '🌅', '🚿', '🧹', '🏋️']
 const COLORS = ['#7c3aed', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16']
 
-function Modal({ onClose, onSave, initial }: {
+function Modal({ onClose, onSave, initial, error }: {
   onClose: () => void
   onSave: (data: object) => void
   initial?: Partial<Habit>
+  error?: string | null
 }) {
   const [name, setName] = useState(initial?.name || '')
   const [description, setDescription] = useState(initial?.description || '')
@@ -57,11 +58,25 @@ function Modal({ onClose, onSave, initial }: {
               </select>
             </div>
             <div className="flex-1">
-              <label className="text-xs text-text-secondary mb-1 block">Horário alvo</label>
-              <input type="time"
-                className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple"
-                value={targetTime} onChange={e => setTargetTime(e.target.value)}
-              />
+              <label className="text-xs text-text-secondary mb-1 block">
+                Horário alvo <span className="text-text-muted">(opcional)</span>
+              </label>
+              <div className="flex gap-1">
+                <input type="time"
+                  className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+                  value={targetTime} onChange={e => setTargetTime(e.target.value)}
+                />
+                {targetTime && (
+                  <button
+                    type="button"
+                    onClick={() => setTargetTime('')}
+                    className="px-2 rounded-lg border border-bg-border text-text-muted hover:text-text-primary hover:bg-bg-border transition-colors"
+                    title="Remover horário"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border border-bg-border/60 rounded-lg">
@@ -93,11 +108,15 @@ function Modal({ onClose, onSave, initial }: {
             </div>
           </div>
         </div>
-        <div className="flex gap-3 mt-5">
+        {error && (
+          <p className="text-xs text-accent-red mt-3 bg-red-950/30 border border-red-900/40 rounded-lg px-3 py-2">{error}</p>
+        )}
+        <div className="flex gap-3 mt-4">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm">Cancelar</button>
           <button
             onClick={() => name && onSave({ name, description, frequency, target_time: targetTime, color, icon })}
-            className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm transition-colors"
+            className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+            disabled={!name}
           >Salvar</button>
         </div>
       </div>
@@ -140,6 +159,7 @@ export default function Habits(): React.JSX.Element {
   const [showModal, setShowModal] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showInactive, setShowInactive] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => { loadHabits() }, [])
 
@@ -158,14 +178,19 @@ export default function Habits(): React.JSX.Element {
   }
 
   async function handleSave(data: object) {
-    if (editingHabit) {
-      await window.api.habits.update(editingHabit.id, data)
-    } else {
-      await window.api.habits.create(data)
+    setSaveError(null)
+    try {
+      if (editingHabit) {
+        await window.api.habits.update(editingHabit.id, data)
+      } else {
+        await window.api.habits.create(data)
+      }
+      setShowModal(false)
+      setEditingHabit(null)
+      await loadHabits()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Erro ao salvar hábito')
     }
-    setShowModal(false)
-    setEditingHabit(null)
-    loadHabits()
   }
 
   async function toggleHabit(id: number) {
@@ -268,9 +293,10 @@ export default function Habits(): React.JSX.Element {
 
       {showModal && (
         <Modal
-          onClose={() => { setShowModal(false); setEditingHabit(null) }}
+          onClose={() => { setShowModal(false); setEditingHabit(null); setSaveError(null) }}
           onSave={handleSave}
           initial={editingHabit || undefined}
+          error={saveError}
         />
       )}
     </div>
