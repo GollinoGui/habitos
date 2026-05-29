@@ -46,6 +46,15 @@ const api = {
     completeTask: (taskId: number, completed: boolean) => ipcRenderer.invoke('goals:complete-task', taskId, completed),
     deleteTask: (taskId: number) => ipcRenderer.invoke('goals:delete-task', taskId),
     complete: (id: number) => ipcRenderer.invoke('goals:complete', id)
+  },
+  calendar: {
+    eventsByMonth: (year: number, month: number) => ipcRenderer.invoke('calendar:events-by-month', year, month),
+    createEvent: (data: object) => ipcRenderer.invoke('calendar:create-event', data),
+    toggleDone: (id: number) => ipcRenderer.invoke('calendar:toggle-done', id),
+    deleteEvent: (id: number) => ipcRenderer.invoke('calendar:delete-event', id),
+    getNote: (date: string) => ipcRenderer.invoke('calendar:get-note', date),
+    saveNote: (date: string, content: string) => ipcRenderer.invoke('calendar:save-note', date, content),
+    notesByMonth: (year: number, month: number) => ipcRenderer.invoke('calendar:notes-by-month', year, month)
   }
 }
 

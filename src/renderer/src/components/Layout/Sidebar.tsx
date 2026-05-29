@@ -10,12 +10,12 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/habits', icon: CheckSquare, label: 'Hábitos' },
-  { to: '/gym', icon: Dumbbell, label: 'Academia' },
-  { to: '/addictions', icon: ShieldOff, label: 'Vícios' },
-  { to: '/goals', icon: Target, label: 'Metas' },
-  { to: '/achievements', icon: Trophy, label: 'Conquistas' }
+  { to: '/', id: 'nav-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/habits', id: 'nav-habits', icon: CheckSquare, label: 'Hábitos' },
+  { to: '/gym', id: 'nav-gym', icon: Dumbbell, label: 'Academia' },
+  { to: '/addictions', id: 'nav-addictions', icon: ShieldOff, label: 'Vícios' },
+  { to: '/goals', id: 'nav-goals', icon: Target, label: 'Metas' },
+  { to: '/achievements', id: 'nav-achievements', icon: Trophy, label: 'Conquistas' }
 ]
 
 export default function Sidebar(): React.JSX.Element {
@@ -27,10 +27,11 @@ export default function Sidebar(): React.JSX.Element {
         <span className="hidden lg:block font-bold text-text-primary text-lg">Hábitos</span>
       </div>
       <nav className="flex-1 py-4 space-y-1 px-2">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {navItems.map(({ to, id, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
+            id={id}
             end={to === '/'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group

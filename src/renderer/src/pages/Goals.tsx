@@ -17,7 +17,6 @@ function GoalModal({ onClose, onSave, initial }: {
   const [title, setTitle] = useState(initial?.title || '')
   const [description, setDescription] = useState(initial?.description || '')
   const [targetDate, setTargetDate] = useState(initial?.target_date || '')
-  const [xpReward, setXpReward] = useState(initial?.xp_reward || 100)
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
@@ -37,22 +36,15 @@ function GoalModal({ onClose, onSave, initial }: {
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
               className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary resize-none focus:outline-none focus:border-accent-purple" />
           </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs text-text-secondary mb-1 block">Prazo</label>
-              <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)}
-                className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple" />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-text-secondary mb-1 block">Recompensa XP</label>
-              <input type="number" min={10} value={xpReward} onChange={e => setXpReward(Number(e.target.value))}
-                className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple" />
-            </div>
+          <div>
+            <label className="text-xs text-text-secondary mb-1 block">Prazo</label>
+            <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)}
+              className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple" />
           </div>
         </div>
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm">Cancelar</button>
-          <button onClick={() => title && onSave({ title, description, target_date: targetDate || null, xp_reward: xpReward })}
+          <button onClick={() => title && onSave({ title, description, target_date: targetDate || null, xp_reward: 100 })}
             className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm">Salvar</button>
         </div>
       </div>
@@ -107,93 +99,110 @@ export default function Goals(): React.JSX.Element {
   const active = goals.filter(g => !g.is_completed)
   const completed = goals.filter(g => g.is_completed)
 
+  function estimateXP(goal: Goal): number {
+    let xp = 50
+    xp += goal.tasks.length * 10
+    if (goal.tasks.length > 0 && goal.tasks.every(t => t.is_completed)) xp += 25
+    if (goal.target_date) xp += 10
+    return Math.min(xp, 300)
+  }
+
   function GoalCard({ goal }: { goal: Goal }) {
     const totalTasks = goal.tasks.length
     const doneTasks = goal.tasks.filter(t => t.is_completed).length
     const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
 
     return (
-      <div className={`bg-bg-secondary border rounded-xl p-5 ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}>
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              {goal.is_completed
-                ? <CheckCircle2 size={18} className="text-accent-green shrink-0" />
-                : <Target size={18} className="text-accent-purple shrink-0" />
-              }
-              <h3 className="font-semibold text-text-primary truncate">{goal.title}</h3>
+      <div className={`bg-bg-secondary border rounded-xl overflow-hidden flex ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}>
+        {/* Main content */}
+        <div className="flex-1 p-5">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                {goal.is_completed
+                  ? <CheckCircle2 size={18} className="text-accent-green shrink-0" />
+                  : <Target size={18} className="text-accent-purple shrink-0" />
+                }
+                <h3 className={`font-semibold text-text-primary truncate ${goal.is_completed ? 'line-through' : ''}`}>{goal.title}</h3>
+              </div>
+              {goal.description && <p className="text-xs text-text-secondary mt-1 ml-6">{goal.description}</p>}
+              <div className="flex items-center gap-3 mt-1 ml-6 text-xs text-text-muted">
+                {goal.target_date && <span>📅 {format(new Date(goal.target_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
+                <span className="text-accent-gold">
+                  {goal.is_completed ? `+${goal.xp_reward} XP` : `~${estimateXP(goal)} XP`}
+                </span>
+              </div>
             </div>
-            {goal.description && <p className="text-xs text-text-secondary mt-1 ml-6">{goal.description}</p>}
-            <div className="flex items-center gap-3 mt-1 ml-6 text-xs text-text-muted">
-              {goal.target_date && <span>📅 {format(new Date(goal.target_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
-              <span className="text-accent-gold">+{goal.xp_reward} XP</span>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            {!goal.is_completed && (
-              <>
+            <div className="flex gap-1 shrink-0 ml-2">
+              {!goal.is_completed && (
                 <button onClick={() => { setEditGoal(goal); setShowModal(true) }}
                   className="p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-border rounded-lg">
                   <Pencil size={13} />
                 </button>
-                <button onClick={() => completeGoal(goal.id)}
-                  className="p-1.5 text-text-muted hover:text-accent-green hover:bg-emerald-950/30 rounded-lg">
-                  <CheckCircle2 size={13} />
-                </button>
-              </>
-            )}
-            <button onClick={async () => { if (confirm('Excluir meta?')) { await window.api.goals.delete(goal.id); load() } }}
-              className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded-lg">
-              <Trash2 size={13} />
-            </button>
-          </div>
-        </div>
-
-        {totalTasks > 0 && (
-          <div className="ml-6 mb-3">
-            <div className="flex justify-between text-xs text-text-muted mb-1">
-              <span>{doneTasks}/{totalTasks} tarefas</span>
-              <span>{pct}%</span>
-            </div>
-            <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full transition-all"
-                style={{ width: `${pct}%` }} />
-            </div>
-          </div>
-        )}
-
-        <div className="ml-6 space-y-1.5">
-          {goal.tasks.map(task => (
-            <div key={task.id} className="flex items-center gap-2 group">
-              <button onClick={() => !goal.is_completed && toggleTask(task.id, task.is_completed)}
-                className="shrink-0 text-text-muted hover:text-accent-purple transition-colors">
-                {task.is_completed ? <CheckSquare size={15} className="text-accent-green" /> : <Square size={15} />}
-              </button>
-              <span className={`text-sm flex-1 ${task.is_completed ? 'line-through text-text-muted' : 'text-text-secondary'}`}>{task.title}</span>
-              {!goal.is_completed && (
-                <button onClick={() => window.api.goals.deleteTask(task.id).then(load)}
-                  className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red transition-all">
-                  <X size={12} />
-                </button>
               )}
-            </div>
-          ))}
-          {!goal.is_completed && (
-            <div className="flex gap-2 mt-2">
-              <input
-                value={newTask[goal.id] || ''}
-                onChange={e => setNewTask(p => ({ ...p, [goal.id]: e.target.value }))}
-                onKeyDown={e => e.key === 'Enter' && addTask(goal.id)}
-                placeholder="+ Nova sub-tarefa"
-                className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple"
-              />
-              <button onClick={() => addTask(goal.id)}
-                className="px-2 py-1 bg-bg-border hover:bg-accent-purple text-text-muted hover:text-white rounded-lg text-xs transition-colors">
-                <Plus size={13} />
+              <button onClick={async () => { if (confirm('Excluir meta?')) { await window.api.goals.delete(goal.id); load() } }}
+                className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded-lg">
+                <Trash2 size={13} />
               </button>
+            </div>
+          </div>
+
+          {totalTasks > 0 && (
+            <div className="ml-6 mb-3">
+              <div className="flex justify-between text-xs text-text-muted mb-1">
+                <span>{doneTasks}/{totalTasks} tarefas</span>
+                <span>{pct}%</span>
+              </div>
+              <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full transition-all"
+                  style={{ width: `${pct}%` }} />
+              </div>
             </div>
           )}
+
+          <div className="ml-6 space-y-1.5">
+            {goal.tasks.map(task => (
+              <div key={task.id} className="flex items-center gap-2 group">
+                <button onClick={() => !goal.is_completed && toggleTask(task.id, task.is_completed)}
+                  className="shrink-0 text-text-muted hover:text-accent-purple transition-colors">
+                  {task.is_completed ? <CheckSquare size={15} className="text-accent-green" /> : <Square size={15} />}
+                </button>
+                <span className={`text-sm flex-1 ${task.is_completed ? 'line-through text-text-muted' : 'text-text-secondary'}`}>{task.title}</span>
+                {!goal.is_completed && (
+                  <button onClick={() => window.api.goals.deleteTask(task.id).then(load)}
+                    className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red transition-all">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {!goal.is_completed && (
+              <div className="flex gap-2 mt-2">
+                <input
+                  value={newTask[goal.id] || ''}
+                  onChange={e => setNewTask(p => ({ ...p, [goal.id]: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && addTask(goal.id)}
+                  placeholder="+ Nova sub-tarefa"
+                  className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple"
+                />
+                <button onClick={() => addTask(goal.id)}
+                  className="px-2 py-1 bg-bg-border hover:bg-accent-purple text-text-muted hover:text-white rounded-lg text-xs transition-colors">
+                  <Plus size={13} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Big complete button on the right */}
+        {!goal.is_completed && (
+          <button
+            onClick={() => completeGoal(goal.id)}
+            className="shrink-0 w-[72px] border-l border-bg-border bg-emerald-950/20 hover:bg-emerald-900/40 flex flex-col items-center justify-center gap-2 text-accent-green/50 hover:text-accent-green transition-all group">
+            <CheckCircle2 size={32} className="transition-transform group-hover:scale-110" />
+            <span className="text-[10px] font-bold uppercase tracking-wide">Feito!</span>
+          </button>
+        )}
       </div>
     )
   }

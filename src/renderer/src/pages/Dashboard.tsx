@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CheckCircle2, Circle, Dumbbell, ShieldOff, Target, Trophy, Zap } from 'lucide-react'
+import { CheckCircle2, Circle, Dumbbell, ShieldOff, Trophy, Zap } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import CalendarSection from '../components/CalendarSection'
 
 interface Habit {
   id: number; name: string; icon: string; color: string; xp_reward: number; is_active: number
@@ -64,7 +65,7 @@ export default function Dashboard(): React.JSX.Element {
   const progressPct = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0
 
   return (
-    <div className="space-y-6 animate-fadeIn max-w-4xl">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-text-primary">
@@ -177,6 +178,9 @@ export default function Dashboard(): React.JSX.Element {
           )}
         </div>
       </div>
+
+      {/* Calendar */}
+      <CalendarSection />
     </div>
   )
 }

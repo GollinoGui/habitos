@@ -9,11 +9,12 @@ export function registerHabitsHandlers(): void {
 
   ipcMain.handle('habits:create', (_e, data: {
     name: string; description?: string; frequency: string;
-    target_time?: string; xp_reward: number; color: string; icon: string
+    target_time?: string; color: string; icon: string
   }) => {
+    const xp = data.frequency === 'weekly' ? 25 : 10
     const result = dbRun(
       'INSERT INTO habits (name, description, frequency, target_time, xp_reward, color, icon) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [data.name, data.description || '', data.frequency, data.target_time || null, data.xp_reward, data.color, data.icon]
+      [data.name, data.description || '', data.frequency, data.target_time || null, xp, data.color, data.icon]
     )
     unlockAchievement('first_habit', 'Primeiro Hábito', 'Criou seu primeiro hábito', '🌟')
     save()
@@ -22,11 +23,12 @@ export function registerHabitsHandlers(): void {
 
   ipcMain.handle('habits:update', (_e, id: number, data: {
     name: string; description?: string; frequency: string;
-    target_time?: string; xp_reward: number; color: string; icon: string
+    target_time?: string; color: string; icon: string
   }) => {
+    const xp = data.frequency === 'weekly' ? 25 : 10
     dbRun(
       'UPDATE habits SET name=?, description=?, frequency=?, target_time=?, xp_reward=?, color=?, icon=? WHERE id=?',
-      [data.name, data.description || '', data.frequency, data.target_time || null, data.xp_reward, data.color, data.icon, id]
+      [data.name, data.description || '', data.frequency, data.target_time || null, xp, data.color, data.icon, id]
     )
     save()
     return true

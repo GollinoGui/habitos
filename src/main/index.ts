@@ -6,6 +6,7 @@ import { registerGymHandlers } from './ipc/gym'
 import { registerAddictionsHandlers } from './ipc/addictions'
 import { registerGoalsHandlers } from './ipc/goals'
 import { registerProfileHandlers } from './ipc/profile'
+import { registerCalendarHandlers } from './ipc/calendar'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -97,6 +98,7 @@ app.whenReady().then(async () => {
   registerGymHandlers()
   registerAddictionsHandlers()
   registerGoalsHandlers()
+  registerCalendarHandlers()
 
   createWindow()
   createTray()

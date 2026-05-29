@@ -20,7 +20,6 @@ function Modal({ onClose, onSave, initial }: {
   const [description, setDescription] = useState(initial?.description || '')
   const [frequency, setFrequency] = useState(initial?.frequency || 'daily')
   const [targetTime, setTargetTime] = useState(initial?.target_time || '')
-  const [xpReward, setXpReward] = useState(initial?.xp_reward || 10)
   const [color, setColor] = useState(initial?.color || '#7c3aed')
   const [icon, setIcon] = useState(initial?.icon || '⭐')
 
@@ -65,12 +64,11 @@ function Modal({ onClose, onSave, initial }: {
               />
             </div>
           </div>
-          <div>
-            <label className="text-xs text-text-secondary mb-1 block">XP por conclusão</label>
-            <input type="number" min={1} max={100}
-              className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple"
-              value={xpReward} onChange={e => setXpReward(Number(e.target.value))}
-            />
+          <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border border-bg-border/60 rounded-lg">
+            <span className="text-accent-gold text-sm">⚡</span>
+            <span className="text-xs text-text-muted">
+              XP automático: <span className="text-accent-gold font-semibold">{frequency === 'weekly' ? '25 XP' : '10 XP'}</span> por conclusão
+            </span>
           </div>
           <div>
             <label className="text-xs text-text-secondary mb-2 block">Ícone</label>
@@ -98,7 +96,7 @@ function Modal({ onClose, onSave, initial }: {
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm">Cancelar</button>
           <button
-            onClick={() => name && onSave({ name, description, frequency, target_time: targetTime, xp_reward: xpReward, color, icon })}
+            onClick={() => name && onSave({ name, description, frequency, target_time: targetTime, color, icon })}
             className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm transition-colors"
           >Salvar</button>
         </div>

@@ -61,9 +61,15 @@ export function registerGoalsHandlers(): void {
   ipcMain.handle('goals:complete', (_e, id: number) => {
     const goal = dbGet('SELECT * FROM goals WHERE id = ?', [id])
     if (!goal || goal.is_completed) return false
-    dbRun('UPDATE goals SET is_completed = 1 WHERE id = ?', [id])
-    dbRun('UPDATE user_profile SET total_xp = total_xp + ? WHERE id = 1', [goal.xp_reward])
-    dbRun('INSERT INTO xp_history (amount, reason) VALUES (?, ?)', [goal.xp_reward, `Meta: ${goal.title}`])
+    const tasks = dbAll('SELECT * FROM goal_tasks WHERE goal_id = ?', [id])
+    let xp = 50
+    xp += tasks.length * 10
+    if (tasks.length > 0 && tasks.every(t => t.is_completed)) xp += 25
+    if (goal.target_date) xp += 10
+    xp = Math.min(xp, 300)
+    dbRun('UPDATE goals SET is_completed = 1, xp_reward = ? WHERE id = ?', [xp, id])
+    dbRun('UPDATE user_profile SET total_xp = total_xp + ? WHERE id = 1', [xp])
+    dbRun('INSERT INTO xp_history (amount, reason) VALUES (?, ?)', [xp, `Meta: ${goal.title}`])
     const completedCount = (dbGet('SELECT COUNT(*) as c FROM goals WHERE is_completed = 1')?.c as number) ?? 0
     if (completedCount === 1) {
       unlockAchievement('goal_first', 'Primeira Meta!', 'Completou sua primeira meta', '🎯')

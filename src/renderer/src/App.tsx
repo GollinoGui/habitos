@@ -9,15 +9,29 @@ import Addictions from './pages/Addictions'
 import Goals from './pages/Goals'
 import Achievements from './pages/Achievements'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
+import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 
 export default function App(): React.JSX.Element {
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('habitos_onboarded')) {
       setShowOnboarding(true)
+    } else if (!localStorage.getItem('habitos_tutorial_done')) {
+      setShowTutorial(true)
     }
   }, [])
+
+  function handleOnboardingComplete(): void {
+    setShowOnboarding(false)
+    setShowTutorial(true)
+  }
+
+  function handleTutorialComplete(): void {
+    localStorage.setItem('habitos_tutorial_done', '1')
+    setShowTutorial(false)
+  }
 
   return (
     <HashRouter>
@@ -37,7 +51,10 @@ export default function App(): React.JSX.Element {
           </main>
         </div>
       </div>
-      {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
+      {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
+      {showTutorial && !showOnboarding && (
+        <TutorialOverlay onComplete={handleTutorialComplete} />
+      )}
     </HashRouter>
   )
 }

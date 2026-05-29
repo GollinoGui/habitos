@@ -53,3 +53,12 @@ body {
 .xp-pulse {
   animation: xpPulse 1.5s ease-in-out;
 }
+
+@keyframes tutorialGlow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0.1), 0 0 20px rgba(124, 58, 237, 0.35); }
+}
+
+.tutorial-glow {
+  animation: tutorialGlow 1.8s ease-in-out infinite;
+}

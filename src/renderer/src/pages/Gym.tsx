@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
-import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell } from 'lucide-react'
+import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell, Link2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useProfileStore } from '../store/profileStore'
 
-interface Exercise { id: number; name: string; sets?: number; reps?: number; weight_kg?: number }
+interface Exercise { id: number; name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }
 interface Workout { id: number; date: string; name: string; notes?: string; duration_min?: number; exercises: Exercise[] }
 interface Bio { id: number; date: string; weight_kg?: number; body_fat_pct?: number; muscle_mass_kg?: number; bmr_kcal?: number }
 
@@ -15,13 +15,25 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
   const [name, setName] = useState('')
   const [notes, setNotes] = useState('')
   const [duration, setDuration] = useState('')
-  const [exercises, setExercises] = useState([{ name: '', sets: '', reps: '', weight: '' }])
+  const [exercises, setExercises] = useState([{ name: '', sets: '', reps: '', weight: '', superset: false }])
 
-  function addEx() { setExercises([...exercises, { name: '', sets: '', reps: '', weight: '' }]) }
+  function addEx() { setExercises([...exercises, { name: '', sets: '', reps: '', weight: '', superset: false }]) }
   function updateEx(i: number, field: string, val: string) {
     setExercises(exercises.map((e, idx) => idx === i ? { ...e, [field]: val } : e))
   }
+  function toggleSuperset(i: number) {
+    setExercises(exercises.map((e, idx) => idx === i ? { ...e, superset: !e.superset } : e))
+  }
   function removeEx(i: number) { setExercises(exercises.filter((_, idx) => idx !== i)) }
+
+  function calcXpPreview(): number {
+    let xp = 15
+    if (duration) xp += Math.floor(Number(duration) / 20) * 5
+    const named = exercises.filter(e => e.name)
+    xp += named.length * 5
+    xp += named.filter((e, i) => i < named.length - 1 && e.superset).length * 10
+    return Math.min(xp, 150)
+  }
 
   function handleSave() {
     if (!name.trim()) return
@@ -29,7 +41,8 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
       date, name, notes, duration_min: duration ? Number(duration) : null,
       exercises: exercises.filter(e => e.name).map(e => ({
         name: e.name, sets: e.sets ? Number(e.sets) : null,
-        reps: e.reps ? Number(e.reps) : null, weight_kg: e.weight ? Number(e.weight) : null
+        reps: e.reps ? Number(e.reps) : null, weight_kg: e.weight ? Number(e.weight) : null,
+        is_superset: e.superset ? 1 : 0
       }))
     })
   }
@@ -71,26 +84,45 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
                 <Plus size={12} /> Adicionar
               </button>
             </div>
-            <div className="space-y-2">
-              {exercises.map((ex, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input value={ex.name} onChange={e => updateEx(i, 'name', e.target.value)} placeholder="Exercício"
-                    className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                  <input value={ex.sets} onChange={e => updateEx(i, 'sets', e.target.value)} placeholder="Séries" type="number"
-                    className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                  <input value={ex.reps} onChange={e => updateEx(i, 'reps', e.target.value)} placeholder="Reps" type="number"
-                    className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                  <input value={ex.weight} onChange={e => updateEx(i, 'weight', e.target.value)} placeholder="kg" type="number"
-                    className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                  <button onClick={() => removeEx(i)} className="text-text-muted hover:text-accent-red"><X size={14} /></button>
-                </div>
-              ))}
+            <div className="space-y-0">
+              {exercises.map((ex, i) => {
+                const prevLinked = i > 0 && exercises[i - 1].superset
+                const isInSuperset = prevLinked || ex.superset
+                return (
+                  <div key={i}>
+                    {prevLinked && (
+                      <div className="flex items-center gap-1.5 my-1 ml-2">
+                        <div className="w-3 h-3 border-l-2 border-b-2 border-orange-500/50 rounded-bl-sm shrink-0" />
+                        <span className="text-[10px] text-orange-400 font-bold tracking-widest">SUPERSERIE</span>
+                      </div>
+                    )}
+                    <div className={`flex gap-2 items-center py-1 ${isInSuperset ? 'border-l-2 border-orange-500/40 pl-2' : ''}`}>
+                      <input value={ex.name} onChange={e => updateEx(i, 'name', e.target.value)} placeholder="Exercício"
+                        className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
+                      <input value={ex.sets} onChange={e => updateEx(i, 'sets', e.target.value)} placeholder="Séries" type="number"
+                        className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
+                      <input value={ex.reps} onChange={e => updateEx(i, 'reps', e.target.value)} placeholder="Reps" type="number"
+                        className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
+                      <input value={ex.weight} onChange={e => updateEx(i, 'weight', e.target.value)} placeholder="kg" type="number"
+                        className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
+                      {i < exercises.length - 1 ? (
+                        <button onClick={() => toggleSuperset(i)}
+                          title={ex.superset ? 'Remover superserie' : 'Linkar como superserie'}
+                          className={`shrink-0 p-1.5 rounded-lg transition-colors ${ex.superset ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30' : 'text-text-muted hover:text-orange-400 hover:bg-orange-950/20'}`}>
+                          <Link2 size={13} />
+                        </button>
+                      ) : <div className="w-[26px] shrink-0" />}
+                      <button onClick={() => removeEx(i)} className="shrink-0 text-text-muted hover:text-accent-red"><X size={14} /></button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm">Cancelar</button>
-          <button onClick={handleSave} className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm">Salvar (+15 XP)</button>
+          <button onClick={handleSave} className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm">Salvar (+{calcXpPreview()} XP)</button>
         </div>
       </div>
     </div>
@@ -253,14 +285,22 @@ export default function Gym(): React.JSX.Element {
                     <div className="grid grid-cols-4 gap-2 text-xs text-text-muted mb-1 font-medium uppercase">
                       <span>Exercício</span><span className="text-center">Séries</span><span className="text-center">Reps</span><span className="text-center">Peso</span>
                     </div>
-                    {w.exercises.map(ex => (
-                      <div key={ex.id} className="grid grid-cols-4 gap-2 text-xs text-text-secondary py-1 border-t border-bg-border/50">
-                        <span>{ex.name}</span>
-                        <span className="text-center">{ex.sets ?? '—'}</span>
-                        <span className="text-center">{ex.reps ?? '—'}</span>
-                        <span className="text-center">{ex.weight_kg ? `${ex.weight_kg}kg` : '—'}</span>
-                      </div>
-                    ))}
+                    {w.exercises.map((ex, idx) => {
+                      const prevLinked = idx > 0 && w.exercises[idx - 1].is_superset
+                      return (
+                        <div key={ex.id} className="grid grid-cols-4 gap-2 text-xs text-text-secondary py-1 border-t border-bg-border/50">
+                          <span className="flex items-center gap-1.5">
+                            {prevLinked && (
+                              <span className="shrink-0 text-[9px] bg-orange-950/40 text-orange-400 border border-orange-500/30 rounded px-1 font-bold">SS</span>
+                            )}
+                            {ex.name}
+                          </span>
+                          <span className="text-center">{ex.sets ?? '—'}</span>
+                          <span className="text-center">{ex.reps ?? '—'}</span>
+                          <span className="text-center">{ex.weight_kg ? `${ex.weight_kg}kg` : '—'}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

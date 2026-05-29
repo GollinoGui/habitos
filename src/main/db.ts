@@ -123,9 +123,34 @@ function createTables(): void {
       reason TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      date DATE NOT NULL,
+      type TEXT DEFAULT 'event',
+      color TEXT DEFAULT '#7c3aed',
+      is_done INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS calendar_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
+  runMigrations()
   save()
+}
+
+function runMigrations(): void {
+  const cols = dbAll('PRAGMA table_info(exercises)')
+  if (!cols.find((c: Record<string, unknown>) => c.name === 'is_superset')) {
+    db.run('ALTER TABLE exercises ADD COLUMN is_superset INTEGER DEFAULT 0')
+  }
 }
 
 export function save(): void {

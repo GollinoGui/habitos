@@ -2,6 +2,14 @@ import { ipcMain } from 'electron'
 import { dbAll, dbGet, dbRun, save } from '../db'
 import { unlockAchievement, checkAllAchievements } from './profile'
 
+function calcWorkoutXP(durationMin: number | null, exercises: { is_superset?: number }[]): number {
+  let xp = 15
+  if (durationMin) xp += Math.floor(durationMin / 20) * 5
+  xp += exercises.length * 5
+  xp += exercises.filter(e => e.is_superset).length * 10
+  return Math.min(xp, 150)
+}
+
 export function registerGymHandlers(): void {
   ipcMain.handle('gym:list-workouts', (_e, limit = 50) => {
     const workouts = dbAll('SELECT * FROM workouts ORDER BY date DESC LIMIT ?', [limit])
@@ -13,7 +21,7 @@ export function registerGymHandlers(): void {
 
   ipcMain.handle('gym:create-workout', (_e, data: {
     date: string; name: string; notes?: string; duration_min?: number;
-    exercises: { name: string; sets?: number; reps?: number; weight_kg?: number }[]
+    exercises: { name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }[]
   }) => {
     const result = dbRun(
       'INSERT INTO workouts (date, name, notes, duration_min) VALUES (?, ?, ?, ?)',
@@ -22,12 +30,13 @@ export function registerGymHandlers(): void {
     const workoutId = result.lastInsertRowid
     for (const ex of data.exercises || []) {
       dbRun(
-        'INSERT INTO exercises (workout_id, name, sets, reps, weight_kg) VALUES (?, ?, ?, ?, ?)',
-        [workoutId, ex.name, ex.sets || null, ex.reps || null, ex.weight_kg || null]
+        'INSERT INTO exercises (workout_id, name, sets, reps, weight_kg, is_superset) VALUES (?, ?, ?, ?, ?, ?)',
+        [workoutId, ex.name, ex.sets || null, ex.reps || null, ex.weight_kg || null, ex.is_superset ?? 0]
       )
     }
-    dbRun('UPDATE user_profile SET total_xp = total_xp + 15 WHERE id = 1')
-    dbRun('INSERT INTO xp_history (amount, reason) VALUES (?, ?)', [15, `Treino: ${data.name}`])
+    const xp = calcWorkoutXP(data.duration_min || null, data.exercises || [])
+    dbRun('UPDATE user_profile SET total_xp = total_xp + ? WHERE id = 1', [xp])
+    dbRun('INSERT INTO xp_history (amount, reason) VALUES (?, ?)', [xp, `Treino: ${data.name}`])
     checkAllAchievements()
     save()
     return workoutId
