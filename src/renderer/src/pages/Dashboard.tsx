@@ -124,18 +124,18 @@ export default function Dashboard(): React.JSX.Element {
       {/* Summary widget */}
       {!focusMode && (
         <div className="flex gap-3 flex-wrap">
-          <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+          <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm animate-slide-up" style={{ animationDelay: '60ms' }}>
             <Zap size={14} className="text-accent-gold" />
             <span className="text-text-secondary">XP hoje:</span>
             <span className="font-bold text-accent-gold">{xpToday}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+          <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm animate-slide-up" style={{ animationDelay: '110ms' }}>
             <CheckCircle2 size={14} className="text-accent-green" />
             <span className="text-text-secondary">Hábitos:</span>
             <span className="font-bold text-text-primary">{completedCount}/{totalHabits}</span>
           </div>
           {addictions.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm animate-slide-up" style={{ animationDelay: '160ms' }}>
               <ShieldOff size={14} className="text-accent-blue" />
               <span className="font-bold text-accent-blue">
                 {Math.floor((Date.now() - new Date(addictions[0].started_free_at).getTime()) / 86400000)}d livres
@@ -143,7 +143,7 @@ export default function Dashboard(): React.JSX.Element {
             </div>
           )}
           {todayReadingMins > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm animate-slide-up" style={{ animationDelay: '210ms' }}>
               <span>📚</span>
               <span className="font-bold text-text-primary">{todayReadingMins}min lidos</span>
             </div>
@@ -152,7 +152,7 @@ export default function Dashboard(): React.JSX.Element {
       )}
 
       {/* Progress bar */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '80ms' }}>
         <div className="flex justify-between mb-2">
           <span className="text-sm font-medium text-text-primary">Progresso do dia</span>
           <span className="text-sm font-bold text-accent-purple">{completedCount}/{totalHabits} hábitos</span>
@@ -176,18 +176,19 @@ export default function Dashboard(): React.JSX.Element {
             <p className="text-text-muted text-sm">Nenhum hábito cadastrado ainda.</p>
           )}
           <div className="space-y-2">
-            {habits.map(habit => {
+            {habits.map((habit, i) => {
               const done = completedToday.has(habit.id)
               return (
                 <button
                   key={habit.id}
                   ref={el => { buttonRefs.current[habit.id] = el }}
                   onClick={(e) => toggleHabit(habit.id, e)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-150 text-left
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-150 text-left animate-slide-up
                     ${done
                       ? 'border-accent-green bg-emerald-950/30 text-text-primary'
                       : 'border-bg-border bg-bg-primary hover:border-bg-border/80 hover:bg-bg-border/30 text-text-secondary'
                     }`}
+                  style={{ animationDelay: `${140 + i * 55}ms` }}
                 >
                   {done
                     ? <CheckCircle2 size={18} className="text-accent-green shrink-0" />
@@ -210,7 +211,7 @@ export default function Dashboard(): React.JSX.Element {
         {!focusMode && (
           <div className="space-y-3">
             {/* Gym widget */}
-            <div className={`rounded-xl p-4 border ${workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary'}`}>
+            <div className={`rounded-xl p-4 border animate-slide-up ${workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary'}`} style={{ animationDelay: '180ms' }}>
               <div className="flex items-center gap-2 mb-1">
                 <Dumbbell size={16} className={workoutToday ? 'text-accent-green' : 'text-text-muted'} />
                 <span className="text-sm font-semibold text-text-primary">Academia</span>
@@ -221,7 +222,7 @@ export default function Dashboard(): React.JSX.Element {
             </div>
 
             {/* Addictions widget */}
-            {addictions.slice(0, 3).map(a => {
+            {addictions.slice(0, 3).map((a, i) => {
               const diffMs = Date.now() - new Date(a.started_free_at).getTime()
               const totalSecs = Math.floor(diffMs / 1000)
               const days = Math.floor(totalSecs / 86400)
@@ -231,7 +232,7 @@ export default function Dashboard(): React.JSX.Element {
               const pad = (n: number) => String(n).padStart(2, '0')
               const hidden = !!a.is_hidden_name
               return (
-                <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+                <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${230 + i * 60}ms` }}>
                   <div className="flex items-center gap-2 mb-1">
                     <ShieldOff size={16} className="text-accent-blue shrink-0" />
                     <span className="text-sm font-semibold text-text-primary truncate flex-1">
@@ -257,7 +258,7 @@ export default function Dashboard(): React.JSX.Element {
 
             {/* Recent achievements */}
             {achievements.length > 0 && (
-              <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+              <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '350ms' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <Trophy size={16} className="text-accent-gold" />
                   <span className="text-sm font-semibold text-text-primary">Conquistas</span>

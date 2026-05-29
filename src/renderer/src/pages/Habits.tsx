@@ -27,7 +27,7 @@ function Modal({ onClose, onSave, initial, error }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-pop-in">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">{initial?.id ? 'Editar' : 'Novo'} Hábito</h2>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary"><X size={18} /></button>
@@ -339,7 +339,7 @@ export default function Habits(): React.JSX.Element {
               </button>
               <button
                 onClick={() => { setEditingHabit(null); setShowModal(true) }}
-                className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors animate-jump-in"
               >
                 <Plus size={16} /> Novo hábito
               </button>
@@ -372,11 +372,11 @@ export default function Habits(): React.JSX.Element {
             <p className="text-text-muted">Nenhum hábito {showInactive ? 'inativo' : 'ativo'}.</p>
           </div>
         )}
-        {displayed.map(habit => {
+        {displayed.map((habit, i) => {
           const done = completedToday.has(habit.id)
           const streak = streaks[habit.id] || 0
           return (
-            <div key={habit.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-fadeIn">
+            <div key={habit.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${i * 65}ms` }}>
               <div className="flex items-start gap-3">
                 <button onClick={() => toggleHabit(habit.id)} className="mt-0.5">
                   {done

@@ -39,7 +39,7 @@ function FolderModal({ onClose, onSave, initial }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">{initial?.id ? 'Editar' : 'Nova'} Pasta</h2>
           <button onClick={onClose}><X size={18} className="text-text-muted" /></button>
@@ -101,7 +101,7 @@ function GoalModal({ onClose, onSave, initial, folders, defaultFolderId }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">{initial?.id ? 'Editar' : 'Nova'} Meta</h2>
           <button onClick={onClose}><X size={18} className="text-text-muted" /></button>
@@ -156,7 +156,7 @@ function CompleteGoalModal({ goal, xp, onConfirm, onClose }: {
 }) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center animate-pop-in">
         <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-accent-green/15 border-2 border-accent-green/40 flex items-center justify-center">
           <CheckCircle2 size={40} className="text-accent-green" />
         </div>
@@ -498,7 +498,7 @@ export default function Goals(): React.JSX.Element {
             <FolderPlus size={15} /> Nova pasta
           </button>
           <button onClick={() => openNewGoal(null)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors">
+            className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors animate-jump-in">
             <Plus size={16} /> Nova meta
           </button>
         </div>

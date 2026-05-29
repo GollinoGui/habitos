@@ -69,7 +69,7 @@ function RelapseModal({ addictionId, onClose, onRelapse }: {
   }
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-red-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div className="bg-bg-secondary border border-red-900/60 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
         <h2 className="text-lg font-bold text-accent-red mb-1">Registrar Recaída</h2>
         <p className="text-text-secondary text-sm mb-4">O contador será reiniciado. Isso é normal — é parte do processo.</p>
         <textarea
@@ -125,13 +125,13 @@ export default function Addictions(): React.JSX.Element {
           <p className="text-text-secondary text-sm">{addictions.length} monitorado(s)</p>
         </div>
         <button onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold">
+          className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold animate-jump-in">
           <Plus size={16} /> Adicionar
         </button>
       </div>
 
       {showAdd && (
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 flex gap-3 animate-fadeIn">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 flex gap-3 animate-slide-down">
           <input
             className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple"
             placeholder="Nome do vício (ex: Cigarro, Álcool...)"

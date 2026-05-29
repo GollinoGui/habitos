@@ -56,7 +56,7 @@ export default function Sidebar(): React.JSX.Element {
       </div>
 
       <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
-        {visibleItems.map(({ to, id, icon: Icon, label, color }) => (
+        {visibleItems.map(({ to, id, icon: Icon, label, color }, idx) => (
           <NavLink
             key={to}
             to={to}
@@ -64,13 +64,16 @@ export default function Sidebar(): React.JSX.Element {
             end={to === '/'}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group animate-slide-in-left
               ${isActive
                 ? 'text-white shadow-lg'
                 : 'text-text-secondary hover:bg-bg-border hover:text-text-primary'
               }`
             }
-            style={({ isActive }) => isActive ? { backgroundColor: color, boxShadow: `0 4px 14px ${color}40` } : {}}
+            style={({ isActive }) => ({
+              ...(isActive ? { backgroundColor: color, boxShadow: `0 4px 14px ${color}40` } : {}),
+              animationDelay: `${idx * 45}ms`
+            })}
           >
             {({ isActive }) => (
               <>
