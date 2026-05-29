@@ -38,6 +38,12 @@ export function registerAddictionsHandlers(): void {
     return true
   })
 
+  ipcMain.handle('addictions:toggle-hidden', (_e, id: number) => {
+    dbRun('UPDATE addictions SET is_hidden_name = 1 - is_hidden_name WHERE id = ?', [id])
+    save()
+    return true
+  })
+
   ipcMain.handle('addictions:check-milestones', () => {
     return checkAllAchievements()
   })

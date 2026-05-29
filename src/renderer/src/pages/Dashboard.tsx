@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CheckCircle2, Circle, Dumbbell, ShieldOff, Trophy, Zap } from 'lucide-react'
+import { CheckCircle2, Circle, Dumbbell, Eye, EyeOff, ShieldOff, Trophy, Zap } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import CalendarSection from '../components/CalendarSection'
 
@@ -9,7 +9,7 @@ interface Habit {
   id: number; name: string; icon: string; color: string; xp_reward: number; is_active: number
 }
 interface Addiction {
-  id: number; name: string; started_free_at: string
+  id: number; name: string; started_free_at: string; is_hidden_name: number
 }
 interface Achievement {
   id: number; key: string; name: string; description: string; icon: string; unlocked_at: string
@@ -24,6 +24,7 @@ export default function Dashboard(): React.JSX.Element {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [workoutToday, setWorkoutToday] = useState(false)
   const [, setTick] = useState(0)
+  const [calendarKey, setCalendarKey] = useState(0)
 
   useEffect(() => {
     loadAll()
@@ -56,6 +57,7 @@ export default function Dashboard(): React.JSX.Element {
     await fetchProfile()
     const comps = await window.api.habits.completionsRange(today, today)
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
+    setCalendarKey(k => k + 1)
   }
 
   const hour = new Date().getHours()
@@ -147,11 +149,24 @@ export default function Dashboard(): React.JSX.Element {
           {addictions.slice(0, 3).map(a => {
             const diffMs = Date.now() - new Date(a.started_free_at).getTime()
             const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+            const hidden = !!a.is_hidden_name
             return (
               <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <ShieldOff size={16} className="text-accent-blue" />
-                  <span className="text-sm font-semibold text-text-primary truncate">{a.name}</span>
+                  <ShieldOff size={16} className="text-accent-blue shrink-0" />
+                  <span className="text-sm font-semibold text-text-primary truncate flex-1">
+                    {hidden ? '••••••' : a.name}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      await window.api.addictions.toggleHidden(a.id)
+                      setAddictions(prev => prev.map(x => x.id === a.id ? { ...x, is_hidden_name: x.is_hidden_name ? 0 : 1 } : x))
+                    }}
+                    className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
+                    title={hidden ? 'Mostrar nome' : 'Ocultar nome'}
+                  >
+                    {hidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                  </button>
                 </div>
                 <p className="text-xl font-bold text-accent-blue">{days}d</p>
                 <p className="text-xs text-text-muted">livre</p>
@@ -180,7 +195,7 @@ export default function Dashboard(): React.JSX.Element {
       </div>
 
       {/* Calendar */}
-      <CalendarSection />
+      <CalendarSection refreshKey={calendarKey} />
     </div>
   )
 }

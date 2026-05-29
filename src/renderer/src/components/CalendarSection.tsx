@@ -12,10 +12,15 @@ interface CalendarEvent {
   is_done: number
 }
 
+interface HabitDot {
+  color: string
+  habit_id: number
+}
+
 const EVENT_COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899']
 const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-export default function CalendarSection(): React.JSX.Element {
+export default function CalendarSection({ refreshKey }: { refreshKey?: number }): React.JSX.Element {
   const now = new Date()
   const todayStr = format(now, 'yyyy-MM-dd')
 
@@ -23,6 +28,7 @@ export default function CalendarSection(): React.JSX.Element {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([])
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set())
+  const [habitDotsByDate, setHabitDotsByDate] = useState<Map<string, HabitDot[]>>(new Map())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [dayEvents, setDayEvents] = useState<CalendarEvent[]>([])
   const [note, setNote] = useState('')
@@ -34,15 +40,23 @@ export default function CalendarSection(): React.JSX.Element {
 
   useEffect(() => {
     async function loadMonth() {
-      const [evts, notes] = await Promise.all([
+      const [evts, notes, habitComps] = await Promise.all([
         window.api.calendar.eventsByMonth(year, month),
-        window.api.calendar.notesByMonth(year, month)
+        window.api.calendar.notesByMonth(year, month),
+        window.api.habits.completionsByMonth(year, month)
       ])
       setAllEvents(evts as CalendarEvent[])
       setNoteDates(new Set((notes as { date: string }[]).map(n => n.date)))
+      const map = new Map<string, HabitDot[]>()
+      for (const c of habitComps as { completed_at: string; color: string; habit_id: number }[]) {
+        const existing = map.get(c.completed_at) || []
+        existing.push({ color: c.color, habit_id: c.habit_id })
+        map.set(c.completed_at, existing)
+      }
+      setHabitDotsByDate(map)
     }
     loadMonth()
-  }, [year, month])
+  }, [year, month, refreshKey])
 
   useEffect(() => {
     if (!selectedDate) {
@@ -169,6 +183,11 @@ export default function CalendarSection(): React.JSX.Element {
               const isSelected = dateStr === selectedDate
               const evts = allEvents.filter(e => e.date === dateStr)
               const hasNote = noteDates.has(dateStr)
+              const habitDots = habitDotsByDate.get(dateStr) || []
+              const allDots = [
+                ...evts.map(e => ({ color: e.is_done ? '#6b7280' : e.color, key: `e-${e.id}` })),
+                ...habitDots.map(h => ({ color: h.color, key: `h-${h.habit_id}` }))
+              ]
 
               return (
                 <button
@@ -190,15 +209,15 @@ export default function CalendarSection(): React.JSX.Element {
                     {day}
                   </span>
                   <div className="flex flex-wrap gap-0.5 justify-center max-w-full px-0.5">
-                    {evts.slice(0, 3).map(e => (
+                    {allDots.slice(0, 4).map(dot => (
                       <div
-                        key={e.id}
+                        key={dot.key}
                         className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: e.is_done ? '#6b7280' : e.color }}
+                        style={{ backgroundColor: dot.color }}
                       />
                     ))}
-                    {evts.length > 3 && (
-                      <span className="text-[9px] text-text-muted leading-none">+{evts.length - 3}</span>
+                    {allDots.length > 4 && (
+                      <span className="text-[9px] text-text-muted leading-none">+{allDots.length - 4}</span>
                     )}
                   </div>
                   {hasNote && (
@@ -210,7 +229,7 @@ export default function CalendarSection(): React.JSX.Element {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 mt-3 px-1">
+          <div className="flex flex-wrap items-center gap-4 mt-3 px-1">
             <div className="flex items-center gap-1.5 text-xs text-text-muted">
               <div className="w-1.5 h-1.5 rounded-full bg-accent-gold" />
               <span>tem observação</span>
@@ -218,6 +237,10 @@ export default function CalendarSection(): React.JSX.Element {
             <div className="flex items-center gap-1.5 text-xs text-text-muted">
               <div className="w-1.5 h-1.5 rounded-full bg-accent-purple" />
               <span>evento / tarefa</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-muted">
+              <div className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+              <span>hábito concluído</span>
             </div>
           </div>
         </div>

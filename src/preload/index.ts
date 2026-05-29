@@ -20,6 +20,7 @@ const api = {
     uncomplete: (habitId: number, date: string) => ipcRenderer.invoke('habits:uncomplete', habitId, date),
     completions: (habitId: number) => ipcRenderer.invoke('habits:completions', habitId),
     completionsRange: (start: string, end: string) => ipcRenderer.invoke('habits:completions-range', start, end),
+    completionsByMonth: (year: number, month: number) => ipcRenderer.invoke('habits:completions-by-month', year, month),
     streak: (habitId: number) => ipcRenderer.invoke('habits:streak', habitId)
   },
   gym: {
@@ -35,6 +36,7 @@ const api = {
     create: (data: object) => ipcRenderer.invoke('addictions:create', data),
     relapse: (id: number, note?: string) => ipcRenderer.invoke('addictions:relapse', id, note),
     delete: (id: number) => ipcRenderer.invoke('addictions:delete', id),
+    toggleHidden: (id: number) => ipcRenderer.invoke('addictions:toggle-hidden', id),
     checkMilestones: () => ipcRenderer.invoke('addictions:check-milestones')
   },
   goals: {

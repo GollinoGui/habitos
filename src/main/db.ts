@@ -163,6 +163,10 @@ function runMigrations(): void {
   if (!goalCols.find((c: Record<string, unknown>) => c.name === 'folder_id')) {
     db.run('ALTER TABLE goals ADD COLUMN folder_id INTEGER DEFAULT NULL')
   }
+  const addictionCols = dbAll('PRAGMA table_info(addictions)')
+  if (!addictionCols.find((c: Record<string, unknown>) => c.name === 'is_hidden_name')) {
+    db.run('ALTER TABLE addictions ADD COLUMN is_hidden_name INTEGER DEFAULT 0')
+  }
 }
 
 export function save(): void {

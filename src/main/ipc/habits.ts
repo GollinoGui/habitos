@@ -52,10 +52,25 @@ export function registerHabitsHandlers(): void {
       const existing = dbGet('SELECT id FROM habit_completions WHERE habit_id = ? AND completed_at = ?', [habitId, date])
       if (existing) return false
       dbRun('INSERT INTO habit_completions (habit_id, completed_at) VALUES (?, ?)', [habitId, date])
-      const habit = dbGet('SELECT xp_reward, name FROM habits WHERE id = ?', [habitId])
+      const habit = dbGet('SELECT xp_reward, name, icon FROM habits WHERE id = ?', [habitId])
       if (habit) {
         dbRun('UPDATE user_profile SET total_xp = total_xp + ? WHERE id = 1', [habit.xp_reward])
         dbRun('INSERT INTO xp_history (amount, reason) VALUES (?, ?)', [habit.xp_reward, `Hábito: ${habit.name}`])
+        const completions = dbAll(
+          'SELECT completed_at FROM habit_completions WHERE habit_id = ? ORDER BY completed_at DESC',
+          [habitId]
+        )
+        const streak = computeStreak(completions)
+        const streakText = streak > 1 ? ` (${streak} dias seguidos)` : ''
+        const habitLine = `✅ ${habit.icon} ${habit.name}${streakText}`
+        const existingNote = dbGet('SELECT content FROM calendar_notes WHERE date = ?', [date])
+        const current = (existingNote?.content as string) || ''
+        const newContent = current.trim() ? `${current}\n${habitLine}` : habitLine
+        dbRun(
+          `INSERT INTO calendar_notes (date, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+           ON CONFLICT(date) DO UPDATE SET content = excluded.content, updated_at = CURRENT_TIMESTAMP`,
+          [date, newContent]
+        )
       }
       checkAllAchievements()
       save()
@@ -69,9 +84,22 @@ export function registerHabitsHandlers(): void {
     const existing = dbGet('SELECT id FROM habit_completions WHERE habit_id = ? AND completed_at = ?', [habitId, date])
     if (!existing) return false
     dbRun('DELETE FROM habit_completions WHERE habit_id = ? AND completed_at = ?', [habitId, date])
-    const habit = dbGet('SELECT xp_reward FROM habits WHERE id = ?', [habitId])
+    const habit = dbGet('SELECT xp_reward, name, icon FROM habits WHERE id = ?', [habitId])
     if (habit) {
       dbRun('UPDATE user_profile SET total_xp = MAX(0, total_xp - ?) WHERE id = 1', [habit.xp_reward])
+      const existingNote = dbGet('SELECT content FROM calendar_notes WHERE date = ?', [date])
+      if (existingNote?.content) {
+        const prefix = `✅ ${habit.icon} ${habit.name}`
+        const filtered = (existingNote.content as string)
+          .split('\n')
+          .filter(l => !l.startsWith(prefix))
+          .join('\n')
+        dbRun(
+          `INSERT INTO calendar_notes (date, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+           ON CONFLICT(date) DO UPDATE SET content = excluded.content, updated_at = CURRENT_TIMESTAMP`,
+          [date, filtered]
+        )
+      }
     }
     save()
     return true
@@ -85,6 +113,18 @@ export function registerHabitsHandlers(): void {
     return dbAll(
       'SELECT habit_id, completed_at FROM habit_completions WHERE completed_at BETWEEN ? AND ?',
       [startDate, endDate]
+    )
+  })
+
+  ipcMain.handle('habits:completions-by-month', (_e, year: number, month: number) => {
+    const y = String(year)
+    const m = String(month).padStart(2, '0')
+    return dbAll(
+      `SELECT hc.completed_at, h.color, h.id as habit_id
+       FROM habit_completions hc
+       JOIN habits h ON h.id = hc.habit_id
+       WHERE hc.completed_at >= ? AND hc.completed_at <= ?`,
+      [`${y}-${m}-01`, `${y}-${m}-31`]
     )
   })
 
