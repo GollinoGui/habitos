@@ -58,6 +58,12 @@ export function registerGoalsHandlers(): void {
     return true
   })
 
+  ipcMain.handle('goals:update-task', (_e, taskId: number, title: string) => {
+    dbRun('UPDATE goal_tasks SET title = ? WHERE id = ?', [title, taskId])
+    save()
+    return true
+  })
+
   ipcMain.handle('goals:folders:list', () => {
     return dbAll('SELECT * FROM goal_folders ORDER BY created_at ASC')
   })

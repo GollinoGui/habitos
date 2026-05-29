@@ -148,6 +148,89 @@ function createTables(): void {
       color TEXT DEFAULT '#7c3aed',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL UNIQUE,
+      content TEXT,
+      mood INTEGER DEFAULT 3,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS sleep_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL UNIQUE,
+      bedtime TEXT,
+      wake_time TEXT,
+      quality INTEGER DEFAULT 3,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS finance_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'expense',
+      icon TEXT DEFAULT '💰',
+      color TEXT DEFAULT '#7c3aed'
+    );
+
+    CREATE TABLE IF NOT EXISTS finance_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      amount REAL NOT NULL,
+      description TEXT,
+      category_id INTEGER,
+      type TEXT NOT NULL DEFAULT 'expense',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS media_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      type TEXT DEFAULT 'book',
+      author TEXT,
+      total_pages INTEGER,
+      current_page INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'reading',
+      started_at DATE,
+      finished_at DATE,
+      cover_emoji TEXT DEFAULT '📚',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS media_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_id INTEGER,
+      date DATE NOT NULL,
+      minutes_read INTEGER DEFAULT 0,
+      pages_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS workout_programs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS workout_program_days (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      program_id INTEGER,
+      day_label TEXT,
+      name TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS workout_program_exercises (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      program_day_id INTEGER,
+      name TEXT NOT NULL,
+      sets INTEGER,
+      reps INTEGER,
+      weight_kg REAL,
+      is_superset INTEGER DEFAULT 0
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
   runMigrations()

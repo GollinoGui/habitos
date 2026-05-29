@@ -189,17 +189,23 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
                 ...habitDots.map(h => ({ color: h.color, key: `h-${h.habit_id}` }))
               ]
 
+              const isPastOrToday = dateStr <= todayStr
+              const allEvtsDone = evts.length > 0 && evts.every(e => e.is_done)
+              const dayBorderClass = isSelected
+                ? 'bg-accent-purple/20 border-accent-purple/60'
+                : isPastOrToday && evts.length > 0
+                  ? allEvtsDone
+                    ? 'border-accent-green/60 bg-accent-green/5 hover:bg-accent-green/10'
+                    : 'border-red-500/60 bg-red-500/5 hover:bg-red-500/10'
+                  : isToday
+                    ? 'border-accent-purple/30 bg-accent-purple/5'
+                    : 'border-transparent hover:bg-bg-border/50'
+
               return (
                 <button
                   key={idx}
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`relative flex flex-col items-center py-2 px-1 rounded-lg border transition-all duration-100 min-h-[64px]
-                    ${isSelected
-                      ? 'bg-accent-purple/20 border-accent-purple/60'
-                      : isToday
-                        ? 'border-accent-purple/30 bg-accent-purple/5'
-                        : 'border-transparent hover:bg-bg-border/50'
-                    }`}
+                  className={`relative flex flex-col items-center py-2 px-1 rounded-lg border transition-all duration-100 min-h-[64px] ${dayBorderClass}`}
                 >
                   <span className={`text-sm leading-none mb-1.5 ${
                     isToday ? 'font-bold text-accent-purple' :
@@ -241,6 +247,14 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
             <div className="flex items-center gap-1.5 text-xs text-text-muted">
               <div className="w-1.5 h-1.5 rounded-full bg-accent-green" />
               <span>hábito concluído</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-muted">
+              <div className="w-3 h-3 rounded border-2 border-accent-green/60" />
+              <span>eventos concluídos</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-muted">
+              <div className="w-3 h-3 rounded border-2 border-red-500/60" />
+              <span>eventos pendentes</span>
             </div>
           </div>
         </div>

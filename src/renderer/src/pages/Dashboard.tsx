@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CheckCircle2, Circle, Dumbbell, Eye, EyeOff, ShieldOff, Trophy, Zap } from 'lucide-react'
+import { CheckCircle2, Circle, Dumbbell, Eye, EyeOff, Focus, ShieldOff, Trophy, Zap } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import CalendarSection from '../components/CalendarSection'
 
@@ -14,6 +14,7 @@ interface Addiction {
 interface Achievement {
   id: number; key: string; name: string; description: string; icon: string; unlocked_at: string
 }
+interface XpFloat { id: number; x: number; y: number; amount: number }
 
 export default function Dashboard(): React.JSX.Element {
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -25,35 +26,51 @@ export default function Dashboard(): React.JSX.Element {
   const [workoutToday, setWorkoutToday] = useState(false)
   const [, setTick] = useState(0)
   const [calendarKey, setCalendarKey] = useState(0)
+  const [focusMode, setFocusMode] = useState(false)
+  const [xpFloats, setXpFloats] = useState<XpFloat[]>([])
+  const [todayReadingMins, setTodayReadingMins] = useState(0)
+  const xpIdRef = useRef(0)
+  const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({})
 
   useEffect(() => {
     loadAll()
-    const interval = setInterval(() => setTick(t => t + 1), 60000)
+    const interval = setInterval(() => setTick(t => t + 1), 1000)
     return () => clearInterval(interval)
   }, [])
 
   async function loadAll() {
-    const [h, comps, add, ach, workouts] = await Promise.all([
+    const [h, comps, add, ach, workouts, readMins] = await Promise.all([
       window.api.habits.list(),
       window.api.habits.completionsRange(today, today),
       window.api.addictions.list(),
       window.api.achievements.list(),
-      window.api.gym.listWorkouts(10)
+      window.api.gym.listWorkouts(10),
+      window.api.media.todayMinutes(today)
     ])
     setHabits((h as Habit[]).filter(x => x.is_active))
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
     setAddictions(add as Addiction[])
     setAchievements(ach as Achievement[])
     setWorkoutToday((workouts as any[]).some(w => w.date === today))
+    setTodayReadingMins(readMins as number)
   }
 
-  async function toggleHabit(id: number) {
+  async function toggleHabit(id: number, e: React.MouseEvent) {
     const done = completedToday.has(id)
-    if (done) {
-      await window.api.habits.uncomplete(id, today)
-    } else {
-      await window.api.habits.complete(id, today)
+    if (!done) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      const habit = habits.find(h => h.id === id)
+      const floatId = ++xpIdRef.current
+      setXpFloats(prev => [...prev, {
+        id: floatId,
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        amount: habit?.xp_reward || 10
+      }])
+      setTimeout(() => setXpFloats(prev => prev.filter(f => f.id !== floatId)), 1000)
     }
+    if (done) await window.api.habits.uncomplete(id, today)
+    else await window.api.habits.complete(id, today)
     await fetchProfile()
     const comps = await window.api.habits.completionsRange(today, today)
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
@@ -65,18 +82,74 @@ export default function Dashboard(): React.JSX.Element {
   const completedCount = completedToday.size
   const totalHabits = habits.length
   const progressPct = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0
+  const xpToday = profile ? (profile.total_xp % 100) : 0
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn relative">
+      {/* XP floating animations */}
+      {xpFloats.map(f => (
+        <div
+          key={f.id}
+          className="xp-float fixed z-50 pointer-events-none font-bold text-accent-gold text-sm flex items-center gap-0.5"
+          style={{ left: f.x, top: f.y }}
+        >
+          <Zap size={12} fill="currentColor" />+{f.amount}
+        </div>
+      ))}
+
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">
-          {greeting}, {profile?.name || 'Herói'}! 👋
-        </h1>
-        <p className="text-text-secondary text-sm mt-1">
-          {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">
+            {greeting}, {profile?.name || 'Herói'}! 👋
+          </h1>
+          <p className="text-text-secondary text-sm mt-1">
+            {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+          </p>
+        </div>
+        <button
+          onClick={() => setFocusMode(v => !v)}
+          title={focusMode ? 'Sair do modo foco' : 'Modo foco'}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+            focusMode
+              ? 'bg-accent-purple text-white border-accent-purple'
+              : 'border-bg-border text-text-secondary hover:text-text-primary hover:bg-bg-border'
+          }`}
+        >
+          <Focus size={14} />
+          {focusMode ? 'Foco' : 'Foco'}
+        </button>
       </div>
+
+      {/* Summary widget */}
+      {!focusMode && (
+        <div className="flex gap-3 flex-wrap">
+          <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+            <Zap size={14} className="text-accent-gold" />
+            <span className="text-text-secondary">XP hoje:</span>
+            <span className="font-bold text-accent-gold">{xpToday}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+            <CheckCircle2 size={14} className="text-accent-green" />
+            <span className="text-text-secondary">Hábitos:</span>
+            <span className="font-bold text-text-primary">{completedCount}/{totalHabits}</span>
+          </div>
+          {addictions.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+              <ShieldOff size={14} className="text-accent-blue" />
+              <span className="font-bold text-accent-blue">
+                {Math.floor((Date.now() - new Date(addictions[0].started_free_at).getTime()) / 86400000)}d livres
+              </span>
+            </div>
+          )}
+          {todayReadingMins > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-bg-border rounded-xl text-sm">
+              <span>📚</span>
+              <span className="font-bold text-text-primary">{todayReadingMins}min lidos</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
@@ -93,9 +166,9 @@ export default function Dashboard(): React.JSX.Element {
         <p className="text-xs text-text-muted mt-1">{progressPct}% concluído</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${focusMode ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
         {/* Habits today */}
-        <div className="lg:col-span-2 bg-bg-secondary border border-bg-border rounded-xl p-4">
+        <div className={`bg-bg-secondary border border-bg-border rounded-xl p-4 ${focusMode ? '' : 'lg:col-span-2'}`}>
           <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
             Hábitos de Hoje
           </h2>
@@ -108,7 +181,8 @@ export default function Dashboard(): React.JSX.Element {
               return (
                 <button
                   key={habit.id}
-                  onClick={() => toggleHabit(habit.id)}
+                  ref={el => { buttonRefs.current[habit.id] = el }}
+                  onClick={(e) => toggleHabit(habit.id, e)}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-150 text-left
                     ${done
                       ? 'border-accent-green bg-emerald-950/30 text-text-primary'
@@ -132,70 +206,78 @@ export default function Dashboard(): React.JSX.Element {
           </div>
         </div>
 
-        {/* Widgets */}
-        <div className="space-y-3">
-          {/* Gym widget */}
-          <div className={`rounded-xl p-4 border ${workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary'}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <Dumbbell size={16} className={workoutToday ? 'text-accent-green' : 'text-text-muted'} />
-              <span className="text-sm font-semibold text-text-primary">Academia</span>
+        {/* Widgets - hidden in focus mode */}
+        {!focusMode && (
+          <div className="space-y-3">
+            {/* Gym widget */}
+            <div className={`rounded-xl p-4 border ${workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <Dumbbell size={16} className={workoutToday ? 'text-accent-green' : 'text-text-muted'} />
+                <span className="text-sm font-semibold text-text-primary">Academia</span>
+              </div>
+              <p className="text-xs text-text-secondary">
+                {workoutToday ? '✅ Treino registrado hoje!' : 'Nenhum treino hoje'}
+              </p>
             </div>
-            <p className="text-xs text-text-secondary">
-              {workoutToday ? '✅ Treino registrado hoje!' : 'Nenhum treino hoje'}
-            </p>
-          </div>
 
-          {/* Addictions widget */}
-          {addictions.slice(0, 3).map(a => {
-            const diffMs = Date.now() - new Date(a.started_free_at).getTime()
-            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-            const hidden = !!a.is_hidden_name
-            return (
-              <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <ShieldOff size={16} className="text-accent-blue shrink-0" />
-                  <span className="text-sm font-semibold text-text-primary truncate flex-1">
-                    {hidden ? '••••••' : a.name}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      await window.api.addictions.toggleHidden(a.id)
-                      setAddictions(prev => prev.map(x => x.id === a.id ? { ...x, is_hidden_name: x.is_hidden_name ? 0 : 1 } : x))
-                    }}
-                    className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
-                    title={hidden ? 'Mostrar nome' : 'Ocultar nome'}
-                  >
-                    {hidden ? <Eye size={13} /> : <EyeOff size={13} />}
-                  </button>
-                </div>
-                <p className="text-xl font-bold text-accent-blue">{days}d</p>
-                <p className="text-xs text-text-muted">livre</p>
-              </div>
-            )
-          })}
-
-          {/* Recent achievements */}
-          {achievements.length > 0 && (
-            <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Trophy size={16} className="text-accent-gold" />
-                <span className="text-sm font-semibold text-text-primary">Conquistas</span>
-              </div>
-              <div className="space-y-1">
-                {achievements.slice(0, 3).map(a => (
-                  <div key={a.id} className="flex items-center gap-2">
-                    <span className="text-base">{a.icon}</span>
-                    <span className="text-xs text-text-secondary truncate">{a.name}</span>
+            {/* Addictions widget */}
+            {addictions.slice(0, 3).map(a => {
+              const diffMs = Date.now() - new Date(a.started_free_at).getTime()
+              const totalSecs = Math.floor(diffMs / 1000)
+              const days = Math.floor(totalSecs / 86400)
+              const hours = Math.floor((totalSecs % 86400) / 3600)
+              const minutes = Math.floor((totalSecs % 3600) / 60)
+              const seconds = totalSecs % 60
+              const pad = (n: number) => String(n).padStart(2, '0')
+              const hidden = !!a.is_hidden_name
+              return (
+                <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldOff size={16} className="text-accent-blue shrink-0" />
+                    <span className="text-sm font-semibold text-text-primary truncate flex-1">
+                      {hidden ? '••••••' : a.name}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        await window.api.addictions.toggleHidden(a.id)
+                        setAddictions(prev => prev.map(x => x.id === a.id ? { ...x, is_hidden_name: x.is_hidden_name ? 0 : 1 } : x))
+                      }}
+                      className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
+                      title={hidden ? 'Mostrar nome' : 'Ocultar nome'}
+                    >
+                      {hidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                    </button>
                   </div>
-                ))}
+                  <p className="text-xl font-bold text-accent-blue leading-tight">{days}d {pad(hours)}h {pad(minutes)}m</p>
+                  <p className="text-sm font-mono text-accent-blue/70">{pad(seconds)}s</p>
+                  <p className="text-xs text-text-muted">livre</p>
+                </div>
+              )
+            })}
+
+            {/* Recent achievements */}
+            {achievements.length > 0 && (
+              <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy size={16} className="text-accent-gold" />
+                  <span className="text-sm font-semibold text-text-primary">Conquistas</span>
+                </div>
+                <div className="space-y-1">
+                  {achievements.slice(0, 3).map(a => (
+                    <div key={a.id} className="flex items-center gap-2">
+                      <span className="text-base">{a.icon}</span>
+                      <span className="text-xs text-text-secondary truncate">{a.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Calendar */}
-      <CalendarSection refreshKey={calendarKey} />
+      {/* Calendar - hidden in focus mode */}
+      {!focusMode && <CalendarSection refreshKey={calendarKey} />}
     </div>
   )
 }

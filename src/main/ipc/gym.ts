@@ -70,5 +70,56 @@ export function registerGymHandlers(): void {
     save()
     return true
   })
+
+  ipcMain.handle('gym:programs:list', () => {
+    const programs = dbAll('SELECT * FROM workout_programs ORDER BY created_at DESC')
+    for (const p of programs) {
+      const days = dbAll('SELECT * FROM workout_program_days WHERE program_id = ? ORDER BY id ASC', [p.id as number])
+      for (const d of days) {
+        d.exercises = dbAll('SELECT * FROM workout_program_exercises WHERE program_day_id = ? ORDER BY id ASC', [d.id as number])
+      }
+      p.days = days
+    }
+    return programs
+  })
+
+  ipcMain.handle('gym:programs:create', (_e, data: {
+    name: string; description?: string;
+    days: { name: string; day_label?: string; exercises: { name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }[] }[]
+  }) => {
+    const result = dbRun('INSERT INTO workout_programs (name, description) VALUES (?, ?)', [data.name, data.description || null])
+    const programId = result.lastInsertRowid
+    for (const day of data.days || []) {
+      const dayResult = dbRun(
+        'INSERT INTO workout_program_days (program_id, day_label, name) VALUES (?, ?, ?)',
+        [programId, day.day_label || null, day.name]
+      )
+      for (const ex of day.exercises || []) {
+        dbRun(
+          'INSERT INTO workout_program_exercises (program_day_id, name, sets, reps, weight_kg, is_superset) VALUES (?, ?, ?, ?, ?, ?)',
+          [dayResult.lastInsertRowid, ex.name, ex.sets || null, ex.reps || null, ex.weight_kg || null, ex.is_superset ?? 0]
+        )
+      }
+    }
+    save()
+    return programId
+  })
+
+  ipcMain.handle('gym:programs:delete', (_e, id: number) => {
+    const days = dbAll('SELECT id FROM workout_program_days WHERE program_id = ?', [id])
+    for (const d of days) {
+      dbRun('DELETE FROM workout_program_exercises WHERE program_day_id = ?', [d.id as number])
+    }
+    dbRun('DELETE FROM workout_program_days WHERE program_id = ?', [id])
+    dbRun('DELETE FROM workout_programs WHERE id = ?', [id])
+    save()
+    return true
+  })
+
+  ipcMain.handle('gym:programs:update', (_e, id: number, data: { name: string; description?: string }) => {
+    dbRun('UPDATE workout_programs SET name = ?, description = ? WHERE id = ?', [data.name, data.description || null, id])
+    save()
+    return true
+  })
 }
 

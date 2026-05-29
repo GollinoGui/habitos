@@ -47,6 +47,7 @@ const api = {
     addTask: (goalId: number, title: string) => ipcRenderer.invoke('goals:add-task', goalId, title),
     completeTask: (taskId: number, completed: boolean) => ipcRenderer.invoke('goals:complete-task', taskId, completed),
     deleteTask: (taskId: number) => ipcRenderer.invoke('goals:delete-task', taskId),
+    updateTask: (taskId: number, title: string) => ipcRenderer.invoke('goals:update-task', taskId, title),
     complete: (id: number) => ipcRenderer.invoke('goals:complete', id)
   },
   goalFolders: {
@@ -69,6 +70,52 @@ const api = {
     saveSettings: (s: { enabled: boolean; hour: number; minute: number }) =>
       ipcRenderer.invoke('notifications:save-settings', s),
     test: () => ipcRenderer.invoke('notifications:test')
+  },
+  journal: {
+    get: (date: string) => ipcRenderer.invoke('journal:get', date),
+    recent: (limit?: number) => ipcRenderer.invoke('journal:recent', limit),
+    save: (data: { date: string; content: string; mood: number }) => ipcRenderer.invoke('journal:save', data),
+    delete: (id: number) => ipcRenderer.invoke('journal:delete', id),
+    byMonth: (year: number, month: number) => ipcRenderer.invoke('journal:by-month', year, month)
+  },
+  sleep: {
+    get: (date: string) => ipcRenderer.invoke('sleep:get', date),
+    recent: (limit?: number) => ipcRenderer.invoke('sleep:recent', limit),
+    save: (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string }) =>
+      ipcRenderer.invoke('sleep:save', data),
+    delete: (id: number) => ipcRenderer.invoke('sleep:delete', id)
+  },
+  finance: {
+    categories: {
+      list: () => ipcRenderer.invoke('finance:categories:list'),
+      create: (data: object) => ipcRenderer.invoke('finance:categories:create', data),
+      delete: (id: number) => ipcRenderer.invoke('finance:categories:delete', id)
+    },
+    transactions: {
+      list: (year: number, month: number) => ipcRenderer.invoke('finance:transactions:list', year, month),
+      create: (data: object) => ipcRenderer.invoke('finance:transactions:create', data),
+      delete: (id: number) => ipcRenderer.invoke('finance:transactions:delete', id)
+    },
+    summary: (year: number, month: number) => ipcRenderer.invoke('finance:summary', year, month)
+  },
+  media: {
+    list: () => ipcRenderer.invoke('media:list'),
+    create: (data: object) => ipcRenderer.invoke('media:create', data),
+    update: (id: number, data: object) => ipcRenderer.invoke('media:update', id, data),
+    delete: (id: number) => ipcRenderer.invoke('media:delete', id),
+    logSession: (data: object) => ipcRenderer.invoke('media:log-session', data),
+    todayMinutes: (date: string) => ipcRenderer.invoke('media:today-minutes', date),
+    logs: (mediaId: number) => ipcRenderer.invoke('media:logs', mediaId)
+  },
+  gymPrograms: {
+    list: () => ipcRenderer.invoke('gym:programs:list'),
+    create: (data: object) => ipcRenderer.invoke('gym:programs:create', data),
+    delete: (id: number) => ipcRenderer.invoke('gym:programs:delete', id),
+    update: (id: number, data: object) => ipcRenderer.invoke('gym:programs:update', id, data)
+  },
+  app: {
+    exportData: () => ipcRenderer.invoke('app:export-data'),
+    resetSection: (section: string) => ipcRenderer.invoke('app:reset-section', section)
   }
 }
 

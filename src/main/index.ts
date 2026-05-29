@@ -8,6 +8,11 @@ import { registerGoalsHandlers } from './ipc/goals'
 import { registerProfileHandlers } from './ipc/profile'
 import { registerCalendarHandlers } from './ipc/calendar'
 import { registerNotificationHandlers } from './ipc/notifications'
+import { registerJournalHandlers } from './ipc/journal'
+import { registerSleepHandlers } from './ipc/sleep'
+import { registerFinanceHandlers } from './ipc/finance'
+import { registerMediaHandlers } from './ipc/media'
+import { registerAppSettingsHandlers } from './ipc/appSettings'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -104,6 +109,11 @@ app.whenReady().then(async () => {
   registerGoalsHandlers()
   registerCalendarHandlers()
   registerNotificationHandlers()
+  registerJournalHandlers()
+  registerSleepHandlers()
+  registerFinanceHandlers()
+  registerMediaHandlers()
+  registerAppSettingsHandlers()
 
   createWindow()
   createTray()

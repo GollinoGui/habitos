@@ -14,6 +14,17 @@ interface Goal {
 }
 interface GoalFolder { id: number; name: string; icon: string; color: string }
 
+interface GoalCallbacks {
+  newTask: Record<number, string>
+  setNewTask: React.Dispatch<React.SetStateAction<Record<number, string>>>
+  toggleTask: (taskId: number, current: number) => Promise<void>
+  addTask: (goalId: number) => Promise<void>
+  onCompleteGoal: (goal: Goal) => void
+  onLoad: () => Promise<void>
+  onEditGoal: (goal: Goal) => void
+  estimateXP: (goal: Goal) => number
+}
+
 const FOLDER_ICONS = ['📁', '🏋️', '🚀', '🎯', '📚', '🎮', '💪', '🏃', '🧘', '🎸', '🏆', '💡', '🌟', '🎨', '🔬']
 const FOLDER_COLORS = ['#7c3aed', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16']
 
@@ -140,6 +151,235 @@ function GoalModal({ onClose, onSave, initial, folders, defaultFolderId }: {
   )
 }
 
+function CompleteGoalModal({ goal, xp, onConfirm, onClose }: {
+  goal: Goal; xp: number; onConfirm: () => void; onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeIn">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center">
+        <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-accent-green/15 border-2 border-accent-green/40 flex items-center justify-center">
+          <CheckCircle2 size={40} className="text-accent-green" />
+        </div>
+        <h2 className="text-xl font-bold text-text-primary mb-2">Concluir Meta?</h2>
+        <p className="text-sm text-text-secondary mb-5 px-2">{goal.title}</p>
+        <div className="flex justify-center mb-4">
+          <div className="px-6 py-3 bg-accent-gold/10 border border-accent-gold/30 rounded-full">
+            <span className="text-accent-gold font-bold text-2xl">+{xp} XP</span>
+          </div>
+        </div>
+        {goal.tasks.length > 0 && (
+          <p className="text-xs text-text-muted mb-5">
+            {goal.tasks.filter(t => t.is_completed).length}/{goal.tasks.length} sub-tarefas concluídas
+          </p>
+        )}
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-bg-border text-text-secondary hover:bg-bg-border text-sm font-medium transition-colors">
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-3 rounded-xl bg-accent-green hover:bg-green-500 text-white font-bold text-sm transition-all hover:shadow-lg hover:shadow-green-500/20">
+            Concluir! 🎉
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const { newTask, setNewTask, toggleTask, addTask, onCompleteGoal, onLoad, onEditGoal, estimateXP } = cbs
+
+  const totalTasks = goal.tasks.length
+  const doneTasks = goal.tasks.filter(t => t.is_completed).length
+  const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
+
+  function startEditTask(task: GoalTask) {
+    setEditingTaskId(task.id)
+    setEditingTitle(task.title)
+  }
+
+  async function saveEditTask(taskId: number) {
+    const trimmed = editingTitle.trim()
+    const original = goal.tasks.find(t => t.id === taskId)?.title
+    if (trimmed && trimmed !== original) {
+      await window.api.goals.updateTask(taskId, trimmed)
+      onLoad()
+    }
+    setEditingTaskId(null)
+  }
+
+  return (
+    <div className={`bg-bg-secondary border rounded-xl overflow-hidden flex ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}>
+      <div className="flex-1 p-5">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              {goal.is_completed
+                ? <CheckCircle2 size={18} className="text-accent-green shrink-0" />
+                : <Target size={18} className="text-accent-purple shrink-0" />
+              }
+              <h3 className={`font-semibold text-text-primary truncate ${goal.is_completed ? 'line-through' : ''}`}>{goal.title}</h3>
+            </div>
+            {goal.description && <p className="text-xs text-text-secondary mt-1 ml-6">{goal.description}</p>}
+            <div className="flex items-center gap-3 mt-1 ml-6 text-xs text-text-muted">
+              {goal.target_date && <span>📅 {format(new Date(goal.target_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
+              <span className="text-accent-gold">
+                {goal.is_completed ? `+${goal.xp_reward} XP` : `~${estimateXP(goal)} XP`}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-1 shrink-0 ml-2">
+            {!goal.is_completed && (
+              <button onClick={() => onEditGoal(goal)}
+                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-border rounded-lg">
+                <Pencil size={13} />
+              </button>
+            )}
+            <button onClick={async () => { if (confirm('Excluir meta?')) { await window.api.goals.delete(goal.id); onLoad() } }}
+              className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded-lg">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {totalTasks > 0 && (
+          <div className="ml-6 mb-3">
+            <div className="flex justify-between text-xs text-text-muted mb-1">
+              <span>{doneTasks}/{totalTasks} tarefas</span>
+              <span>{pct}%</span>
+            </div>
+            <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full transition-all"
+                style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )}
+
+        <div className="ml-6 space-y-1.5">
+          {goal.tasks.map(task => (
+            <div key={task.id} className="flex items-center gap-2 group">
+              <button onClick={() => !goal.is_completed && toggleTask(task.id, task.is_completed)}
+                className="shrink-0 text-text-muted hover:text-accent-purple transition-colors">
+                {task.is_completed ? <CheckSquare size={15} className="text-accent-green" /> : <Square size={15} />}
+              </button>
+              {editingTaskId === task.id ? (
+                <input
+                  autoFocus
+                  value={editingTitle}
+                  onChange={e => setEditingTitle(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') saveEditTask(task.id)
+                    if (e.key === 'Escape') setEditingTaskId(null)
+                  }}
+                  onBlur={() => saveEditTask(task.id)}
+                  className="flex-1 bg-bg-primary border border-accent-purple/50 rounded px-2 py-0.5 text-sm text-text-primary focus:outline-none"
+                />
+              ) : (
+                <span
+                  onDoubleClick={() => !goal.is_completed && startEditTask(task)}
+                  title={!goal.is_completed ? 'Duplo clique para editar' : undefined}
+                  className={`text-sm flex-1 ${task.is_completed ? 'line-through text-text-muted' : 'text-text-secondary'} ${!goal.is_completed ? 'cursor-text' : ''}`}>
+                  {task.title}
+                </span>
+              )}
+              {!goal.is_completed && editingTaskId !== task.id && (
+                <button onClick={() => window.api.goals.deleteTask(task.id).then(onLoad)}
+                  className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red transition-all">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+          {!goal.is_completed && (
+            <div className="flex gap-2 mt-2">
+              <input
+                value={newTask[goal.id] || ''}
+                onChange={e => setNewTask(p => ({ ...p, [goal.id]: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addTask(goal.id)}
+                placeholder="+ Nova sub-tarefa"
+                className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple"
+              />
+              <button onClick={() => addTask(goal.id)}
+                className="px-2 py-1 bg-bg-border hover:bg-accent-purple text-text-muted hover:text-white rounded-lg text-xs transition-colors">
+                <Plus size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!goal.is_completed && (
+        <button
+          onClick={() => onCompleteGoal(goal)}
+          className="shrink-0 w-[72px] border-l border-bg-border bg-emerald-950/20 hover:bg-emerald-900/40 flex flex-col items-center justify-center gap-2 text-accent-green/50 hover:text-accent-green transition-all group">
+          <CheckCircle2 size={32} className="transition-transform group-hover:scale-110" />
+          <span className="text-[10px] font-bold uppercase tracking-wide">Feito!</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+function FolderSection({
+  folder, active, collapsed, toggleCollapse,
+  setEditFolder, setShowFolderModal, deleteFolder, openNewGoal, cbs
+}: {
+  folder: GoalFolder
+  active: Goal[]
+  collapsed: Record<string, boolean>
+  toggleCollapse: (key: string) => void
+  setEditFolder: React.Dispatch<React.SetStateAction<GoalFolder | null>>
+  setShowFolderModal: React.Dispatch<React.SetStateAction<boolean>>
+  deleteFolder: (folder: GoalFolder) => Promise<void>
+  openNewGoal: (folderId: number | null) => void
+  cbs: GoalCallbacks
+}) {
+  const folderGoals = active.filter(g => g.folder_id === folder.id)
+  const isOpen = !collapsed[`folder-${folder.id}`]
+
+  return (
+    <div className="rounded-xl border border-bg-border overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3 bg-bg-secondary cursor-pointer select-none"
+        onClick={() => toggleCollapse(`folder-${folder.id}`)}>
+        <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
+        <span className="text-xl">{folder.icon}</span>
+        <span className="font-semibold text-text-primary flex-1">{folder.name}</span>
+        <span className="text-xs text-text-muted">{folderGoals.length} {folderGoals.length === 1 ? 'meta' : 'metas'}</span>
+        <button
+          onClick={e => { e.stopPropagation(); setEditFolder(folder); setShowFolderModal(true) }}
+          className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-border rounded transition-colors">
+          <Pencil size={13} />
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); deleteFolder(folder) }}
+          className="p-1 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded transition-colors">
+          <Trash2 size={13} />
+        </button>
+        {isOpen ? <ChevronDown size={16} className="text-text-muted" /> : <ChevronRight size={16} className="text-text-muted" />}
+      </div>
+
+      {isOpen && (
+        <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
+          {folderGoals.length === 0 && (
+            <p className="text-xs text-text-muted text-center py-2">Nenhuma meta nesta pasta ainda.</p>
+          )}
+          {folderGoals.map(g => <GoalCard key={g.id} goal={g} cbs={cbs} />)}
+          <button
+            onClick={() => openNewGoal(folder.id)}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-bg-border text-text-muted hover:text-text-primary hover:border-accent-purple/50 text-xs transition-colors">
+            <Plus size={13} /> Nova meta em "{folder.name}"
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Goals(): React.JSX.Element {
   const { fetchProfile } = useProfileStore()
   const [goals, setGoals] = useState<Goal[]>([])
@@ -151,6 +391,7 @@ export default function Goals(): React.JSX.Element {
   const [defaultFolderId, setDefaultFolderId] = useState<number | null>(null)
   const [newTask, setNewTask] = useState<Record<number, string>>({})
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [confirmGoal, setConfirmGoal] = useState<Goal | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -192,29 +433,12 @@ export default function Goals(): React.JSX.Element {
     }
   }
 
-  async function addTask(goalId: number) {
-    const title = (newTask[goalId] || '').trim()
-    if (!title) return
-    await window.api.goals.addTask(goalId, title)
-    setNewTask(p => ({ ...p, [goalId]: '' }))
+  async function handleConfirmComplete() {
+    if (!confirmGoal) return
+    await window.api.goals.complete(confirmGoal.id)
+    await fetchProfile()
+    setConfirmGoal(null)
     load()
-  }
-
-  async function toggleTask(taskId: number, current: number) {
-    await window.api.goals.completeTask(taskId, !current)
-    load()
-  }
-
-  async function completeGoal(id: number) {
-    if (confirm('Marcar esta meta como concluída? Você ganhará XP!')) {
-      await window.api.goals.complete(id)
-      await fetchProfile()
-      load()
-    }
-  }
-
-  function toggleCollapse(key: string) {
-    setCollapsed(p => ({ ...p, [key]: !p[key] }))
   }
 
   function estimateXP(goal: Goal): number {
@@ -225,155 +449,38 @@ export default function Goals(): React.JSX.Element {
     return Math.min(xp, 300)
   }
 
+  function toggleCollapse(key: string) {
+    setCollapsed(p => ({ ...p, [key]: !p[key] }))
+  }
+
   function openNewGoal(folderId: number | null = null) {
     setEditGoal(null)
     setDefaultFolderId(folderId)
     setShowGoalModal(true)
   }
 
+  const cbs: GoalCallbacks = {
+    newTask,
+    setNewTask,
+    toggleTask: async (taskId, current) => {
+      await window.api.goals.completeTask(taskId, !current)
+      load()
+    },
+    addTask: async (goalId) => {
+      const title = (newTask[goalId] || '').trim()
+      if (!title) return
+      await window.api.goals.addTask(goalId, title)
+      setNewTask(p => ({ ...p, [goalId]: '' }))
+      load()
+    },
+    onCompleteGoal: (goal) => setConfirmGoal(goal),
+    onLoad: load,
+    onEditGoal: (goal) => { setEditGoal(goal); setShowGoalModal(true) },
+    estimateXP
+  }
+
   const active = goals.filter(g => !g.is_completed)
   const completed = goals.filter(g => g.is_completed)
-
-  function GoalCard({ goal }: { goal: Goal }) {
-    const totalTasks = goal.tasks.length
-    const doneTasks = goal.tasks.filter(t => t.is_completed).length
-    const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
-
-    return (
-      <div className={`bg-bg-secondary border rounded-xl overflow-hidden flex ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}>
-        <div className="flex-1 p-5">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                {goal.is_completed
-                  ? <CheckCircle2 size={18} className="text-accent-green shrink-0" />
-                  : <Target size={18} className="text-accent-purple shrink-0" />
-                }
-                <h3 className={`font-semibold text-text-primary truncate ${goal.is_completed ? 'line-through' : ''}`}>{goal.title}</h3>
-              </div>
-              {goal.description && <p className="text-xs text-text-secondary mt-1 ml-6">{goal.description}</p>}
-              <div className="flex items-center gap-3 mt-1 ml-6 text-xs text-text-muted">
-                {goal.target_date && <span>📅 {format(new Date(goal.target_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
-                <span className="text-accent-gold">
-                  {goal.is_completed ? `+${goal.xp_reward} XP` : `~${estimateXP(goal)} XP`}
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-1 shrink-0 ml-2">
-              {!goal.is_completed && (
-                <button onClick={() => { setEditGoal(goal); setShowGoalModal(true) }}
-                  className="p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-border rounded-lg">
-                  <Pencil size={13} />
-                </button>
-              )}
-              <button onClick={async () => { if (confirm('Excluir meta?')) { await window.api.goals.delete(goal.id); load() } }}
-                className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded-lg">
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
-
-          {totalTasks > 0 && (
-            <div className="ml-6 mb-3">
-              <div className="flex justify-between text-xs text-text-muted mb-1">
-                <span>{doneTasks}/{totalTasks} tarefas</span>
-                <span>{pct}%</span>
-              </div>
-              <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full transition-all"
-                  style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          )}
-
-          <div className="ml-6 space-y-1.5">
-            {goal.tasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2 group">
-                <button onClick={() => !goal.is_completed && toggleTask(task.id, task.is_completed)}
-                  className="shrink-0 text-text-muted hover:text-accent-purple transition-colors">
-                  {task.is_completed ? <CheckSquare size={15} className="text-accent-green" /> : <Square size={15} />}
-                </button>
-                <span className={`text-sm flex-1 ${task.is_completed ? 'line-through text-text-muted' : 'text-text-secondary'}`}>{task.title}</span>
-                {!goal.is_completed && (
-                  <button onClick={() => window.api.goals.deleteTask(task.id).then(load)}
-                    className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red transition-all">
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            ))}
-            {!goal.is_completed && (
-              <div className="flex gap-2 mt-2">
-                <input
-                  value={newTask[goal.id] || ''}
-                  onChange={e => setNewTask(p => ({ ...p, [goal.id]: e.target.value }))}
-                  onKeyDown={e => e.key === 'Enter' && addTask(goal.id)}
-                  placeholder="+ Nova sub-tarefa"
-                  className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple"
-                />
-                <button onClick={() => addTask(goal.id)}
-                  className="px-2 py-1 bg-bg-border hover:bg-accent-purple text-text-muted hover:text-white rounded-lg text-xs transition-colors">
-                  <Plus size={13} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {!goal.is_completed && (
-          <button
-            onClick={() => completeGoal(goal.id)}
-            className="shrink-0 w-[72px] border-l border-bg-border bg-emerald-950/20 hover:bg-emerald-900/40 flex flex-col items-center justify-center gap-2 text-accent-green/50 hover:text-accent-green transition-all group">
-            <CheckCircle2 size={32} className="transition-transform group-hover:scale-110" />
-            <span className="text-[10px] font-bold uppercase tracking-wide">Feito!</span>
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  function FolderSection({ folder }: { folder: GoalFolder }) {
-    const folderGoals = active.filter(g => g.folder_id === folder.id)
-    const isOpen = !collapsed[`folder-${folder.id}`]
-
-    return (
-      <div className="rounded-xl border border-bg-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 bg-bg-secondary cursor-pointer select-none"
-          onClick={() => toggleCollapse(`folder-${folder.id}`)}>
-          <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
-          <span className="text-xl">{folder.icon}</span>
-          <span className="font-semibold text-text-primary flex-1">{folder.name}</span>
-          <span className="text-xs text-text-muted">{folderGoals.length} {folderGoals.length === 1 ? 'meta' : 'metas'}</span>
-          <button
-            onClick={e => { e.stopPropagation(); setEditFolder(folder); setShowFolderModal(true) }}
-            className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-border rounded transition-colors">
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); deleteFolder(folder) }}
-            className="p-1 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded transition-colors">
-            <Trash2 size={13} />
-          </button>
-          {isOpen ? <ChevronDown size={16} className="text-text-muted" /> : <ChevronRight size={16} className="text-text-muted" />}
-        </div>
-
-        {isOpen && (
-          <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
-            {folderGoals.length === 0 && (
-              <p className="text-xs text-text-muted text-center py-2">Nenhuma meta nesta pasta ainda.</p>
-            )}
-            {folderGoals.map(g => <GoalCard key={g.id} goal={g} />)}
-            <button
-              onClick={() => openNewGoal(folder.id)}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-bg-border text-text-muted hover:text-text-primary hover:border-accent-purple/50 text-xs transition-colors">
-              <Plus size={13} /> Nova meta em "{folder.name}"
-            </button>
-          </div>
-        )}
-      </div>
-    )
-  }
-
   const uncategorized = active.filter(g => g.folder_id === null || !folders.find(f => f.id === g.folder_id))
   const showUncategorized = uncategorized.length > 0
   const isUncatOpen = !collapsed['uncategorized']
@@ -406,7 +513,20 @@ export default function Goals(): React.JSX.Element {
       )}
 
       <div className="space-y-3">
-        {folders.map(f => <FolderSection key={f.id} folder={f} />)}
+        {folders.map(f => (
+          <FolderSection
+            key={f.id}
+            folder={f}
+            active={active}
+            collapsed={collapsed}
+            toggleCollapse={toggleCollapse}
+            setEditFolder={setEditFolder}
+            setShowFolderModal={setShowFolderModal}
+            deleteFolder={deleteFolder}
+            openNewGoal={openNewGoal}
+            cbs={cbs}
+          />
+        ))}
 
         {showUncategorized && (
           <div className="rounded-xl border border-bg-border overflow-hidden">
@@ -419,7 +539,7 @@ export default function Goals(): React.JSX.Element {
             </div>
             {isUncatOpen && (
               <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
-                {uncategorized.map(g => <GoalCard key={g.id} goal={g} />)}
+                {uncategorized.map(g => <GoalCard key={g.id} goal={g} cbs={cbs} />)}
               </div>
             )}
           </div>
@@ -436,7 +556,7 @@ export default function Goals(): React.JSX.Element {
             </div>
             {!collapsed['completed'] && (
               <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
-                {completed.map(g => <GoalCard key={g.id} goal={g} />)}
+                {completed.map(g => <GoalCard key={g.id} goal={g} cbs={cbs} />)}
               </div>
             )}
           </div>
@@ -458,6 +578,15 @@ export default function Goals(): React.JSX.Element {
           onClose={() => { setShowFolderModal(false); setEditFolder(null) }}
           onSave={handleSaveFolder}
           initial={editFolder || undefined}
+        />
+      )}
+
+      {confirmGoal && (
+        <CompleteGoalModal
+          goal={confirmGoal}
+          xp={estimateXP(confirmGoal)}
+          onConfirm={handleConfirmComplete}
+          onClose={() => setConfirmGoal(null)}
         />
       )}
     </div>

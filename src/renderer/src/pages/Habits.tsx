@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { format, subDays, eachDayOfInterval } from 'date-fns'
-import { Plus, Flame, CheckCircle2, Circle, Pencil, Trash2, X, Check } from 'lucide-react'
+import { ptBR } from 'date-fns/locale'
+import { Plus, Flame, CheckCircle2, Circle, Pencil, Trash2, X, Check, BarChart2 } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 
 interface Habit {
@@ -150,6 +151,113 @@ function HeatmapRow({ habitId }: { habitId: number }) {
   )
 }
 
+interface Completion { habit_id: number; completed_at: string }
+
+function Analytics({ habits, streaks }: { habits: Habit[]; streaks: Record<number, number> }) {
+  const [completions, setCompletions] = useState<Completion[]>([])
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const start = format(subDays(new Date(), 29), 'yyyy-MM-dd')
+
+  useEffect(() => {
+    window.api.habits.completionsRange(start, today).then((c) => setCompletions(c as Completion[]))
+  }, [])
+
+  const active = habits.filter(h => h.is_active)
+  const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+  const dowCounts = Array(7).fill(0)
+  completions.forEach(c => {
+    const d = new Date(c.completed_at + 'T12:00:00')
+    dowCounts[d.getDay()]++
+  })
+  const maxDow = Math.max(...dowCounts, 1)
+
+  const habitStats = active.map(h => {
+    const count = completions.filter(c => c.habit_id === h.id).length
+    return { habit: h, count, rate: Math.round((count / 30) * 100) }
+  }).sort((a, b) => b.rate - a.rate)
+
+  const totalDays = 30
+  const perfectDays = (() => {
+    if (active.length === 0) return 0
+    const days = eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() })
+    return days.filter(d => {
+      const key = format(d, 'yyyy-MM-dd')
+      const done = completions.filter(c => c.completed_at === key)
+      return done.length >= active.length
+    }).length
+  })()
+
+  return (
+    <div className="space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-accent-purple">{completions.length}</p>
+          <p className="text-xs text-text-muted">Conclusões em 30 dias</p>
+        </div>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-accent-green">{perfectDays}</p>
+          <p className="text-xs text-text-muted">Dias perfeitos</p>
+        </div>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-accent-gold">{Math.max(...Object.values(streaks), 0)}</p>
+          <p className="text-xs text-text-muted">Melhor sequência</p>
+        </div>
+      </div>
+
+      {/* Day of week chart */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Conclusões por dia da semana</h3>
+        <div className="flex items-end gap-2 h-24">
+          {DOW_LABELS.map((label, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                <div
+                  className="w-full rounded-t-md bg-accent-purple transition-all"
+                  style={{ height: `${Math.max(4, (dowCounts[i] / maxDow) * 80)}px`, opacity: dowCounts[i] === 0 ? 0.2 : 1 }}
+                />
+              </div>
+              <span className="text-xs text-text-muted">{label}</span>
+              <span className="text-xs text-text-secondary font-medium">{dowCounts[i]}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-text-muted mt-2">
+          Melhor dia: <span className="text-text-primary font-medium">{DOW_LABELS[dowCounts.indexOf(Math.max(...dowCounts))]}</span>
+        </p>
+      </div>
+
+      {/* Per-habit rates */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Taxa de conclusão por hábito (30 dias)</h3>
+        <div className="space-y-3">
+          {habitStats.map(({ habit, count, rate }) => (
+            <div key={habit.id}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-text-primary flex items-center gap-2">
+                  <span>{habit.icon}</span> {habit.name}
+                  {streaks[habit.id] > 0 && (
+                    <span className="text-xs text-orange-400 flex items-center gap-0.5">
+                      <Flame size={11} fill="currentColor" />{streaks[habit.id]}
+                    </span>
+                  )}
+                </span>
+                <span className="text-sm font-bold" style={{ color: habit.color }}>{rate}%</span>
+              </div>
+              <div className="h-2 bg-bg-border rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, backgroundColor: habit.color }} />
+              </div>
+              <p className="text-xs text-text-muted mt-0.5">{count} de {totalDays} dias</p>
+            </div>
+          ))}
+          {habitStats.length === 0 && <p className="text-text-muted text-sm">Nenhum hábito ativo.</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Habits(): React.JSX.Element {
   const today = format(new Date(), 'yyyy-MM-dd')
   const { fetchProfile } = useProfileStore()
@@ -160,6 +268,7 @@ export default function Habits(): React.JSX.Element {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showInactive, setShowInactive] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'habits' | 'analytics'>('habits')
 
   useEffect(() => { loadHabits() }, [])
 
@@ -220,22 +329,44 @@ export default function Habits(): React.JSX.Element {
           <p className="text-text-secondary text-sm">{active.length} ativos · {completedToday.size} concluídos hoje</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowInactive(!showInactive)}
-            className="px-3 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm"
-          >
-            {showInactive ? 'Ver ativos' : 'Ver inativos'}
-          </button>
-          <button
-            onClick={() => { setEditingHabit(null); setShowModal(true) }}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"
-          >
-            <Plus size={16} /> Novo hábito
-          </button>
+          {activeTab === 'habits' && (
+            <>
+              <button
+                onClick={() => setShowInactive(!showInactive)}
+                className="px-3 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm"
+              >
+                {showInactive ? 'Ver ativos' : 'Ver inativos'}
+              </button>
+              <button
+                onClick={() => { setEditingHabit(null); setShowModal(true) }}
+                className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Plus size={16} /> Novo hábito
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* Tabs */}
+      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setActiveTab('habits')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'habits' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}
+        >
+          <CheckCircle2 size={14} /> Hábitos
+        </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'analytics' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}
+        >
+          <BarChart2 size={14} /> Analytics
+        </button>
+      </div>
+
+      {activeTab === 'analytics' && <Analytics habits={habits} streaks={streaks} />}
+
+      {activeTab === 'habits' && <div className="space-y-3">
         {displayed.length === 0 && (
           <div className="bg-bg-secondary border border-bg-border rounded-xl p-8 text-center">
             <p className="text-text-muted">Nenhum hábito {showInactive ? 'inativo' : 'ativo'}.</p>
@@ -289,7 +420,7 @@ export default function Habits(): React.JSX.Element {
             </div>
           )
         })}
-      </div>
+      </div>}
 
       {showModal && (
         <Modal

@@ -9,14 +9,26 @@ import Addictions from './pages/Addictions'
 import Goals from './pages/Goals'
 import Achievements from './pages/Achievements'
 import Settings from './pages/Settings'
+import Journal from './pages/Journal'
+import Sleep from './pages/Sleep'
+import Finance from './pages/Finance'
+import Reading from './pages/Reading'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
+
+function applyStoredTheme() {
+  const theme = localStorage.getItem('habitos_theme') || 'dark'
+  const accent = localStorage.getItem('habitos_accent') || '#7c3aed'
+  document.documentElement.setAttribute('data-theme', theme)
+  document.documentElement.style.setProperty('--accent-purple', accent)
+}
 
 export default function App(): React.JSX.Element {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
 
   useEffect(() => {
+    applyStoredTheme()
     if (!localStorage.getItem('habitos_onboarded')) {
       setShowOnboarding(true)
     } else if (!localStorage.getItem('habitos_tutorial_done')) {
@@ -49,6 +61,10 @@ export default function App(): React.JSX.Element {
               <Route path="/goals" element={<Goals />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/journal" element={<Journal />} />
+              <Route path="/sleep" element={<Sleep />} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/reading" element={<Reading />} />
             </Routes>
           </main>
         </div>
