@@ -134,7 +134,7 @@ function HeatmapRow({ habitId, rangeDays = 30 }: { habitId: number; rangeDays?: 
     })
   }, [habitId])
 
-  const days = eachDayOfInterval({ start: subDays(new Date(), rangeDays - 1), end: new Date() })
+  const days = eachDayOfInterval({ start: subDays(new Date(), rangeDays - 1), end: new Date() }).reverse()
 
   return (
     <div className="flex gap-0.5 mt-2 flex-wrap">

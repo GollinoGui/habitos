@@ -95,7 +95,7 @@ export default function Sleep(): React.JSX.Element {
     : null
 
   const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = format(subDays(new Date(), 6 - i), 'yyyy-MM-dd')
+    const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
     return recent.find(l => l.date === d)
   })
 
@@ -108,9 +108,9 @@ export default function Sleep(): React.JSX.Element {
   }
 
   const chartData = Array.from({ length: 14 }, (_, i) => {
-    const d = format(subDays(new Date(), 13 - i), 'yyyy-MM-dd')
+    const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
     const log = recent.find(l => l.date === d)
-    const label = format(subDays(new Date(), 13 - i), 'dd/MM')
+    const label = format(subDays(new Date(), i), 'dd/MM')
     if (!log) return { date: label, horas: null }
     const mins = calcMins(log.bedtime, log.wake_time)
     return { date: label, horas: parseFloat((mins / 60).toFixed(1)) }
