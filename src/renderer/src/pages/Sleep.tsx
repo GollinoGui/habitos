@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { format, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Moon, Save, Star, Trash2 } from 'lucide-react'
@@ -34,6 +34,10 @@ export default function Sleep(): React.JSX.Element {
   const [saved, setSaved] = useState(false)
   const [recent, setRecent] = useState<SleepLog[]>([])
   const [existingId, setExistingId] = useState<number | null>(null)
+  const [highlightedDate, setHighlightedDate] = useState<string | null>(null)
+
+  const chartRef = useRef<HTMLDivElement>(null)
+  const cardRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   useEffect(() => { loadRecent() }, [])
   useEffect(() => { loadEntry(date) }, [date])
@@ -94,11 +98,6 @@ export default function Sleep(): React.JSX.Element {
       })()
     : null
 
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
-    return recent.find(l => l.date === d)
-  })
-
   function calcMins(bedtime: string, wake_time: string): number {
     const [bh, bm] = bedtime.split(':').map(Number)
     const [wh, wm] = wake_time.split(':').map(Number)
@@ -111,10 +110,51 @@ export default function Sleep(): React.JSX.Element {
     const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
     const log = recent.find(l => l.date === d)
     const label = format(subDays(new Date(), i), 'dd/MM')
-    if (!log) return { date: label, horas: null }
+    if (!log) return null
     const mins = calcMins(log.bedtime, log.wake_time)
-    return { date: label, horas: parseFloat((mins / 60).toFixed(1)) }
-  })
+    return { date: label, rawDate: d, horas: parseFloat((mins / 60).toFixed(1)) }
+  }).filter(Boolean).reverse() as { date: string; rawDate: string; horas: number }[]
+
+  function smoothScrollTo(element: HTMLElement) {
+    const container = element.closest('main') as HTMLElement
+    if (!container) return
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    const target = elementRect.top - containerRect.top + container.scrollTop - 80
+    container.scrollTo({ top: target, behavior: 'smooth' })
+  }
+
+  function handleChartClick(data: any) {
+    const rawDate = data?.activePayload?.[0]?.payload?.rawDate
+    if (!rawDate) return
+    setDate(rawDate)
+    setHighlightedDate(rawDate)
+    setTimeout(() => {
+      const card = cardRefs.current[rawDate]
+      if (card) smoothScrollTo(card)
+    }, 50)
+  }
+
+  function handleCardClick(logDate: string) {
+    setDate(logDate)
+    setHighlightedDate(logDate)
+    if (chartRef.current) smoothScrollTo(chartRef.current)
+  }
+
+  const renderDot = (props: any) => {
+    const { cx, cy, payload } = props
+    if (payload.rawDate === highlightedDate) {
+      return (
+        <g key={`dot-${payload.rawDate}`}>
+          <circle cx={cx} cy={cy} r={9} fill="#06b6d4" opacity={0.25} />
+          <circle cx={cx} cy={cy} r={5} fill="#06b6d4" stroke="#ffffff" strokeWidth={2} />
+        </g>
+      )
+    }
+    return <circle key={`dot-${payload.rawDate}`} cx={cx} cy={cy} r={3} fill="#06b6d4" />
+  }
+
+  const highlightedLog = highlightedDate ? recent.find(l => l.date === highlightedDate) : null
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -139,20 +179,33 @@ export default function Sleep(): React.JSX.Element {
       </div>
 
       {/* Duration chart - last 14 days */}
-      {chartData.some(d => d.horas !== null) && (
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-          <p className="text-sm font-medium text-text-secondary mb-3">Duração do sono — últimos 14 dias</p>
+      {chartData.length > 0 && (
+        <div ref={chartRef} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-text-secondary">Duração do sono — últimos 14 dias</p>
+            {highlightedLog && (
+              <div className="flex items-center gap-2 bg-accent-blue/10 border border-accent-blue/30 rounded-lg px-3 py-1 animate-fadeIn">
+                <span className="text-xs text-accent-blue font-medium">
+                  📍 {format(new Date(highlightedDate! + 'T12:00:00'), "d 'de' MMM", { locale: ptBR })}
+                </span>
+                <span className="text-xs text-text-muted">·</span>
+                <span className="text-xs text-text-secondary">{calcDuration(highlightedLog.bedtime, highlightedLog.wake_time)}</span>
+                <span className="text-xs text-text-muted">·</span>
+                <span className={`text-xs font-medium ${qualityColor(highlightedLog.quality)}`}>{highlightedLog.quality}/5 ⭐</span>
+              </div>
+            )}
+          </div>
           <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={chartData} margin={{ left: -10, right: 8, top: 4, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ left: -10, right: 8, top: 4, bottom: 0 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2a4a" />
               <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={1} />
               <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 12]} tickFormatter={v => `${v}h`} />
               <Tooltip formatter={(v: number) => [`${v}h`, 'Horas']} contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8 }} />
               <ReferenceLine y={8} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} label={{ value: '8h', position: 'right', fill: '#10b981', fontSize: 10 }} />
-              <Line type="monotone" dataKey="horas" stroke="#06b6d4" strokeWidth={2} dot={{ fill: '#06b6d4', r: 3 }} connectNulls={false} />
+              <Line type="monotone" dataKey="horas" stroke="#06b6d4" strokeWidth={2} dot={renderDot} activeDot={{ r: 5, fill: '#06b6d4' }} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
-          <p className="text-xs text-text-muted mt-1">Linha verde = meta de 8h</p>
+          <p className="text-xs text-text-muted mt-1">Linha verde = meta de 8h · Clique em um ponto para ver o registro</p>
         </div>
       )}
 
@@ -259,12 +312,13 @@ export default function Sleep(): React.JSX.Element {
           {recent.map(log => (
             <button
               key={log.id}
-              onClick={() => setDate(log.date)}
+              ref={el => { cardRefs.current[log.date] = el }}
+              onClick={() => handleCardClick(log.date)}
               className={`w-full text-left p-3 rounded-xl border transition-all ${
                 log.date === date
                   ? 'border-accent-purple bg-accent-purple/10'
                   : 'border-bg-border bg-bg-secondary hover:border-bg-border/60'
-              }`}
+              } ${log.date === highlightedDate && log.date !== date ? 'ring-1 ring-accent-blue/50' : ''}`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-text-primary">

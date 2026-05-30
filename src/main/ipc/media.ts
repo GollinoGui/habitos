@@ -20,7 +20,7 @@ export function registerMediaHandlers(): void {
 
   ipcMain.handle('media:update', (_e, id: number, data: {
     title?: string; author?: string; total_pages?: number; current_page?: number;
-    status?: string; finished_at?: string; cover_emoji?: string
+    current_season?: number; status?: string; finished_at?: string; cover_emoji?: string; rating?: number
   }) => {
     const item = dbGet('SELECT * FROM media_items WHERE id = ?', [id])
     if (!item) return false
@@ -30,14 +30,19 @@ export function registerMediaHandlers(): void {
         author = COALESCE(?, author),
         total_pages = COALESCE(?, total_pages),
         current_page = COALESCE(?, current_page),
+        current_season = COALESCE(?, current_season),
         status = COALESCE(?, status),
         finished_at = COALESCE(?, finished_at),
-        cover_emoji = COALESCE(?, cover_emoji)
+        cover_emoji = COALESCE(?, cover_emoji),
+        rating = CASE WHEN ? IS NOT NULL THEN ? ELSE rating END
        WHERE id = ?`,
       [
         data.title ?? null, data.author ?? null, data.total_pages ?? null,
-        data.current_page ?? null, data.status ?? null, data.finished_at ?? null,
-        data.cover_emoji ?? null, id
+        data.current_page ?? null, data.current_season ?? null,
+        data.status ?? null, data.finished_at ?? null,
+        data.cover_emoji ?? null,
+        data.rating ?? null, data.rating ?? null,
+        id
       ]
     )
     if (data.status === 'done' && item.status !== 'done') {

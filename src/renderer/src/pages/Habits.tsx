@@ -266,6 +266,7 @@ export default function Habits(): React.JSX.Element {
   const [streaks, setStreaks] = useState<Record<number, number>>({})
   const [showModal, setShowModal] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
+  const [togglingHabits, setTogglingHabits] = useState<Set<number>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'habits' | 'analytics'>('habits')
@@ -304,11 +305,21 @@ export default function Habits(): React.JSX.Element {
   }
 
   async function toggleHabit(id: number) {
-    const done = completedToday.has(id)
-    if (done) await window.api.habits.uncomplete(id, today)
-    else await window.api.habits.complete(id, today)
-    await fetchProfile()
-    loadHabits()
+    if (togglingHabits.has(id)) return
+    setTogglingHabits(prev => new Set(prev).add(id))
+    try {
+      const done = completedToday.has(id)
+      if (done) await window.api.habits.uncomplete(id, today)
+      else await window.api.habits.complete(id, today)
+      await fetchProfile()
+      await loadHabits()
+    } finally {
+      setTogglingHabits(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
   }
 
   async function deleteHabit(id: number) {
@@ -392,7 +403,7 @@ export default function Habits(): React.JSX.Element {
           return (
             <div key={habit.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${i * 65}ms` }}>
               <div className="flex items-start gap-3">
-                <button onClick={() => toggleHabit(habit.id)} className="mt-0.5">
+                <button onClick={() => toggleHabit(habit.id)} disabled={togglingHabits.has(habit.id)} className="mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   {done
                     ? <CheckCircle2 size={22} className="text-accent-green" />
                     : <Circle size={22} className="text-text-muted hover:text-text-primary transition-colors" />

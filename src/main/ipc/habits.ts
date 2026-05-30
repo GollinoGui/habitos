@@ -87,6 +87,15 @@ export function registerHabitsHandlers(): void {
     const habit = dbGet('SELECT xp_reward, name, icon FROM habits WHERE id = ?', [habitId])
     if (habit) {
       dbRun('UPDATE user_profile SET total_xp = MAX(0, total_xp - ?) WHERE id = 1', [habit.xp_reward])
+      dbRun(
+        `DELETE FROM xp_history WHERE id = (
+          SELECT id FROM xp_history
+          WHERE reason = ? AND DATE(created_at) = ?
+          ORDER BY created_at DESC
+          LIMIT 1
+        )`,
+        [`Hábito: ${habit.name}`, date]
+      )
       const existingNote = dbGet('SELECT content FROM calendar_notes WHERE date = ?', [date])
       if (existingNote?.content) {
         const prefix = `✅ ${habit.icon} ${habit.name}`

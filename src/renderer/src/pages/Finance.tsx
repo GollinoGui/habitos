@@ -34,6 +34,7 @@ export default function Finance(): React.JSX.Element {
   const [catType, setCatType] = useState<'income' | 'expense'>('expense')
   const [catIcon, setCatIcon] = useState('💰')
   const [activeTab, setActiveTab] = useState<'transactions' | 'categories'>('transactions')
+  const [catChartTab, setCatChartTab] = useState<'expense' | 'income'>('expense')
 
   useEffect(() => { loadAll() }, [year, month])
 
@@ -87,6 +88,28 @@ export default function Finance(): React.JSX.Element {
 
   const monthLabel = format(new Date(year, month - 1, 1), "MMMM 'de' yyyy", { locale: ptBR })
 
+  function buildCategoryData(type: 'expense' | 'income') {
+    const grouped: Record<string, { name: string; icon: string; total: number; color: string }> = {}
+    transactions.filter(t => t.type === type).forEach(t => {
+      const key = t.category_name || 'Sem categoria'
+      if (!grouped[key]) grouped[key] = {
+        name: key,
+        icon: t.category_icon || (type === 'income' ? '💰' : '💸'),
+        total: 0,
+        color: t.category_color || (type === 'income' ? '#10b981' : '#ef4444')
+      }
+      grouped[key].total += t.amount
+    })
+    return Object.values(grouped).sort((a, b) => b.total - a.total).slice(0, 6)
+  }
+
+  const tooltipStyle = {
+    contentStyle: { background: '#1e1e3a', border: '1px solid #2a2a4a', borderRadius: 8, color: '#e2e8f0' },
+    labelStyle: { color: '#94a3b8', fontWeight: 600 },
+    itemStyle: { color: '#e2e8f0' },
+    cursor: { fill: 'rgba(255,255,255,0.04)' }
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
@@ -121,28 +144,69 @@ export default function Finance(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Category breakdown chart */}
-      {transactions.filter(t => t.type === 'expense' && t.category_id).length > 0 && (
+      {/* Income vs Expense comparison chart */}
+      {(summary.income > 0 || summary.expense > 0) && (
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-          <p className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
-            <BarChart2 size={14} /> Despesas por categoria
+          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 flex items-center gap-2">
+            <BarChart2 size={13} /> Receitas vs Despesas
           </p>
+          <ResponsiveContainer width="100%" height={56}>
+            <BarChart
+              data={[
+                { name: 'Receitas', value: summary.income },
+                { name: 'Despesas', value: summary.expense }
+              ]}
+              layout="vertical"
+              barCategoryGap="25%"
+              margin={{ left: 0, right: 52, top: 0, bottom: 0 }}
+            >
+              <XAxis type="number" hide />
+              <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} width={62} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v: number) => [fmt(v), '']} {...tooltipStyle} />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={18} label={{ position: 'right', formatter: (v: number) => fmt(v), fill: '#94a3b8', fontSize: 11 }}>
+                <Cell fill="#10b981" fillOpacity={0.85} />
+                <Cell fill="#ef4444" fillOpacity={0.85} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Category breakdown chart */}
+      {transactions.length > 0 && (
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2">
+              <BarChart2 size={13} /> Por categoria
+            </p>
+            <div className="flex gap-1 bg-bg-primary border border-bg-border rounded-lg p-0.5">
+              <button
+                onClick={() => setCatChartTab('expense')}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${catChartTab === 'expense' ? 'bg-red-500/20 text-accent-red' : 'text-text-muted hover:text-text-secondary'}`}
+              >
+                Despesas
+              </button>
+              <button
+                onClick={() => setCatChartTab('income')}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${catChartTab === 'income' ? 'bg-emerald-500/20 text-accent-green' : 'text-text-muted hover:text-text-secondary'}`}
+              >
+                Receitas
+              </button>
+            </div>
+          </div>
           {(() => {
-            const grouped: Record<string, { name: string; icon: string; total: number; color: string }> = {}
-            transactions.filter(t => t.type === 'expense').forEach(t => {
-              const key = t.category_name || 'Sem categoria'
-              if (!grouped[key]) grouped[key] = { name: key, icon: t.category_icon || '💸', total: 0, color: t.category_color || '#ef4444' }
-              grouped[key].total += t.amount
-            })
-            const data = Object.values(grouped).sort((a, b) => b.total - a.total).slice(0, 6)
+            const data = buildCategoryData(catChartTab)
+            if (data.length === 0) {
+              return <p className="text-xs text-text-muted py-2">Nenhuma {catChartTab === 'expense' ? 'despesa' : 'receita'} com categoria neste mês.</p>
+            }
             return (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={data} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
-                  <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `R$${v}`} />
+              <ResponsiveContainer width="100%" height={data.length * 30 + 8}>
+                <BarChart data={data} layout="vertical" barCategoryGap="20%" margin={{ left: 0, right: 52, top: 4, bottom: 4 }}>
+                  <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} width={90}
-                    tickFormatter={(v, i) => `${data[i]?.icon || ''} ${v}`} />
-                  <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8 }} />
-                  <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+                    tickFormatter={(v, i) => `${data[i]?.icon || ''} ${v}`} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v: number) => [fmt(v), 'Total']} {...tooltipStyle} />
+                  <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={18} label={{ position: 'right', formatter: (v: number) => fmt(v), fill: '#94a3b8', fontSize: 11 }}>
                     {data.map((entry, i) => (
                       <Cell key={i} fill={entry.color} fillOpacity={0.85} />
                     ))}

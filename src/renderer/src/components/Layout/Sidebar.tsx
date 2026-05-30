@@ -16,7 +16,7 @@ const ALL_NAV_ITEMS = [
   { to: '/journal', id: 'nav-journal', icon: BookOpen, label: 'Diário', key: 'journal', color: '#8b5cf6' },
   { to: '/sleep', id: 'nav-sleep', icon: Moon, label: 'Sono', key: 'sleep', color: '#06b6d4' },
   { to: '/finance', id: 'nav-finance', icon: DollarSign, label: 'Finanças', key: 'finance', color: '#10b981' },
-  { to: '/reading', id: 'nav-reading', icon: BookMarked, label: 'Leitura', key: 'reading', color: '#ec4899' }
+  { to: '/reading', id: 'nav-reading', icon: BookMarked, label: 'Mídia', key: 'reading', color: '#ec4899' }
 ]
 
 function getHiddenSections(): string[] {
