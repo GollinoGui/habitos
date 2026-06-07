@@ -49,7 +49,12 @@ export default function Achievements(): React.JSX.Element {
 
   useEffect(() => {
     fetchProfile()
-    window.api.achievements.list().then(setAchievements)
+    async function load() {
+      await window.api.achievements.check()
+      const all = await window.api.achievements.list()
+      setAchievements(all as Achievement[])
+    }
+    load()
   }, [])
 
   const unlockedKeys = new Set(achievements.map(a => a.key))

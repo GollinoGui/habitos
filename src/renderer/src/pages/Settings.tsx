@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Bell, BellOff, Send, AlertTriangle, Download, Trash2, Palette, Eye, EyeOff } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Bell, BellOff, Send, AlertTriangle, Download, Upload, Trash2, Palette, Eye, EyeOff } from 'lucide-react'
 
 interface NotifSettings { enabled: boolean; hour: number; minute: number }
 
@@ -21,7 +21,8 @@ const ALL_SECTIONS = [
   { key: 'journal', label: 'Diário', emoji: '📓' },
   { key: 'sleep', label: 'Sono', emoji: '🌙' },
   { key: 'finance', label: 'Finanças', emoji: '💰' },
-  { key: 'reading', label: 'Leitura', emoji: '📚' }
+  { key: 'reading', label: 'Leitura', emoji: '📚' },
+  { key: 'calendar', label: 'Calendário', emoji: '📅' }
 ]
 
 const RESET_SECTIONS = [
@@ -53,6 +54,9 @@ export default function Settings(): React.JSX.Element {
   const [hiddenSections, setHiddenSections] = useState<string[]>(getHiddenSections)
   const [exporting, setExporting] = useState(false)
   const [exportDone, setExportDone] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importStatus, setImportStatus] = useState<'idle' | 'done' | 'error'>('idle')
+  const importInputRef = useRef<HTMLInputElement>(null)
   const [resetTarget, setResetTarget] = useState('')
   const [resetConfirm, setResetConfirm] = useState(false)
   const [resetDone, setResetDone] = useState(false)
@@ -107,6 +111,25 @@ export default function Settings(): React.JSX.Element {
     setExporting(false)
     setExportDone(true)
     setTimeout(() => setExportDone(false), 3000)
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportStatus('idle')
+    try {
+      const text = await file.text()
+      JSON.parse(text)
+      await window.api.app.importData(text)
+      setImportStatus('done')
+    } catch {
+      setImportStatus('error')
+    } finally {
+      setImporting(false)
+      if (importInputRef.current) importInputRef.current.value = ''
+      setTimeout(() => setImportStatus('idle'), 4000)
+    }
   }
 
   async function handleReset() {
@@ -267,6 +290,38 @@ export default function Settings(): React.JSX.Element {
           <Download size={14} />
           {exportDone ? 'Download iniciado!' : exporting ? 'Exportando...' : 'Baixar backup JSON'}
         </button>
+      </div>
+
+      {/* Import */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <Upload size={20} className="text-accent-purple" />
+          <h2 className="text-lg font-semibold text-text-primary">Importar dados</h2>
+        </div>
+        <p className="text-sm text-text-secondary">
+          Restaura um backup JSON. <span className="text-accent-red font-medium">Todos os dados atuais serão substituídos.</span>
+        </p>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleImport}
+        />
+        <button
+          onClick={() => importInputRef.current?.click()}
+          disabled={importing}
+          className="flex items-center gap-2 px-4 py-2 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+        >
+          <Upload size={14} />
+          {importing ? 'Importando...' : importStatus === 'done' ? 'Importado com sucesso!' : importStatus === 'error' ? 'Arquivo inválido' : 'Selecionar backup JSON'}
+        </button>
+        {importStatus === 'error' && (
+          <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-700/40 rounded-lg">
+            <AlertTriangle size={15} className="text-accent-red shrink-0 mt-0.5" />
+            <p className="text-xs text-accent-red">O arquivo selecionado não é um backup válido.</p>
+          </div>
+        )}
       </div>
 
       {/* Reset */}

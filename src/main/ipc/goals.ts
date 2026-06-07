@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { dbAll, dbGet, dbRun, save } from '../db'
-import { unlockAchievement } from './profile'
+import { checkAllAchievements } from './profile'
 
 export function registerGoalsHandlers(): void {
   ipcMain.handle('goals:list', () => {
@@ -102,11 +102,7 @@ export function registerGoalsHandlers(): void {
     dbRun('UPDATE goals SET is_completed = 1, xp_reward = ? WHERE id = ?', [xp, id])
     dbRun('UPDATE user_profile SET total_xp = total_xp + ? WHERE id = 1', [xp])
     dbRun('INSERT INTO xp_history (amount, reason) VALUES (?, ?)', [xp, `Meta: ${goal.title}`])
-    const completedCount = (dbGet('SELECT COUNT(*) as c FROM goals WHERE is_completed = 1')?.c as number) ?? 0
-    if (completedCount === 1) {
-      unlockAchievement('goal_first', 'Primeira Meta!', 'Completou sua primeira meta', '🎯')
-    }
-    unlockAchievement('goal_' + id, `Meta: ${goal.title}`, 'Completou uma meta', '✅')
+    checkAllAchievements()
     save()
     return true
   })

@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { dbAll, dbGet, dbRun, save } from '../db'
-import { unlockAchievement } from './profile'
+import { checkAllAchievements } from './profile'
 
 export function registerMediaHandlers(): void {
   ipcMain.handle('media:list', () => {
@@ -46,11 +46,7 @@ export function registerMediaHandlers(): void {
       ]
     )
     if (data.status === 'done' && item.status !== 'done') {
-      unlockAchievement('media_first', 'Primeira Leitura!', 'Terminou seu primeiro livro/série', '📖')
-      const count = (dbGet("SELECT COUNT(*) as c FROM media_items WHERE status = 'done'")?.c as number) ?? 0
-      if (count >= 5) {
-        unlockAchievement('media_five', 'Leitor Ávido', 'Terminou 5 livros/séries', '📚')
-      }
+      checkAllAchievements()
     }
     save()
     return true

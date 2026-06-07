@@ -13,6 +13,7 @@ import Journal from './pages/Journal'
 import Sleep from './pages/Sleep'
 import Finance from './pages/Finance'
 import Reading from './pages/Reading'
+import Calendar from './pages/Calendar'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 
@@ -65,6 +66,7 @@ export default function App(): React.JSX.Element {
               <Route path="/sleep" element={<Sleep />} />
               <Route path="/finance" element={<Finance />} />
               <Route path="/reading" element={<Reading />} />
+              <Route path="/calendar" element={<Calendar />} />
             </Routes>
           </main>
         </div>

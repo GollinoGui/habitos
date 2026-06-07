@@ -115,6 +115,7 @@ const api = {
   },
   app: {
     exportData: () => ipcRenderer.invoke('app:export-data'),
+    importData: (json: string) => ipcRenderer.invoke('app:import-data', json),
     resetSection: (section: string) => ipcRenderer.invoke('app:reset-section', section)
   }
 }

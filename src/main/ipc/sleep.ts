@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { dbAll, dbGet, dbRun, save } from '../db'
-import { unlockAchievement } from './profile'
+import { checkAllAchievements } from './profile'
 
 export function registerSleepHandlers(): void {
   ipcMain.handle('sleep:get', (_e, date: string) => {
@@ -25,13 +25,7 @@ export function registerSleepHandlers(): void {
         'INSERT INTO sleep_logs (date, bedtime, wake_time, quality, notes) VALUES (?, ?, ?, ?, ?)',
         [data.date, data.bedtime, data.wake_time, data.quality, data.notes || null]
       )
-      const count = (dbGet('SELECT COUNT(*) as c FROM sleep_logs')?.c as number) ?? 0
-      if (count === 7) {
-        unlockAchievement('sleep_week', 'Dormidor Consistente', 'Registrou sono por 7 dias', '😴')
-      }
-      if (count === 30) {
-        unlockAchievement('sleep_month', 'Mestre do Sono', 'Registrou sono por 30 dias', '🌙')
-      }
+      checkAllAchievements()
     }
     save()
     return true
