@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, Dumbbell, ShieldOff, Target,
@@ -7,21 +7,25 @@ import {
 } from 'lucide-react'
 
 const ALL_NAV_ITEMS = [
-  { to: '/', id: 'nav-dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard', color: '#7c3aed' },
-  { to: '/habits', id: 'nav-habits', icon: CheckSquare, label: 'Hábitos', key: 'habits', color: '#10b981' },
-  { to: '/gym', id: 'nav-gym', icon: Dumbbell, label: 'Academia', key: 'gym', color: '#ef4444' },
-  { to: '/addictions', id: 'nav-addictions', icon: ShieldOff, label: 'Vícios', key: 'addictions', color: '#3b82f6' },
-  { to: '/goals', id: 'nav-goals', icon: Target, label: 'Metas', key: 'goals', color: '#f59e0b' },
-  { to: '/achievements', id: 'nav-achievements', icon: Trophy, label: 'Conquistas', key: 'achievements', color: '#f59e0b' },
-  { to: '/journal', id: 'nav-journal', icon: BookOpen, label: 'Diário', key: 'journal', color: '#8b5cf6' },
-  { to: '/sleep', id: 'nav-sleep', icon: Moon, label: 'Sono', key: 'sleep', color: '#06b6d4' },
-  { to: '/finance', id: 'nav-finance', icon: DollarSign, label: 'Finanças', key: 'finance', color: '#10b981' },
-  { to: '/reading', id: 'nav-reading', icon: BookMarked, label: 'Mídia', key: 'reading', color: '#ec4899' },
-  { to: '/calendar', id: 'nav-calendar', icon: Calendar, label: 'Calendário', key: 'calendar', color: '#0ea5e9' }
+  { to: '/',            id: 'nav-dashboard',    icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard',    color: '#7c3aed' },
+  { to: '/habits',      id: 'nav-habits',        icon: CheckSquare,     label: 'Hábitos',   key: 'habits',       color: '#10b981' },
+  { to: '/gym',         id: 'nav-gym',           icon: Dumbbell,        label: 'Academia',  key: 'gym',          color: '#ef4444' },
+  { to: '/addictions',  id: 'nav-addictions',    icon: ShieldOff,       label: 'Vícios',    key: 'addictions',   color: '#3b82f6' },
+  { to: '/goals',       id: 'nav-goals',         icon: Target,          label: 'Metas',     key: 'goals',        color: '#f59e0b' },
+  { to: '/achievements',id: 'nav-achievements',  icon: Trophy,          label: 'Conquistas',key: 'achievements', color: '#f59e0b' },
+  { to: '/journal',     id: 'nav-journal',       icon: BookOpen,        label: 'Diário',    key: 'journal',      color: '#8b5cf6' },
+  { to: '/sleep',       id: 'nav-sleep',         icon: Moon,            label: 'Sono',      key: 'sleep',        color: '#06b6d4' },
+  { to: '/finance',     id: 'nav-finance',       icon: DollarSign,      label: 'Finanças',  key: 'finance',      color: '#10b981' },
+  { to: '/reading',     id: 'nav-reading',       icon: BookMarked,      label: 'Mídia',     key: 'reading',      color: '#ec4899' },
+  { to: '/calendar',    id: 'nav-calendar',      icon: Calendar,        label: 'Calendário',key: 'calendar',     color: '#0ea5e9' }
 ]
 
 function getHiddenSections(): string[] {
   try { return JSON.parse(localStorage.getItem('habitos_hidden_sections') || '[]') } catch { return [] }
+}
+
+function getSectionOrder(): string[] {
+  try { return JSON.parse(localStorage.getItem('habitos_section_order') || '[]') } catch { return [] }
 }
 
 function getCollapsed(): boolean {
@@ -30,11 +34,13 @@ function getCollapsed(): boolean {
 
 export default function Sidebar(): React.JSX.Element {
   const [hidden, setHidden] = useState<string[]>(getHiddenSections)
+  const [order, setOrder] = useState<string[]>(getSectionOrder)
   const [collapsed, setCollapsed] = useState(getCollapsed)
 
   useEffect(() => {
     function onSectionsChanged() {
       setHidden(getHiddenSections())
+      setOrder(getSectionOrder())
     }
     window.addEventListener('habitos_sections_changed', onSectionsChanged)
     return () => window.removeEventListener('habitos_sections_changed', onSectionsChanged)
@@ -46,13 +52,24 @@ export default function Sidebar(): React.JSX.Element {
     localStorage.setItem('habitos_sidebar_collapsed', next ? '1' : '0')
   }
 
-  const visibleItems = ALL_NAV_ITEMS.filter(item => !hidden.includes(item.key))
+  const orderedItems = useMemo(() => {
+    if (!order.length) return ALL_NAV_ITEMS
+    return [...ALL_NAV_ITEMS].sort((a, b) => {
+      const ai = order.indexOf(a.key)
+      const bi = order.indexOf(b.key)
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
+    })
+  }, [order])
+
+  const visibleItems = orderedItems.filter(item => !hidden.includes(item.key))
 
   return (
     <aside className={`flex flex-col bg-bg-secondary border-r border-bg-border shrink-0 transition-all duration-200 ${collapsed ? 'w-14' : 'w-14 lg:w-56'}`}>
       <div className="h-8" />
       <div className={`flex items-center border-b border-bg-border ${collapsed ? 'justify-center px-0 py-5' : 'gap-3 px-4 py-5'}`}>
-        <span className="text-2xl shrink-0">🏆</span>
+        <span className="text-2xl shrink-0 animate-float">🏆</span>
         {!collapsed && <span className="hidden lg:block font-bold text-text-primary text-lg">Hábitos</span>}
       </div>
 

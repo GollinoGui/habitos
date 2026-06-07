@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Tag, BarChart2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Tag, BarChart2, Clock } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 interface Category { id: number; name: string; type: string; icon: string; color: string }
@@ -87,6 +87,7 @@ export default function Finance(): React.JSX.Element {
   }
 
   const monthLabel = format(new Date(year, month - 1, 1), "MMMM 'de' yyyy", { locale: ptBR })
+  const hasFuture = transactions.some(t => t.date > today)
 
   function buildCategoryData(type: 'expense' | 'income') {
     const grouped: Record<string, { name: string; icon: string; total: number; color: string }> = {}
@@ -113,8 +114,8 @@ export default function Finance(): React.JSX.Element {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Finanças</h1>
-        <p className="text-text-secondary text-sm mt-1">Controle de receitas e despesas</p>
+        <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Finanças</h1>
+        <p className="text-text-secondary text-sm mt-1 animate-slide-in-left" style={{ animationDelay: '60ms' }}>Controle de receitas e despesas</p>
       </div>
 
       {/* Month nav */}
@@ -130,19 +131,25 @@ export default function Finance(): React.JSX.Element {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-slide-up" style={{ animationDelay: '0ms' }}>
           <p className="text-xs text-text-muted">Receitas</p>
-          <p className="text-lg font-bold text-accent-green">{fmt(summary.income)}</p>
+          <p className="text-lg font-bold text-accent-green animate-count-up" style={{ animationDelay: '120ms' }}>{fmt(summary.income)}</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-slide-up" style={{ animationDelay: '70ms' }}>
           <p className="text-xs text-text-muted">Despesas</p>
-          <p className="text-lg font-bold text-accent-red">{fmt(summary.expense)}</p>
+          <p className="text-lg font-bold text-accent-red animate-count-up" style={{ animationDelay: '190ms' }}>{fmt(summary.expense)}</p>
         </div>
-        <div className={`rounded-xl p-4 text-center border ${summary.balance >= 0 ? 'bg-emerald-950/30 border-accent-green/30' : 'bg-red-950/30 border-accent-red/30'}`}>
+        <div className={`rounded-xl p-4 text-center border animate-slide-up ${summary.balance >= 0 ? 'bg-emerald-950/30 border-accent-green/30' : 'bg-red-950/30 border-accent-red/30'}`} style={{ animationDelay: '140ms' }}>
           <p className="text-xs text-text-muted">Saldo</p>
-          <p className={`text-lg font-bold ${summary.balance >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>{fmt(summary.balance)}</p>
+          <p className={`text-lg font-bold animate-count-up ${summary.balance >= 0 ? 'text-accent-green' : 'text-accent-red'}`} style={{ animationDelay: '260ms' }}>{fmt(summary.balance)}</p>
         </div>
       </div>
+      {hasFuture && (
+        <div className="flex items-center gap-1.5 text-xs text-accent-purple">
+          <Clock size={11} />
+          <span>Inclui transações agendadas para datas futuras</span>
+        </div>
+      )}
 
       {/* Income vs Expense comparison chart */}
       {(summary.income > 0 || summary.expense > 0) && (
@@ -265,7 +272,7 @@ export default function Finance(): React.JSX.Element {
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={txDate} max={today} onChange={e => setTxDate(e.target.value)}
+                <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)}
                   className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
                 <input type="text" value={txAmount} onChange={e => setTxAmount(e.target.value)} placeholder="Valor (R$)"
                   className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
@@ -294,24 +301,31 @@ export default function Finance(): React.JSX.Element {
             <p className="text-text-muted text-sm">Nenhuma transação neste mês.</p>
           )}
 
-          {transactions.map(tx => (
-            <div key={tx.id} className="flex items-center gap-3 p-3 bg-bg-secondary border border-bg-border rounded-xl">
-              <span className="text-xl">{tx.category_icon || (tx.type === 'income' ? '💰' : '💸')}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary truncate">{tx.description}</p>
-                <p className="text-xs text-text-muted">
-                  {format(new Date(tx.date + 'T12:00:00'), "d 'de' MMM", { locale: ptBR })}
-                  {tx.category_name && <span className="ml-2">· {tx.category_name}</span>}
-                </p>
+          {transactions.map((tx, i) => {
+            const isFuture = tx.date > today
+            return (
+              <div key={tx.id} className={`flex items-center gap-3 p-3 rounded-xl border animate-slide-up ${isFuture ? 'bg-bg-secondary border-dashed border-accent-purple/40 opacity-80' : 'bg-bg-secondary border-bg-border'}`} style={{ animationDelay: `${i * 45}ms` }}>
+                <span className="text-xl">{tx.category_icon || (tx.type === 'income' ? '💰' : '💸')}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-text-primary truncate">{tx.description}</p>
+                    {isFuture && <Clock size={11} className="text-accent-purple shrink-0" />}
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    {format(new Date(tx.date + 'T12:00:00'), "d 'de' MMM", { locale: ptBR })}
+                    {isFuture && <span className="ml-1.5 text-accent-purple font-medium">· agendado</span>}
+                    {tx.category_name && <span className="ml-2">· {tx.category_name}</span>}
+                  </p>
+                </div>
+                <span className={`font-bold text-sm ${tx.type === 'income' ? 'text-accent-green' : 'text-accent-red'} ${isFuture ? 'opacity-60' : ''}`}>
+                  {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount)}
+                </span>
+                <button onClick={() => deleteTransaction(tx.id)} className="text-text-muted hover:text-accent-red transition-colors">
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <span className={`font-bold text-sm ${tx.type === 'income' ? 'text-accent-green' : 'text-accent-red'}`}>
-                {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount)}
-              </span>
-              <button onClick={() => deleteTransaction(tx.id)} className="text-text-muted hover:text-accent-red transition-colors">
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

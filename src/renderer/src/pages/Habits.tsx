@@ -138,12 +138,13 @@ function HeatmapRow({ habitId, rangeDays = 30 }: { habitId: number; rangeDays?: 
 
   return (
     <div className="flex gap-0.5 mt-2 flex-wrap">
-      {days.map(d => {
+      {days.map((d, idx) => {
         const key = format(d, 'yyyy-MM-dd')
         const done = completions.has(key)
         return (
           <div key={key} title={key}
-            className={`w-3 h-3 rounded-sm transition-colors ${done ? 'bg-accent-purple' : 'bg-bg-border'}`}
+            className={`w-3 h-3 rounded-sm animate-slide-up-tiny ${done ? 'bg-accent-purple' : 'bg-bg-border'}`}
+            style={{ animationDelay: `${idx * 16}ms` }}
           />
         )
       })}
@@ -192,34 +193,38 @@ function Analytics({ habits, streaks, rangeDays }: { habits: Habit[]; streaks: R
     <div className="space-y-6">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-purple">{completions.length}</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-pop-in" style={{ animationDelay: '0ms' }}>
+          <p className="text-2xl font-bold text-accent-purple animate-count-up" style={{ animationDelay: '100ms' }}>{completions.length}</p>
           <p className="text-xs text-text-muted">Conclusões em {rangeDays} dias</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-green">{perfectDays}</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-pop-in" style={{ animationDelay: '80ms' }}>
+          <p className="text-2xl font-bold text-accent-green animate-count-up" style={{ animationDelay: '180ms' }}>{perfectDays}</p>
           <p className="text-xs text-text-muted">Dias perfeitos</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-gold">{Math.max(...Object.values(streaks), 0)}</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-pop-in" style={{ animationDelay: '160ms' }}>
+          <p className="text-2xl font-bold text-accent-gold animate-count-up" style={{ animationDelay: '260ms' }}>{Math.max(...Object.values(streaks), 0)}</p>
           <p className="text-xs text-text-muted">Melhor sequência</p>
         </div>
       </div>
 
       {/* Day of week chart */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Conclusões por dia da semana</h3>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 animate-slide-up" style={{ animationDelay: '80ms' }}>
+        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4 animate-reveal-left">Conclusões por dia da semana</h3>
         <div className="flex items-end gap-2 h-24">
           {DOW_LABELS.map((label, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
               <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
                 <div
-                  className="w-full rounded-t-md bg-accent-purple transition-all"
-                  style={{ height: `${Math.max(4, (dowCounts[i] / maxDow) * 80)}px`, opacity: dowCounts[i] === 0 ? 0.2 : 1 }}
+                  className="w-full rounded-t-md bg-accent-purple animate-slide-up"
+                  style={{
+                    height: `${Math.max(4, (dowCounts[i] / maxDow) * 80)}px`,
+                    opacity: dowCounts[i] === 0 ? 0.2 : 1,
+                    animationDelay: `${120 + i * 70}ms`
+                  }}
                 />
               </div>
               <span className="text-xs text-text-muted">{label}</span>
-              <span className="text-xs text-text-secondary font-medium">{dowCounts[i]}</span>
+              <span className="text-xs text-text-secondary font-medium animate-count-up" style={{ animationDelay: `${200 + i * 70}ms` }}>{dowCounts[i]}</span>
             </div>
           ))}
         </div>
@@ -229,11 +234,11 @@ function Analytics({ habits, streaks, rangeDays }: { habits: Habit[]; streaks: R
       </div>
 
       {/* Per-habit rates */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Taxa de conclusão por hábito ({rangeDays} dias)</h3>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 animate-slide-up" style={{ animationDelay: '160ms' }}>
+        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4 animate-reveal-left" style={{ animationDelay: '200ms' }}>Taxa de conclusão por hábito ({rangeDays} dias)</h3>
         <div className="space-y-3">
-          {habitStats.map(({ habit, count, rate }) => (
-            <div key={habit.id}>
+          {habitStats.map(({ habit, count, rate }, idx) => (
+            <div key={habit.id} className="animate-slide-in-left" style={{ animationDelay: `${240 + idx * 55}ms` }}>
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-text-primary flex items-center gap-2">
                   <span>{habit.icon}</span> {habit.name}

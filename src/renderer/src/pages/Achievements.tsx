@@ -46,6 +46,18 @@ export default function Achievements(): React.JSX.Element {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [badgeFilter, setBadgeFilter] = useState('Todos')
+  const [displayXpPct, setDisplayXpPct] = useState(0)
+
+  useEffect(() => {
+    if (!profile) return
+    const { levelInfo, total_xp } = profile
+    const { current, next } = levelInfo
+    const xpInLevel = total_xp - current.xp
+    const xpToNext = next ? next.xp - current.xp : 0
+    const p = next ? Math.min(100, Math.round((xpInLevel / xpToNext) * 100)) : 100
+    const t = setTimeout(() => setDisplayXpPct(p), 250)
+    return () => clearTimeout(t)
+  }, [profile])
 
   useEffect(() => {
     fetchProfile()
@@ -83,7 +95,7 @@ export default function Achievements(): React.JSX.Element {
       {/* Profile card */}
       <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6">
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-purple to-accent-blue flex items-center justify-center text-3xl">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-purple to-accent-blue flex items-center justify-center text-3xl animate-bounce-in">
             {current.level <= 2 ? '🌱' : current.level <= 4 ? '⚔️' : current.level <= 6 ? '👑' : '🌟'}
           </div>
           <div className="flex-1">
@@ -105,13 +117,13 @@ export default function Achievements(): React.JSX.Element {
               )}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <Star size={13} className="text-accent-gold" fill="currentColor" />
+              <Star size={13} className="text-accent-gold animate-glow-pulse" fill="currentColor" />
               <span className="text-sm font-semibold text-accent-gold">Nv.{current.level} — {current.rank}</span>
             </div>
           </div>
           <div className="text-right">
             <div className="flex items-center gap-1 text-accent-gold font-bold text-xl justify-end">
-              <Zap size={16} fill="currentColor" />{total_xp}
+              <Zap size={16} fill="currentColor" className="animate-glow-pulse" />{total_xp}
             </div>
             <p className="text-xs text-text-muted">XP total</p>
           </div>
@@ -124,8 +136,8 @@ export default function Achievements(): React.JSX.Element {
             {next && <span>Nv.{next.level} — {next.rank}</span>}
           </div>
           <div className="h-3 bg-bg-border rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-accent-purple to-accent-blue rounded-full transition-all duration-500"
-              style={{ width: `${pct}%` }} />
+            <div className="h-full bg-gradient-to-r from-accent-purple to-accent-blue rounded-full"
+              style={{ width: `${displayXpPct}%`, transition: 'width 1s cubic-bezier(0.4,0,0.2,1)' }} />
           </div>
           <div className="flex justify-between text-xs text-text-muted mt-1">
             <span>{xpInLevel} XP</span>
@@ -136,11 +148,11 @@ export default function Achievements(): React.JSX.Element {
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="bg-bg-primary rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-accent-purple">{unlockedCount}</p>
+            <p className="text-xl font-bold text-accent-purple animate-count-up">{unlockedCount}</p>
             <p className="text-xs text-text-muted">Conquistas</p>
           </div>
           <div className="bg-bg-primary rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-accent-gold">{total_xp}</p>
+            <p className="text-xl font-bold text-accent-gold animate-count-up" style={{ animationDelay: '0.1s' }}>{total_xp}</p>
             <p className="text-xs text-text-muted">XP Total</p>
           </div>
         </div>
@@ -163,20 +175,25 @@ export default function Achievements(): React.JSX.Element {
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
-          {ALL_BADGES.filter(b => badgeFilter === 'Todos' || b.category === badgeFilter).map(badge => {
+        <div key={badgeFilter} className="grid grid-cols-3 lg:grid-cols-4 gap-3">
+          {ALL_BADGES.filter(b => badgeFilter === 'Todos' || b.category === badgeFilter).map((badge, idx) => {
             const unlocked = unlockedKeys.has(badge.key)
             const achievement = achievements.find(a => a.key === badge.key)
+            const delay = idx * 70
             return (
               <div key={badge.key}
-                className={`rounded-xl p-3 text-center border transition-all duration-200
+                className={`rounded-xl p-3 text-center border animate-pop-in
                   ${unlocked
                     ? 'bg-bg-secondary border-accent-purple/40 shadow-lg shadow-purple-900/20'
                     : 'bg-bg-primary border-bg-border opacity-50 grayscale'
                   }`}
+                style={{ animationDelay: `${delay}ms` }}
                 title={badge.description}
               >
-                <div className="text-3xl mb-1.5">{badge.icon}</div>
+                <div className={`text-3xl mb-1.5 ${unlocked ? 'animate-bounce-in' : ''}`}
+                  style={unlocked ? { animationDelay: `${delay + 120}ms` } : {}}>
+                  {badge.icon}
+                </div>
                 <p className={`text-xs font-medium leading-tight ${unlocked ? 'text-text-primary' : 'text-text-muted'}`}>{badge.name}</p>
                 {unlocked && achievement && (
                   <p className="text-xs text-text-muted mt-1">{format(new Date(achievement.unlocked_at.replace(' ', 'T') + 'Z'), 'dd/MM/yy')}</p>
@@ -195,7 +212,9 @@ export default function Achievements(): React.JSX.Element {
           </h2>
           <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
             {profile.history.slice(0, 20).map((h, i) => (
-              <div key={h.id} className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t border-bg-border/50' : ''}`}>
+              <div key={h.id}
+                className={`flex items-center gap-3 px-4 py-2.5 animate-slide-in-left ${i > 0 ? 'border-t border-bg-border/50' : ''}`}
+                style={{ animationDelay: `${i * 35}ms` }}>
                 <span className="text-accent-gold font-bold text-sm w-14 text-right shrink-0">+{h.amount}</span>
                 <span className="text-text-secondary text-sm flex-1">{h.reason}</span>
                 <span className="text-text-muted text-xs shrink-0">{format(new Date(h.created_at.replace(' ', 'T') + 'Z'), 'dd/MM HH:mm')}</span>

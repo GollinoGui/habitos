@@ -35,6 +35,8 @@ export default function Sleep(): React.JSX.Element {
   const [recent, setRecent] = useState<SleepLog[]>([])
   const [existingId, setExistingId] = useState<number | null>(null)
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null)
+  const [qualityVersion, setQualityVersion] = useState(0)
+  const [showSaveFloat, setShowSaveFloat] = useState(false)
 
   const chartRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -64,10 +66,17 @@ export default function Sleep(): React.JSX.Element {
     }
   }
 
+  function handleQualityClick(q: number) {
+    setQuality(q)
+    setQualityVersion(v => v + 1)
+  }
+
   async function handleSave() {
     await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes })
     setSaved(true)
+    setShowSaveFloat(true)
     setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => setShowSaveFloat(false), 950)
     loadRecent()
     const entry = await window.api.sleep.get(date) as SleepLog | null
     if (entry) setExistingId(entry.id)
@@ -159,8 +168,8 @@ export default function Sleep(): React.JSX.Element {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Sono</h1>
-        <p className="text-text-secondary text-sm mt-1">Acompanhe a qualidade do seu sono</p>
+        <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Sono</h1>
+        <p className="text-text-secondary text-sm mt-1 animate-slide-in-left" style={{ animationDelay: '60ms' }}>Acompanhe a qualidade do seu sono</p>
       </div>
 
       {/* Stats */}
@@ -169,10 +178,10 @@ export default function Sleep(): React.JSX.Element {
           { label: 'Registros', value: String(recent.length), icon: '📋' },
           { label: 'Qualidade média', value: avgQuality ? `${avgQuality}/5` : '—', icon: '⭐' },
           { label: 'Duração média', value: avgDuration || '—', icon: '⏱️' }
-        ].map(s => (
-          <div key={s.label} className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-            <span className="text-2xl">{s.icon}</span>
-            <p className="text-xl font-bold text-text-primary mt-1">{s.value}</p>
+        ].map((s, i) => (
+          <div key={s.label} className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-slide-up" style={{ animationDelay: `${i * 70}ms` }}>
+            <span className="text-2xl animate-bounce-in" style={{ animationDelay: `${100 + i * 70}ms`, display: 'inline-block' }}>{s.icon}</span>
+            <p className="text-xl font-bold text-text-primary mt-1 animate-count-up" style={{ animationDelay: `${180 + i * 70}ms` }}>{s.value}</p>
             <p className="text-xs text-text-muted">{s.label}</p>
           </div>
         ))}
@@ -180,7 +189,7 @@ export default function Sleep(): React.JSX.Element {
 
       {/* Duration chart - last 14 days */}
       {chartData.length > 0 && (
-        <div ref={chartRef} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+        <div ref={chartRef} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '180ms' }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-text-secondary">Duração do sono — últimos 14 dias</p>
             {highlightedLog && (
@@ -211,9 +220,12 @@ export default function Sleep(): React.JSX.Element {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 space-y-4">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 space-y-4 animate-card-in relative overflow-hidden" style={{ animationDelay: '250ms' }}>
+          <span className="absolute top-3 right-5 text-sm text-text-muted/20 animate-float select-none pointer-events-none" style={{ animationDelay: '0s' }}>✦</span>
+          <span className="absolute top-14 right-9 text-xs text-text-muted/15 animate-float select-none pointer-events-none" style={{ animationDelay: '1.4s' }}>✦</span>
+          <span className="absolute bottom-14 right-4 text-base text-text-muted/10 animate-float select-none pointer-events-none" style={{ animationDelay: '0.7s' }}>✦</span>
           <div className="flex items-center gap-2">
-            <Moon size={18} className="text-accent-blue" />
+            <Moon size={18} className="text-accent-blue animate-float" style={{ animationDelay: '0.3s' } as React.CSSProperties} />
             <h2 className="font-semibold text-text-primary">Registrar sono</h2>
           </div>
 
@@ -251,7 +263,9 @@ export default function Sleep(): React.JSX.Element {
 
           <div className="p-3 bg-bg-primary rounded-lg text-center">
             <span className="text-sm text-text-secondary">Duração: </span>
-            <span className="font-bold text-text-primary">{calcDuration(bedtime, wakeTime)}</span>
+            <span key={calcDuration(bedtime, wakeTime)} className="font-bold text-text-primary animate-count-up" style={{ display: 'inline-block' }}>
+              {calcDuration(bedtime, wakeTime)}
+            </span>
           </div>
 
           <div>
@@ -260,14 +274,20 @@ export default function Sleep(): React.JSX.Element {
               {[1, 2, 3, 4, 5].map(q => (
                 <button
                   key={q}
-                  onClick={() => setQuality(q)}
+                  onClick={() => handleQualityClick(q)}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                     quality === q
                       ? 'border-accent-purple bg-accent-purple/20 text-text-primary'
                       : 'border-bg-border text-text-muted hover:bg-bg-border'
                   }`}
                 >
-                  <Star size={12} className={`mx-auto ${quality >= q ? 'text-accent-gold fill-accent-gold' : ''}`} />
+                  <span
+                    key={quality >= q ? `f${qualityVersion}-${q}` : `e${q}`}
+                    style={{ display: 'block' }}
+                    className={quality >= q ? 'animate-check-pop' : ''}
+                  >
+                    <Star size={12} className={`mx-auto ${quality >= q ? 'text-accent-gold fill-accent-gold' : ''}`} />
+                  </span>
                 </button>
               ))}
             </div>
@@ -284,13 +304,18 @@ export default function Sleep(): React.JSX.Element {
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 relative">
+            {showSaveFloat && (
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-sm font-bold text-accent-green xp-float pointer-events-none whitespace-nowrap">
+                💤 Salvo!
+              </span>
+            )}
             <button
               onClick={handleSave}
-              className="flex-1 flex items-center justify-center gap-2 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-white text-sm font-medium rounded-lg transition-all ${saved ? 'bg-accent-green' : 'bg-accent-purple hover:bg-purple-600'}`}
             >
-              <Save size={14} />
-              {saved ? 'Salvo!' : existingId ? 'Atualizar' : 'Salvar'}
+              <Save size={14} className={saved ? 'animate-check-pop' : ''} />
+              {saved ? 'Salvo! ✓' : existingId ? 'Atualizar' : 'Salvar'}
             </button>
             {existingId && (
               <button
@@ -305,20 +330,21 @@ export default function Sleep(): React.JSX.Element {
 
         {/* History */}
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Histórico</h2>
+          <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider animate-reveal-left">Histórico</h2>
           {recent.length === 0 && (
             <p className="text-text-muted text-sm">Nenhum registro ainda.</p>
           )}
-          {recent.map(log => (
+          {recent.map((log, i) => (
             <button
               key={log.id}
               ref={el => { cardRefs.current[log.date] = el }}
               onClick={() => handleCardClick(log.date)}
-              className={`w-full text-left p-3 rounded-xl border transition-all ${
+              className={`w-full text-left p-3 rounded-xl border transition-all animate-slide-up hover:shadow-md hover:shadow-accent-blue/10 hover:-translate-y-px ${
                 log.date === date
-                  ? 'border-accent-purple bg-accent-purple/10'
-                  : 'border-bg-border bg-bg-secondary hover:border-bg-border/60'
+                  ? 'border-accent-purple bg-accent-purple/10 shadow-sm shadow-accent-purple/20'
+                  : 'border-bg-border bg-bg-secondary hover:border-accent-blue/30'
               } ${log.date === highlightedDate && log.date !== date ? 'ring-1 ring-accent-blue/50' : ''}`}
+              style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-text-primary">

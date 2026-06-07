@@ -430,8 +430,11 @@ export default function Gym(): React.JSX.Element {
   return (
     <div className="space-y-4 animate-fadeIn max-w-3xl">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-text-primary">Academia</h1>
-        <div className="flex gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Academia</h1>
+          <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>{workouts.length} treino{workouts.length !== 1 ? 's' : ''} registrado{workouts.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex gap-2 animate-slide-up" style={{ animationDelay: '80ms' }}>
           <button onClick={() => setShowBioModal(true)}
             className="flex items-center gap-2 px-3 py-2 border border-bg-border hover:bg-bg-border text-text-secondary rounded-lg text-sm">
             <Scale size={15} /> Bioimpedância
@@ -444,7 +447,7 @@ export default function Gym(): React.JSX.Element {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 w-fit animate-slide-up" style={{ animationDelay: '120ms' }}>
         <button onClick={() => setTab('workouts')}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === 'workouts' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
           <Dumbbell className="inline mr-1.5" size={13} />Treinos ({workouts.length})
@@ -467,10 +470,10 @@ export default function Gym(): React.JSX.Element {
               <p className="text-text-muted">Nenhum treino registrado ainda.</p>
             </div>
           )}
-          {workouts.map(w => {
+          {workouts.map((w, i) => {
             const isExpanded = expanded.has(w.id)
             return (
-              <div key={w.id} className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+              <div key={w.id} className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden animate-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
                 <div className="flex items-center gap-3 p-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -564,18 +567,18 @@ export default function Gym(): React.JSX.Element {
                 <p className="text-text-muted">Nenhuma medição registrada.</p>
               </div>
             )}
-            {bio.map(b => (
-              <div key={b.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+            {bio.map((b, i) => (
+              <div key={b.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${i * 55}ms` }}>
                 <div className="flex justify-between items-start">
                   <p className="text-sm font-semibold text-text-primary">{format(new Date(b.date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                   <button onClick={async () => { if (confirm('Excluir medição?')) { await window.api.gym.deleteBioimpedance(b.id); loadAll() } }}
                     className="p-1 text-text-muted hover:text-accent-red"><Trash2 size={13} /></button>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
-                  {b.weight_kg != null && <div><p className="text-xs text-text-muted">Peso</p><p className="text-lg font-bold text-accent-purple">{b.weight_kg}kg</p></div>}
-                  {b.body_fat_pct != null && <div><p className="text-xs text-text-muted">Gordura</p><p className="text-lg font-bold text-accent-red">{b.body_fat_pct}%</p></div>}
-                  {b.muscle_mass_kg != null && <div><p className="text-xs text-text-muted">Músculo</p><p className="text-lg font-bold text-accent-green">{b.muscle_mass_kg}kg</p></div>}
-                  {b.bmr_kcal != null && <div><p className="text-xs text-text-muted">TMB</p><p className="text-lg font-bold text-accent-gold">{b.bmr_kcal}kcal</p></div>}
+                  {b.weight_kg != null && <div><p className="text-xs text-text-muted">Peso</p><p className="text-lg font-bold text-accent-purple animate-count-up">{b.weight_kg}kg</p></div>}
+                  {b.body_fat_pct != null && <div><p className="text-xs text-text-muted">Gordura</p><p className="text-lg font-bold text-accent-red animate-count-up" style={{ animationDelay: '60ms' }}>{b.body_fat_pct}%</p></div>}
+                  {b.muscle_mass_kg != null && <div><p className="text-xs text-text-muted">Músculo</p><p className="text-lg font-bold text-accent-green animate-count-up" style={{ animationDelay: '120ms' }}>{b.muscle_mass_kg}kg</p></div>}
+                  {b.bmr_kcal != null && <div><p className="text-xs text-text-muted">TMB</p><p className="text-lg font-bold text-accent-gold animate-count-up" style={{ animationDelay: '180ms' }}>{b.bmr_kcal}kcal</p></div>}
                 </div>
               </div>
             ))}

@@ -22,6 +22,9 @@ function applyStoredTheme() {
   const accent = localStorage.getItem('habitos_accent') || '#7c3aed'
   document.documentElement.setAttribute('data-theme', theme)
   document.documentElement.style.setProperty('--accent-purple', accent)
+  if (localStorage.getItem('habitos_reduce_motion') === '1') {
+    document.documentElement.setAttribute('data-reduce-motion', '1')
+  }
 }
 
 export default function App(): React.JSX.Element {

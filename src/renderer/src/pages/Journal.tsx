@@ -72,17 +72,17 @@ export default function Journal(): React.JSX.Element {
   const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd')
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div>
+    <div className="space-y-6">
+      <div className="animate-slide-down">
         <h1 className="text-2xl font-bold text-text-primary">Diário</h1>
-        <p className="text-text-secondary text-sm mt-1">Reflexões e anotações do dia</p>
+        <p className="text-text-secondary text-sm mt-1 animate-slide-in-left" style={{ animationDelay: '60ms' }}>Reflexões e anotações do dia</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Editor */}
         <div className="lg:col-span-2 space-y-4">
           {/* Date nav */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 animate-slide-up" style={{ animationDelay: '120ms' }}>
             <button onClick={() => shiftDay(-1)} className="p-1.5 rounded-lg bg-bg-secondary border border-bg-border hover:bg-bg-border transition-colors">
               <ChevronLeft size={16} className="text-text-secondary" />
             </button>
@@ -102,19 +102,20 @@ export default function Journal(): React.JSX.Element {
           </div>
 
           {/* Mood */}
-          <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+          <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '210ms' }}>
             <p className="text-sm font-medium text-text-secondary mb-3">Como você está se sentindo?</p>
             <div className="flex gap-3 justify-center">
-              {MOODS.map(m => (
+              {MOODS.map((m, i) => (
                 <button
                   key={m.value}
                   onClick={() => setMood(m.value)}
                   title={m.label}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all animate-pop-in ${
                     mood === m.value
                       ? 'bg-accent-purple/20 ring-2 ring-accent-purple scale-110'
                       : 'hover:bg-bg-border'
                   }`}
+                  style={{ animationDelay: `${270 + i * 55}ms` }}
                 >
                   <span className="text-2xl">{m.emoji}</span>
                   <span className="text-xs text-text-muted">{m.label}</span>
@@ -124,7 +125,7 @@ export default function Journal(): React.JSX.Element {
           </div>
 
           {/* Text area */}
-          <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
+          <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '560ms' }}>
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
@@ -134,7 +135,7 @@ export default function Journal(): React.JSX.Element {
             />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 animate-slide-up" style={{ animationDelay: '640ms' }}>
             <button
               onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
@@ -156,23 +157,24 @@ export default function Journal(): React.JSX.Element {
 
         {/* Recent entries */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2 animate-slide-in-left" style={{ animationDelay: '160ms' }}>
             <BookOpen size={14} /> Entradas recentes
           </h2>
           {recent.length === 0 && (
-            <p className="text-text-muted text-sm">Nenhuma entrada ainda.</p>
+            <p className="text-text-muted text-sm animate-slide-up" style={{ animationDelay: '240ms' }}>Nenhuma entrada ainda.</p>
           )}
-          {recent.map(entry => {
+          {recent.map((entry, i) => {
             const m = MOODS.find(x => x.value === entry.mood)
             return (
               <button
                 key={entry.id}
                 onClick={() => setSelectedDate(entry.date)}
-                className={`w-full text-left p-3 rounded-xl border transition-all ${
+                className={`w-full text-left p-3 rounded-xl border transition-all animate-card-in ${
                   entry.date === selectedDate
                     ? 'border-accent-purple bg-accent-purple/10'
                     : 'border-bg-border bg-bg-secondary hover:border-bg-border/60'
                 }`}
+                style={{ animationDelay: `${220 + i * 60}ms` }}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium text-text-secondary">

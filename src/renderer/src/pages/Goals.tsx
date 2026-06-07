@@ -158,14 +158,20 @@ function CompleteGoalModal({ goal, xp, onConfirm, onClose }: {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeIn">
       <div className="bg-bg-secondary border border-bg-border rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center animate-pop-in">
-        <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-accent-green/15 border-2 border-accent-green/40 flex items-center justify-center">
-          <CheckCircle2 size={40} className="text-accent-green" />
+        <div className="relative flex justify-center mb-5">
+          <span className="absolute -top-4 left-4 text-2xl animate-float" style={{ animationDelay: '0s' }}>✨</span>
+          <span className="absolute -top-2 right-4 text-xl animate-float" style={{ animationDelay: '0.35s' }}>🎊</span>
+          <span className="absolute top-8 -left-2 text-lg animate-float" style={{ animationDelay: '0.6s' }}>⭐</span>
+          <span className="absolute top-8 -right-2 text-lg animate-float" style={{ animationDelay: '0.9s' }}>🏆</span>
+          <div className="w-20 h-20 rounded-full bg-accent-green/15 border-2 border-accent-green/40 flex items-center justify-center animate-bounce-in">
+            <CheckCircle2 size={40} className="text-accent-green animate-glow-pulse" />
+          </div>
         </div>
         <h2 className="text-xl font-bold text-text-primary mb-2">Concluir Meta?</h2>
         <p className="text-sm text-text-secondary mb-5 px-2">{goal.title}</p>
         <div className="flex justify-center mb-4">
-          <div className="px-6 py-3 bg-accent-gold/10 border border-accent-gold/30 rounded-full">
-            <span className="text-accent-gold font-bold text-2xl">+{xp} XP</span>
+          <div className="px-6 py-3 bg-accent-gold/10 border border-accent-gold/30 rounded-full animate-bounce-in" style={{ animationDelay: '0.15s' }}>
+            <span className="text-accent-gold font-bold text-2xl animate-count-up" style={{ display: 'inline-block', animationDelay: '0.2s' }}>+{xp} XP</span>
           </div>
         </div>
         {goal.tasks.length > 0 && (
@@ -190,14 +196,29 @@ function CompleteGoalModal({ goal, xp, onConfirm, onClose }: {
   )
 }
 
-function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
+function GoalCard({ goal, cbs, index = 0 }: { goal: Goal; cbs: GoalCallbacks; index?: number }) {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [justChecked, setJustChecked] = useState<Set<number>>(new Set())
+  const [displayPct, setDisplayPct] = useState(0)
   const { newTask, setNewTask, toggleTask, addTask, onCompleteGoal, onLoad, onEditGoal, onDeleteGoal, estimateXP } = cbs
 
   const totalTasks = goal.tasks.length
   const doneTasks = goal.tasks.filter(t => t.is_completed).length
   const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
+
+  useEffect(() => {
+    const t = setTimeout(() => setDisplayPct(pct), 80 + index * 60)
+    return () => clearTimeout(t)
+  }, [pct, index])
+
+  async function handleToggleTask(taskId: number, current: number) {
+    if (!current) {
+      setJustChecked(prev => new Set([...prev, taskId]))
+      setTimeout(() => setJustChecked(prev => { const s = new Set(prev); s.delete(taskId); return s }), 600)
+    }
+    await toggleTask(taskId, current)
+  }
 
   function startEditTask(task: GoalTask) {
     setEditingTaskId(task.id)
@@ -215,7 +236,8 @@ function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
   }
 
   return (
-    <div className={`bg-bg-secondary border rounded-xl overflow-hidden flex ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}>
+    <div className={`bg-bg-secondary border rounded-xl overflow-hidden flex animate-card-in hover:shadow-lg hover:shadow-accent-purple/5 ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}
+      style={{ animationDelay: `${index * 70}ms` }}>
       <div className="flex-1 p-5">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
@@ -255,8 +277,8 @@ function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
               <span>{pct}%</span>
             </div>
             <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full transition-all"
-                style={{ width: `${pct}%` }} />
+              <div className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full"
+                style={{ width: `${displayPct}%`, transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)' }} />
             </div>
           </div>
         )}
@@ -264,9 +286,11 @@ function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
         <div className="ml-6 space-y-1.5">
           {goal.tasks.map(task => (
             <div key={task.id} className="flex items-center gap-2 group">
-              <button onClick={() => !goal.is_completed && toggleTask(task.id, task.is_completed)}
+              <button onClick={() => !goal.is_completed && handleToggleTask(task.id, task.is_completed)}
                 className="shrink-0 text-text-muted hover:text-accent-purple transition-colors">
-                {task.is_completed ? <CheckSquare size={15} className="text-accent-green" /> : <Square size={15} />}
+                {task.is_completed
+                  ? <CheckSquare size={15} className={`text-accent-green ${justChecked.has(task.id) ? 'animate-check-pop' : ''}`} />
+                  : <Square size={15} />}
               </button>
               {editingTaskId === task.id ? (
                 <input
@@ -328,7 +352,7 @@ function GoalCard({ goal, cbs }: { goal: Goal; cbs: GoalCallbacks }) {
 
 function FolderSection({
   folder, active, collapsed, toggleCollapse,
-  setEditFolder, setShowFolderModal, deleteFolder, openNewGoal, cbs
+  setEditFolder, setShowFolderModal, deleteFolder, openNewGoal, cbs, index = 0
 }: {
   folder: GoalFolder
   active: Goal[]
@@ -339,12 +363,13 @@ function FolderSection({
   deleteFolder: (folder: GoalFolder) => Promise<void>
   openNewGoal: (folderId: number | null) => void
   cbs: GoalCallbacks
+  index?: number
 }) {
   const folderGoals = active.filter(g => g.folder_id === folder.id)
   const isOpen = !collapsed[`folder-${folder.id}`]
 
   return (
-    <div className="rounded-xl border border-bg-border overflow-hidden">
+    <div className="rounded-xl border border-bg-border overflow-hidden animate-card-in" style={{ animationDelay: `${index * 80}ms` }}>
       <div className="flex items-center gap-3 px-4 py-3 bg-bg-secondary cursor-pointer select-none"
         onClick={() => toggleCollapse(`folder-${folder.id}`)}>
         <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
@@ -365,11 +390,11 @@ function FolderSection({
       </div>
 
       {isOpen && (
-        <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
+        <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3 animate-slide-down">
           {folderGoals.length === 0 && (
             <p className="text-xs text-text-muted text-center py-2">Nenhuma meta nesta pasta ainda.</p>
           )}
-          {folderGoals.map(g => <GoalCard key={g.id} goal={g} cbs={cbs} />)}
+          {folderGoals.map((g, i) => <GoalCard key={g.id} goal={g} cbs={cbs} index={i} />)}
           <button
             onClick={() => openNewGoal(folder.id)}
             className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-bg-border text-text-muted hover:text-text-primary hover:border-accent-purple/50 text-xs transition-colors">
@@ -548,14 +573,14 @@ export default function Goals(): React.JSX.Element {
 
       {goals.length === 0 && folders.length === 0 && (
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-10 text-center">
-          <Target size={40} className="text-text-muted mx-auto mb-2" />
+          <Target size={40} className="text-text-muted mx-auto mb-2 animate-float" />
           <p className="text-text-muted">Nenhuma meta cadastrada.</p>
           <p className="text-xs text-text-muted mt-1">Crie pastas para organizar suas metas por categoria.</p>
         </div>
       )}
 
       <div className="space-y-3">
-        {folders.map(f => (
+        {folders.map((f, i) => (
           <FolderSection
             key={f.id}
             folder={f}
@@ -567,6 +592,7 @@ export default function Goals(): React.JSX.Element {
             deleteFolder={deleteFolder}
             openNewGoal={openNewGoal}
             cbs={cbs}
+            index={i}
           />
         ))}
 
@@ -580,8 +606,8 @@ export default function Goals(): React.JSX.Element {
               {isUncatOpen ? <ChevronDown size={16} className="text-text-muted" /> : <ChevronRight size={16} className="text-text-muted" />}
             </div>
             {isUncatOpen && (
-              <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
-                {uncategorized.map(g => <GoalCard key={g.id} goal={g} cbs={cbs} />)}
+              <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3 animate-slide-down">
+                {uncategorized.map((g, i) => <GoalCard key={g.id} goal={g} cbs={cbs} index={i} />)}
               </div>
             )}
           </div>
@@ -597,8 +623,8 @@ export default function Goals(): React.JSX.Element {
               {!collapsed['completed'] ? <ChevronDown size={16} className="text-text-muted" /> : <ChevronRight size={16} className="text-text-muted" />}
             </div>
             {!collapsed['completed'] && (
-              <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3">
-                {completed.map(g => <GoalCard key={g.id} goal={g} cbs={cbs} />)}
+              <div className="border-t border-bg-border bg-bg-primary/30 p-3 space-y-3 animate-slide-down">
+                {completed.map((g, i) => <GoalCard key={g.id} goal={g} cbs={cbs} index={i} />)}
               </div>
             )}
           </div>

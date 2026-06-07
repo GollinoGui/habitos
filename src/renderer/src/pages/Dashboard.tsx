@@ -53,11 +53,15 @@ export default function Dashboard(): React.JSX.Element {
   const [weeklyData, setWeeklyData] = useState<{ date: string; count: number; pct: number; isFuture: boolean }[]>([])
 
   const [focusMode, setFocusMode] = useState(false)
+  const [barsVisible, setBarsVisible] = useState(false)
   const [, setTick] = useState(0)
   const [calendarKey, setCalendarKey] = useState(0)
   const [xpFloats, setXpFloats] = useState<XpFloat[]>([])
   const xpIdRef = useRef(0)
   const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({})
+  const [hiddenSections, setHiddenSections] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('habitos_hidden_sections') || '[]') } catch { return [] }
+  })
 
   // Quick actions
   const [quickAction, setQuickAction] = useState<'journal' | 'sleep' | null>(null)
@@ -72,7 +76,11 @@ export default function Dashboard(): React.JSX.Element {
   useEffect(() => {
     loadAll()
     const interval = setInterval(() => setTick(t => t + 1), 1000)
-    return () => clearInterval(interval)
+    function onSectionsChanged() {
+      try { setHiddenSections(JSON.parse(localStorage.getItem('habitos_hidden_sections') || '[]')) } catch { setHiddenSections([]) }
+    }
+    window.addEventListener('habitos_sections_changed', onSectionsChanged)
+    return () => { clearInterval(interval); window.removeEventListener('habitos_sections_changed', onSectionsChanged) }
   }, [])
 
   async function loadAll() {
@@ -106,12 +114,14 @@ export default function Dashboard(): React.JSX.Element {
       byDate.set(d, (byDate.get(d) ?? 0) + 1)
     }
     const total = activeHabits.length
+    setBarsVisible(false)
     setWeeklyData(Array.from({ length: 7 }, (_, i) => {
       const d = format(new Date(mondayMs + i * 86400000), 'yyyy-MM-dd')
       const count = byDate.get(d) ?? 0
       const isFuture = d > today
       return { date: d, count, pct: total > 0 && !isFuture ? Math.round((count / total) * 100) : 0, isFuture }
     }))
+    setTimeout(() => setBarsVisible(true), 120)
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
     setAddictions(add as Addiction[])
     setAchievements(ach as Achievement[])
@@ -195,6 +205,8 @@ export default function Dashboard(): React.JSX.Element {
     setTimeout(() => setQuickSaved(false), 2000)
   }
 
+  const showW = (key: string) => !hiddenSections.includes(key)
+
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
   const completedCount = completedToday.size
@@ -219,13 +231,13 @@ export default function Dashboard(): React.JSX.Element {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">
             {greeting}, {(profile as any)?.name || 'Herói'}! 👋
           </h1>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <div className="flex items-center gap-2 mt-1 flex-wrap animate-slide-in-left" style={{ animationDelay: '80ms' }}>
             <p className="text-text-secondary text-sm">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
             {maxStreak >= 3 && (
-              <span className="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-700/40 text-orange-400 text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-700/40 text-orange-400 text-xs font-bold px-2 py-0.5 rounded-full animate-pulse-soft">
                 <Flame size={11} />
                 {maxStreak} dias em sequência
               </span>
@@ -246,32 +258,32 @@ export default function Dashboard(): React.JSX.Element {
       {/* Stats row */}
       {!focusMode && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '50ms' }}>
-            <Zap size={18} className="text-accent-gold shrink-0" />
+          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '80ms' }}>
+            <Zap size={18} className="text-accent-gold shrink-0 animate-float" />
             <div>
               <p className="text-xs text-text-muted">XP hoje</p>
-              <p className="font-bold text-accent-gold text-lg leading-tight">{xpToday}</p>
+              <p className="font-bold text-accent-gold text-lg leading-tight animate-count-up" style={{ animationDelay: '230ms' }}>{xpToday}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '90ms' }}>
-            <Flame size={18} className="text-orange-400 shrink-0" />
+          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '165ms' }}>
+            <Flame size={18} className="text-orange-400 shrink-0 animate-float" style={{ animationDelay: '0.4s' } as React.CSSProperties} />
             <div>
               <p className="text-xs text-text-muted">Sequência</p>
-              <p className="font-bold text-orange-400 text-lg leading-tight">{maxStreak > 0 ? `${maxStreak}d` : '—'}</p>
+              <p className="font-bold text-orange-400 text-lg leading-tight animate-count-up" style={{ animationDelay: '315ms' }}>{maxStreak > 0 ? `${maxStreak}d` : '—'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '130ms' }}>
-            <CheckCircle2 size={18} className="text-accent-green shrink-0" />
+          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '250ms' }}>
+            <CheckCircle2 size={18} className="text-accent-green shrink-0 animate-float" style={{ animationDelay: '0.8s' } as React.CSSProperties} />
             <div>
               <p className="text-xs text-text-muted">Hábitos</p>
-              <p className="font-bold text-accent-green text-lg leading-tight">{completedCount}/{totalHabits}</p>
+              <p className="font-bold text-accent-green text-lg leading-tight animate-count-up" style={{ animationDelay: '400ms' }}>{completedCount}/{totalHabits}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '170ms' }}>
-            <Moon size={18} className="text-accent-blue shrink-0" />
+          <div className="flex items-center gap-3 bg-bg-secondary border border-bg-border rounded-xl px-4 py-3 animate-slide-up" style={{ animationDelay: '335ms' }}>
+            <Moon size={18} className="text-accent-blue shrink-0 animate-float" style={{ animationDelay: '1.2s' } as React.CSSProperties} />
             <div>
               <p className="text-xs text-text-muted">Sono</p>
-              <p className="font-bold text-accent-blue text-lg leading-tight">
+              <p className="font-bold text-accent-blue text-lg leading-tight animate-count-up" style={{ animationDelay: '485ms' }}>
                 {lastSleep ? sleepDuration(lastSleep.bedtime, lastSleep.wake_time) : '—'}
               </p>
             </div>
@@ -280,14 +292,18 @@ export default function Dashboard(): React.JSX.Element {
       )}
 
       {/* Progress bar */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '80ms' }}>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '430ms' }}>
         <div className="flex justify-between mb-2">
           <span className="text-sm font-medium text-text-primary">Progresso do dia</span>
           <span className="text-sm font-bold text-accent-purple">{progressPct}%</span>
         </div>
         <div className="h-3 bg-bg-border rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-accent-purple to-accent-green rounded-full transition-all duration-500"
+            className={`h-full rounded-full transition-all duration-500 ${
+              progressPct === 100
+                ? 'animate-shimmer'
+                : 'bg-gradient-to-r from-accent-purple to-accent-green'
+            }`}
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -301,7 +317,7 @@ export default function Dashboard(): React.JSX.Element {
         {/* Habits + weekly summary */}
         <div className={`space-y-3 ${focusMode ? '' : 'lg:col-span-2'}`}>
           <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">Hábitos de Hoje</h2>
+            <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 animate-reveal-left">Hábitos de Hoje</h2>
             {habits.length === 0 && (
               <p className="text-text-muted text-sm">Nenhum hábito cadastrado ainda.</p>
             )}
@@ -318,10 +334,10 @@ export default function Dashboard(): React.JSX.Element {
                         ? 'border-accent-green bg-emerald-950/30 text-text-primary'
                         : 'border-bg-border bg-bg-primary hover:border-bg-border/80 hover:bg-bg-border/30 text-text-secondary'
                       }`}
-                    style={{ animationDelay: `${140 + i * 50}ms` }}
+                    style={{ animationDelay: `${80 + i * 60}ms` }}
                   >
                     {done
-                      ? <CheckCircle2 size={18} className="text-accent-green shrink-0" />
+                      ? <CheckCircle2 key={`chk-${habit.id}-done`} size={18} className="text-accent-green shrink-0 animate-check-pop" />
                       : <Circle size={18} className="shrink-0" />
                     }
                     <span className="text-lg">{habit.icon}</span>
@@ -339,10 +355,10 @@ export default function Dashboard(): React.JSX.Element {
 
           {/* Weekly summary */}
           {weeklyData.length > 0 && habits.length > 0 && !focusMode && (
-            <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
-              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4">Últimos 7 dias</p>
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '80ms' }}>
+              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4 animate-reveal-left">Últimos 7 dias</p>
               <div className="flex gap-2 h-12">
-                {weeklyData.map(day => {
+                {weeklyData.map((day, i) => {
                   const barH = day.isFuture ? 1 : Math.max(Math.round(day.pct * 0.48), day.count > 0 ? 3 : 1)
                   return (
                     <div
@@ -358,7 +374,10 @@ export default function Dashboard(): React.JSX.Element {
                           : day.pct > 0 ? 'bg-accent-purple/40'
                           : 'bg-bg-border'
                         }`}
-                        style={{ height: `${barH}px` }}
+                        style={{
+                          height: `${barsVisible ? barH : 0}px`,
+                          transitionDelay: `${i * 75}ms`
+                        }}
                       />
                     </div>
                   )
@@ -478,25 +497,27 @@ export default function Dashboard(): React.JSX.Element {
         {!focusMode && (
           <div className="space-y-3">
             {/* Gym */}
-            <div
-              className={`rounded-xl p-4 border animate-slide-up cursor-pointer transition-colors ${
-                workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary hover:bg-bg-border/20'
-              }`}
-              style={{ animationDelay: '180ms' }}
-              onClick={() => navigate('/gym')}
-            >
-              <div className="flex items-center gap-2">
-                <Dumbbell size={16} className={workoutToday ? 'text-accent-green' : 'text-text-muted'} />
-                <span className="text-sm font-semibold text-text-primary flex-1">Academia</span>
-                <ArrowRight size={13} className="text-text-muted" />
+            {showW('gym') && (
+              <div
+                className={`rounded-xl p-4 border animate-slide-up cursor-pointer transition-colors ${
+                  workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary hover:bg-bg-border/20'
+                }`}
+                style={{ animationDelay: '520ms' }}
+                onClick={() => navigate('/gym')}
+              >
+                <div className="flex items-center gap-2">
+                  <Dumbbell size={16} className={workoutToday ? 'text-accent-green' : 'text-text-muted'} />
+                  <span className="text-sm font-semibold text-text-primary flex-1">Academia</span>
+                  <ArrowRight size={13} className="text-text-muted" />
+                </div>
+                <p className="text-xs text-text-secondary mt-1">
+                  {workoutToday ? '✅ Treino registrado hoje' : 'Nenhum treino hoje'}
+                </p>
               </div>
-              <p className="text-xs text-text-secondary mt-1">
-                {workoutToday ? '✅ Treino registrado hoje' : 'Nenhum treino hoje'}
-              </p>
-            </div>
+            )}
 
             {/* Addictions - compact */}
-            {addictions.slice(0, 2).map((a, i) => {
+            {showW('addictions') && addictions.slice(0, 2).map((a, i) => {
               const diffMs = Date.now() - new Date(a.started_free_at).getTime()
               const totalSecs = Math.floor(diffMs / 1000)
               const days = Math.floor(totalSecs / 86400)
@@ -505,7 +526,7 @@ export default function Dashboard(): React.JSX.Element {
               const secs = totalSecs % 60
               const hidden = !!a.is_hidden_name
               return (
-                <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${230 + i * 50}ms` }}>
+                <div key={a.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
                   <div className="flex items-center gap-2 mb-1">
                     <ShieldOff size={15} className="text-accent-blue shrink-0" />
                     <span className="text-sm font-semibold text-text-primary truncate flex-1">
@@ -531,10 +552,10 @@ export default function Dashboard(): React.JSX.Element {
             })}
 
             {/* Sleep widget */}
-            {lastSleep && (
+            {showW('sleep') && lastSleep && (
               <div
                 className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up cursor-pointer hover:bg-bg-border/20 transition-colors"
-                style={{ animationDelay: '330ms' }}
+                style={{ animationDelay: '80ms' }}
                 onClick={() => navigate('/sleep')}
               >
                 <div className="flex items-center gap-2">
@@ -552,8 +573,8 @@ export default function Dashboard(): React.JSX.Element {
             )}
 
             {/* Reading */}
-            {todayReadingMins > 0 && (
-              <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '370ms' }}>
+            {showW('reading') && todayReadingMins > 0 && (
+              <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '160ms' }}>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-base">📚</span>
                   <span className="text-sm font-semibold text-text-primary">Leitura</span>
@@ -564,14 +585,14 @@ export default function Dashboard(): React.JSX.Element {
             )}
 
             {/* Recent achievements */}
-            {achievements.length > 0 && (
+            {showW('achievements') && achievements.length > 0 && (
               <div
-                className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up cursor-pointer hover:bg-bg-border/20 transition-colors"
-                style={{ animationDelay: '400ms' }}
+                className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-bounce-in cursor-pointer hover:bg-bg-border/20 transition-colors"
+                style={{ animationDelay: '240ms' }}
                 onClick={() => navigate('/achievements')}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Trophy size={15} className="text-accent-gold" />
+                  <Trophy size={15} className="text-accent-gold animate-glow-pulse" />
                   <span className="text-sm font-semibold text-text-primary flex-1">Conquistas</span>
                   <ArrowRight size={13} className="text-text-muted" />
                 </div>

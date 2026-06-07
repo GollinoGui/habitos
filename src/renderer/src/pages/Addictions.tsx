@@ -36,25 +36,49 @@ function getMilestones(seconds: number) {
 
 function Timer({ startedAt }: { startedAt: string }) {
   const [secs, setSecs] = useState(() => differenceInSeconds(new Date(), new Date(startedAt)))
+  const [barVisible, setBarVisible] = useState(false)
+  const [timerVisible, setTimerVisible] = useState(false)
+
   useEffect(() => {
     const interval = setInterval(() => setSecs(differenceInSeconds(new Date(), new Date(startedAt))), 1000)
     return () => clearInterval(interval)
   }, [startedAt])
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setTimerVisible(true), 80)
+    const t2 = setTimeout(() => setBarVisible(true), 320)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+
   const { next, prev, days } = getMilestones(secs)
   const pct = next ? Math.min(100, ((days - (prev?.days || 0)) / (next.days - (prev?.days || 0))) * 100) : 100
   return (
     <div>
-      <p className="text-3xl font-bold text-accent-blue tabular-nums">{formatDuration(secs)}</p>
+      <p className={`text-3xl font-bold text-accent-blue tabular-nums ${timerVisible ? 'animate-count-up' : 'opacity-0'}`}>
+        {formatDuration(secs)}
+      </p>
       {next && (
         <div className="mt-2">
           <div className="flex justify-between text-xs text-text-muted mb-1">
-            <span>{prev ? `${prev.icon} ${prev.label}` : 'Início'}</span>
-            <span>{next.icon} {next.label}</span>
+            <span className="animate-slide-in-left" style={{ animationDelay: '200ms' }}>
+              {prev ? `${prev.icon} ${prev.label}` : 'Início'}
+            </span>
+            <span className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+              {next.icon} {next.label}
+            </span>
           </div>
           <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-accent-blue to-accent-purple rounded-full transition-all"
-              style={{ width: `${pct}%` }} />
+            <div
+              className="h-full bg-gradient-to-r from-accent-blue to-accent-purple rounded-full"
+              style={{
+                width: `${barVisible ? pct : 0}%`,
+                transition: 'width 1.1s cubic-bezier(0.34, 1.1, 0.64, 1)'
+              }}
+            />
           </div>
+          <p className="text-[10px] text-accent-blue/60 mt-0.5 text-right animate-slide-up" style={{ animationDelay: '400ms' }}>
+            {Math.round(pct)}% até o próximo marco
+          </p>
         </div>
       )}
     </div>
@@ -90,6 +114,12 @@ function RelapseModal({ addictionId, onClose, onRelapse }: {
 }
 
 function AddictionsStats({ addictions }: { addictions: Addiction[] }) {
+  const [barsVisible, setBarsVisible] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setBarsVisible(true), 180)
+    return () => clearTimeout(t)
+  }, [])
+
   const totalRelapses = addictions.reduce((s, a) => s + a.relapses.length, 0)
 
   const longestStreak = addictions.reduce((best, a) => {
@@ -120,31 +150,35 @@ function AddictionsStats({ addictions }: { addictions: Addiction[] }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-        <p className="text-2xl font-bold text-accent-blue">{longestStreak}d</p>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-pop-in" style={{ animationDelay: '0ms' }}>
+        <p className="text-2xl font-bold text-accent-blue animate-count-up" style={{ animationDelay: '120ms' }}>{longestStreak}d</p>
         <p className="text-xs text-text-muted">Maior streak</p>
       </div>
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-        <p className="text-2xl font-bold text-accent-red">{totalRelapses}</p>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-pop-in" style={{ animationDelay: '80ms' }}>
+        <p className="text-2xl font-bold text-accent-red animate-count-up" style={{ animationDelay: '200ms' }}>{totalRelapses}</p>
         <p className="text-xs text-text-muted">Recaídas totais</p>
       </div>
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-        <p className="text-2xl font-bold text-accent-gold">{riskDay || '—'}</p>
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-pop-in" style={{ animationDelay: '160ms' }}>
+        <p className="text-2xl font-bold text-accent-gold animate-count-up" style={{ animationDelay: '280ms' }}>{riskDay || '—'}</p>
         <p className="text-xs text-text-muted">Dia de maior risco</p>
       </div>
       {totalRelapses > 0 && (
-        <div className="lg:col-span-3 bg-bg-secondary border border-bg-border rounded-xl p-4">
-          <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-3">Recaídas por dia da semana</p>
+        <div className="lg:col-span-3 bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '200ms' }}>
+          <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-3 animate-reveal-left" style={{ animationDelay: '250ms' }}>Recaídas por dia da semana</p>
           <div className="flex items-end gap-2 h-16">
             {DOW_LABELS.map((label, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div className="w-full flex items-end justify-center" style={{ height: '48px' }}>
                   <div
-                    className="w-full rounded-t-sm bg-accent-red transition-all"
-                    style={{ height: `${Math.max(3, (dowCounts[i] / maxDow) * 48)}px`, opacity: dowCounts[i] === 0 ? 0.15 : 1 }}
+                    className="w-full rounded-t-sm bg-accent-red transition-all duration-700"
+                    style={{
+                      height: `${barsVisible ? Math.max(3, (dowCounts[i] / maxDow) * 48) : 0}px`,
+                      opacity: dowCounts[i] === 0 ? 0.15 : 1,
+                      transitionDelay: `${i * 65}ms`
+                    }}
                   />
                 </div>
-                <span className="text-[10px] text-text-muted">{label}</span>
+                <span className="text-[10px] text-text-muted animate-slide-up-tiny" style={{ animationDelay: `${300 + i * 65}ms` }}>{label}</span>
               </div>
             ))}
           </div>
@@ -189,8 +223,8 @@ export default function Addictions(): React.JSX.Element {
     <div className="space-y-4 animate-fadeIn max-w-2xl">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Vícios & Sobriedade</h1>
-          <p className="text-text-secondary text-sm">{addictions.length} monitorado(s)</p>
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Vícios & Sobriedade</h1>
+          <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>{addictions.length} monitorado(s)</p>
         </div>
         <button onClick={() => setShowAdd(!showAdd)}
           className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold animate-jump-in">
@@ -222,15 +256,15 @@ export default function Addictions(): React.JSX.Element {
             <p className="text-xs text-text-muted mt-1">Adicione um para começar a contar sua sobriedade.</p>
           </div>
         )}
-        {addictions.map(addiction => {
+        {addictions.map((addiction, i) => {
           const expanded = expandedHistory.has(addiction.id)
           return (
-            <div key={addiction.id} className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+            <div key={addiction.id} className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
               <div className="p-5">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-bold text-text-primary text-lg">{addiction.name}</h3>
-                    <p className="text-xs text-text-muted">
+                    <h3 className="font-bold text-text-primary text-lg animate-slide-down" style={{ animationDelay: `${i * 80}ms` }}>{addiction.name}</h3>
+                    <p className="text-xs text-text-muted animate-slide-in-left" style={{ animationDelay: `${60 + i * 80}ms` }}>
                       Desde {format(new Date(addiction.started_free_at), "dd/MM/yyyy 'às' HH:mm")}
                     </p>
                   </div>
