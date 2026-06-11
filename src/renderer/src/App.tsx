@@ -27,12 +27,15 @@ function applyStoredTheme() {
   }
 }
 
+const isDemo = typeof window !== 'undefined' && !!window.__demoMode__
+
 export default function App(): React.JSX.Element {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
 
   useEffect(() => {
     applyStoredTheme()
+    if (isDemo) return
     if (!localStorage.getItem('habitos_onboarded')) {
       setShowOnboarding(true)
     } else if (!localStorage.getItem('habitos_tutorial_done')) {
@@ -77,6 +80,13 @@ export default function App(): React.JSX.Element {
       {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
       {showTutorial && !showOnboarding && (
         <TutorialOverlay onComplete={handleTutorialComplete} />
+      )}
+      {isDemo && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-accent-purple py-2 text-white text-xs font-semibold tracking-wide pointer-events-none">
+          <span>MODO DEMO</span>
+          <span className="opacity-60">—</span>
+          <span className="opacity-80 font-normal">dados fictícios, nenhuma informação real é exibida</span>
+        </div>
       )}
     </HashRouter>
   )

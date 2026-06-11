@@ -182,6 +182,31 @@ function createTables(): void {
       description TEXT,
       category_id INTEGER,
       type TEXT NOT NULL DEFAULT 'expense',
+      status TEXT NOT NULL DEFAULT 'paid',
+      bill_id INTEGER DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS finance_bills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      amount REAL NOT NULL,
+      due_day INTEGER NOT NULL DEFAULT 5,
+      due_month INTEGER DEFAULT NULL,
+      category_id INTEGER DEFAULT NULL,
+      type TEXT NOT NULL DEFAULT 'expense',
+      recurrence TEXT NOT NULL DEFAULT 'monthly',
+      is_active INTEGER DEFAULT 1,
+      icon TEXT DEFAULT '📋',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS finance_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      bank TEXT NOT NULL DEFAULT '',
+      icon TEXT DEFAULT '🏦',
+      color TEXT DEFAULT '#7c3aed',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -256,6 +281,16 @@ function runMigrations(): void {
   }
   if (!mediaCols.find((c: Record<string, unknown>) => c.name === 'current_season')) {
     db.run('ALTER TABLE media_items ADD COLUMN current_season INTEGER DEFAULT 1')
+  }
+  const txCols = dbAll('PRAGMA table_info(finance_transactions)')
+  if (!txCols.find((c: Record<string, unknown>) => c.name === 'status')) {
+    db.run("ALTER TABLE finance_transactions ADD COLUMN status TEXT NOT NULL DEFAULT 'paid'")
+  }
+  if (!txCols.find((c: Record<string, unknown>) => c.name === 'bill_id')) {
+    db.run('ALTER TABLE finance_transactions ADD COLUMN bill_id INTEGER DEFAULT NULL')
+  }
+  if (!txCols.find((c: Record<string, unknown>) => c.name === 'account_id')) {
+    db.run('ALTER TABLE finance_transactions ADD COLUMN account_id INTEGER DEFAULT NULL')
   }
 }
 

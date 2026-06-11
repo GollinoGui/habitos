@@ -116,8 +116,28 @@ export function registerGymHandlers(): void {
     return true
   })
 
-  ipcMain.handle('gym:programs:update', (_e, id: number, data: { name: string; description?: string }) => {
+  ipcMain.handle('gym:programs:update', (_e, id: number, data: {
+    name: string; description?: string;
+    days: { name: string; day_label?: string; exercises: { name: string; sets?: number; reps?: number; weight_kg?: number }[] }[]
+  }) => {
     dbRun('UPDATE workout_programs SET name = ?, description = ? WHERE id = ?', [data.name, data.description || null, id])
+    const existingDays = dbAll('SELECT id FROM workout_program_days WHERE program_id = ?', [id])
+    for (const d of existingDays) {
+      dbRun('DELETE FROM workout_program_exercises WHERE program_day_id = ?', [d.id as number])
+    }
+    dbRun('DELETE FROM workout_program_days WHERE program_id = ?', [id])
+    for (const day of data.days || []) {
+      const dayResult = dbRun(
+        'INSERT INTO workout_program_days (program_id, day_label, name) VALUES (?, ?, ?)',
+        [id, day.day_label || null, day.name]
+      )
+      for (const ex of day.exercises || []) {
+        dbRun(
+          'INSERT INTO workout_program_exercises (program_day_id, name, sets, reps, weight_kg, is_superset) VALUES (?, ?, ?, ?, ?, ?)',
+          [dayResult.lastInsertRowid, ex.name, ex.sets || null, ex.reps || null, ex.weight_kg || null, 0]
+        )
+      }
+    }
     save()
     return true
   })

@@ -1,4 +1,17 @@
-import { app, shell, BrowserWindow, Tray, Menu, nativeImage } from 'electron'
+// Polyfill browser globals used by pdfjs-dist (via pdf-parse) in Node.js
+if (typeof (globalThis as Record<string, unknown>).DOMMatrix === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    static fromMatrix() { return new (globalThis as any).DOMMatrix() }
+    multiply() { return this }; translate() { return this }; scale() { return this }
+    rotate() { return this }; inverse() { return this }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transformPoint(p: any) { return { x: p?.x ?? 0, y: p?.y ?? 0, z: p?.z ?? 0, w: p?.w ?? 1 } }
+  }
+}
+
+import { app, shell, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import { initDb } from './db'
 import { registerHabitsHandlers } from './ipc/habits'
@@ -115,14 +128,76 @@ app.whenReady().then(async () => {
   registerMediaHandlers()
   registerAppSettingsHandlers()
 
+  ipcMain.handle('demo:open', () => {
+    const demoWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 900,
+      minHeight: 600,
+      show: false,
+      autoHideMenuBar: true,
+      title: 'Hábitos — Modo Demo',
+      titleBarStyle: 'hidden',
+      titleBarOverlay: {
+        color: '#0f0f0f',
+        symbolColor: '#f1f5f9',
+        height: 32
+      },
+      backgroundColor: '#0f0f0f',
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.mjs'),
+        additionalArguments: ['--habitos-demo'],
+        sandbox: false,
+        contextIsolation: true
+      }
+    })
+    demoWindow.on('ready-to-show', () => demoWindow.show())
+    demoWindow.webContents.setWindowOpenHandler((details) => {
+      shell.openExternal(details.url)
+      return { action: 'deny' }
+    })
+    if (process.env['ELECTRON_RENDERER_URL']) {
+      demoWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    } else {
+      demoWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    }
+  })
+
   createWindow()
   createTray()
   setupAutoLaunch()
+  setupAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+function setupAutoUpdater(): void {
+  if (!app.isPackaged) return
+
+  autoUpdater.checkForUpdates()
+
+  autoUpdater.on('update-available', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Atualização disponível',
+      message: 'Uma nova versão do Hábitos está sendo baixada em segundo plano.',
+      buttons: ['OK']
+    })
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Atualização pronta',
+      message: 'A nova versão foi baixada. Reinicie o app para instalar.',
+      buttons: ['Reiniciar agora', 'Depois']
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall()
+    })
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

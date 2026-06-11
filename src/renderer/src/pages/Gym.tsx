@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
-import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell, Link2 } from 'lucide-react'
+import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell, Link2, Pencil } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useProfileStore } from '../store/profileStore'
 
@@ -192,6 +192,7 @@ function ProgramsTab() {
   const [programs, setPrograms] = useState<WorkoutProgram[]>([])
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [showForm, setShowForm] = useState(false)
+  const [editingProgramId, setEditingProgramId] = useState<number | null>(null)
   const [progName, setProgName] = useState('')
   const [progDesc, setProgDesc] = useState('')
   const [days, setDays] = useState([{ name: '', day_label: '', exercises: [{ name: '', sets: '', reps: '', weight: '' }] }])
@@ -207,12 +208,43 @@ function ProgramsTab() {
     setPrograms(p as WorkoutProgram[])
   }
 
+  function resetForm() {
+    setEditingProgramId(null)
+    setProgName('')
+    setProgDesc('')
+    setDays([{ name: '', day_label: '', exercises: [{ name: '', sets: '', reps: '', weight: '' }] }])
+    setShowForm(false)
+  }
+
+  function openEdit(prog: WorkoutProgram) {
+    setEditingProgramId(prog.id)
+    setProgName(prog.name)
+    setProgDesc(prog.description || '')
+    setDays(prog.days.map(d => ({
+      name: d.name,
+      day_label: d.day_label || '',
+      exercises: d.exercises.length > 0
+        ? d.exercises.map(e => ({
+            name: e.name,
+            sets: e.sets != null ? String(e.sets) : '',
+            reps: e.reps != null ? String(e.reps) : '',
+            weight: e.weight_kg != null ? String(e.weight_kg) : ''
+          }))
+        : [{ name: '', sets: '', reps: '', weight: '' }]
+    })))
+    setShowForm(true)
+  }
+
   function addDay() {
     setDays([...days, { name: '', day_label: '', exercises: [{ name: '', sets: '', reps: '', weight: '' }] }])
   }
 
   function updateDay(i: number, field: string, val: string) {
     setDays(days.map((d, idx) => idx === i ? { ...d, [field]: val } : d))
+  }
+
+  function removeDay(i: number) {
+    setDays(days.filter((_, idx) => idx !== i))
   }
 
   function addExToDay(di: number) {
@@ -230,22 +262,29 @@ function ProgramsTab() {
     setDays(days.map((d, idx) => idx === di ? { ...d, exercises: d.exercises.filter((_, eidx) => eidx !== ei) } : d))
   }
 
+  function buildDaysPayload() {
+    return days.filter(d => d.name).map(d => ({
+      name: d.name, day_label: d.day_label,
+      exercises: d.exercises.filter(e => e.name).map(e => ({
+        name: e.name,
+        sets: e.sets ? Number(e.sets) : null,
+        reps: e.reps ? Number(e.reps) : null,
+        weight_kg: e.weight ? Number(e.weight) : null
+      }))
+    }))
+  }
+
   async function handleCreate() {
     if (!progName.trim()) return
-    await window.api.gymPrograms.create({
-      name: progName, description: progDesc,
-      days: days.filter(d => d.name).map(d => ({
-        name: d.name, day_label: d.day_label,
-        exercises: d.exercises.filter(e => e.name).map(e => ({
-          name: e.name,
-          sets: e.sets ? Number(e.sets) : null,
-          reps: e.reps ? Number(e.reps) : null,
-          weight_kg: e.weight ? Number(e.weight) : null
-        }))
-      }))
-    })
-    setProgName(''); setProgDesc(''); setDays([{ name: '', day_label: '', exercises: [{ name: '', sets: '', reps: '', weight: '' }] }])
-    setShowForm(false)
+    await window.api.gymPrograms.create({ name: progName, description: progDesc, days: buildDaysPayload() })
+    resetForm()
+    load()
+  }
+
+  async function handleUpdate() {
+    if (!progName.trim() || editingProgramId === null) return
+    await window.api.gymPrograms.update(editingProgramId, { name: progName, description: progDesc, days: buildDaysPayload() })
+    resetForm()
     load()
   }
 
@@ -267,62 +306,74 @@ function ProgramsTab() {
   async function deleteProgram(id: number) {
     if (confirm('Excluir este programa?')) {
       await window.api.gymPrograms.delete(id)
+      if (editingProgramId === id) resetForm()
       load()
     }
   }
+
+  const formDays = days.map((day, di) => (
+    <div key={di} className="border border-bg-border rounded-lg p-3 space-y-2">
+      <div className="flex gap-2 items-center">
+        <input value={day.day_label} onChange={e => updateDay(di, 'day_label', e.target.value)} placeholder="Rótulo (Ex: Push, Dia A)"
+          className="w-28 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+        <input value={day.name} onChange={e => updateDay(di, 'name', e.target.value)} placeholder="Nome do dia *"
+          className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+        {days.length > 1 && (
+          <button onClick={() => removeDay(di)} className="text-text-muted hover:text-accent-red transition-colors shrink-0">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {day.exercises.map((ex, ei) => (
+        <div key={ei} className="flex gap-1.5 items-center">
+          <input value={ex.name} onChange={e => updateEx(di, ei, 'name', e.target.value)} placeholder="Exercício"
+            className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          <input value={ex.sets} onChange={e => updateEx(di, ei, 'sets', e.target.value)} placeholder="Séries" type="number"
+            className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          <input value={ex.reps} onChange={e => updateEx(di, ei, 'reps', e.target.value)} placeholder="Reps" type="number"
+            className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          <input value={ex.weight} onChange={e => updateEx(di, ei, 'weight', e.target.value)} placeholder="Kg" type="number"
+            className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          <button onClick={() => removeEx(di, ei)} className="text-text-muted hover:text-accent-red transition-colors">
+            <X size={13} />
+          </button>
+        </div>
+      ))}
+      <button onClick={() => addExToDay(di)} className="text-xs text-accent-purple hover:text-purple-400 transition-colors">
+        + Exercício
+      </button>
+    </div>
+  ))
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-text-secondary">{programs.length} programa{programs.length !== 1 ? 's' : ''} criado{programs.length !== 1 ? 's' : ''}</p>
-        <button onClick={() => setShowForm(v => !v)} className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-semibold rounded-lg transition-colors">
+        <button onClick={() => { resetForm(); setShowForm(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-semibold rounded-lg transition-colors">
           <Plus size={15} /> Novo programa
         </button>
       </div>
 
       {showForm && (
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 space-y-4">
-          <h3 className="font-semibold text-text-primary">Criar programa de treino</h3>
+          <h3 className="font-semibold text-text-primary">
+            {editingProgramId !== null ? 'Editar programa' : 'Criar programa de treino'}
+          </h3>
           <div className="grid grid-cols-2 gap-3">
             <input value={progName} onChange={e => setProgName(e.target.value)} placeholder="Nome do programa *"
               className="col-span-2 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
             <input value={progDesc} onChange={e => setProgDesc(e.target.value)} placeholder="Descrição (opcional)"
               className="col-span-2 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
           </div>
-          {days.map((day, di) => (
-            <div key={di} className="border border-bg-border rounded-lg p-3 space-y-2">
-              <div className="flex gap-2">
-                <input value={day.day_label} onChange={e => updateDay(di, 'day_label', e.target.value)} placeholder="Rótulo (Ex: Push, Dia A)"
-                  className="w-28 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-                <input value={day.name} onChange={e => updateDay(di, 'name', e.target.value)} placeholder="Nome do dia *"
-                  className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-              </div>
-              {day.exercises.map((ex, ei) => (
-                <div key={ei} className="flex gap-1.5 items-center">
-                  <input value={ex.name} onChange={e => updateEx(di, ei, 'name', e.target.value)} placeholder="Exercício"
-                    className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-                  <input value={ex.sets} onChange={e => updateEx(di, ei, 'sets', e.target.value)} placeholder="Séries" type="number"
-                    className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-                  <input value={ex.reps} onChange={e => updateEx(di, ei, 'reps', e.target.value)} placeholder="Reps" type="number"
-                    className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-                  <input value={ex.weight} onChange={e => updateEx(di, ei, 'weight', e.target.value)} placeholder="Kg" type="number"
-                    className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-                  <button onClick={() => removeEx(di, ei)} className="text-text-muted hover:text-accent-red transition-colors">
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-              <button onClick={() => addExToDay(di)} className="text-xs text-accent-purple hover:text-purple-400 transition-colors">
-                + Exercício
-              </button>
-            </div>
-          ))}
+          {formDays}
           <button onClick={addDay} className="text-sm text-accent-blue hover:text-blue-400 transition-colors">+ Adicionar dia</button>
           <div className="flex gap-2">
-            <button onClick={handleCreate} className="flex-1 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-semibold rounded-lg transition-colors">
-              Criar programa
+            <button
+              onClick={editingProgramId !== null ? handleUpdate : handleCreate}
+              className="flex-1 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-semibold rounded-lg transition-colors">
+              {editingProgramId !== null ? 'Salvar alterações' : 'Criar programa'}
             </button>
-            <button onClick={() => setShowForm(false)} className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg">Cancelar</button>
+            <button onClick={resetForm} className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg">Cancelar</button>
           </div>
         </div>
       )}
@@ -348,7 +399,10 @@ function ProgramsTab() {
                 className="p-1.5 text-text-muted hover:text-text-primary">
                 {isExp ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
-              <button onClick={() => deleteProgram(prog.id)} className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded">
+              <button onClick={() => openEdit(prog)} className="p-1.5 text-text-muted hover:text-accent-purple hover:bg-accent-purple/10 rounded transition-colors">
+                <Pencil size={14} />
+              </button>
+              <button onClick={() => deleteProgram(prog.id)} className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded transition-colors">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -357,29 +411,29 @@ function ProgramsTab() {
                 {prog.days.map(day => {
                   const isLastUsed = lastApplied[prog.id] === day.id
                   return (
-                  <div key={day.id} className={`px-4 py-3 ${isLastUsed ? 'bg-accent-purple/5' : ''}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {day.day_label && <span className="text-xs bg-bg-border text-text-muted px-1.5 py-0.5 rounded">{day.day_label}</span>}
-                        <span className="text-sm font-medium text-text-primary">{day.name}</span>
-                        {isLastUsed && (
-                          <span className="text-[10px] bg-accent-purple/20 text-accent-purple border border-accent-purple/30 px-1.5 py-0.5 rounded font-bold">Último usado</span>
-                        )}
+                    <div key={day.id} className={`px-4 py-3 ${isLastUsed ? 'bg-accent-purple/5' : ''}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {day.day_label && <span className="text-xs bg-bg-border text-text-muted px-1.5 py-0.5 rounded">{day.day_label}</span>}
+                          <span className="text-sm font-medium text-text-primary">{day.name}</span>
+                          {isLastUsed && (
+                            <span className="text-[10px] bg-accent-purple/20 text-accent-purple border border-accent-purple/30 px-1.5 py-0.5 rounded font-bold">Último usado</span>
+                          )}
+                        </div>
+                        <button onClick={() => applyDay(day)}
+                          className="text-xs px-2.5 py-1 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg hover:bg-accent-green/30 transition-colors">
+                          Usar hoje
+                        </button>
                       </div>
-                      <button onClick={() => applyDay(day)}
-                        className="text-xs px-2.5 py-1 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg hover:bg-accent-green/30 transition-colors">
-                        Usar hoje
-                      </button>
+                      {day.exercises.map((ex) => (
+                        <div key={ex.id} className="flex gap-3 text-xs text-text-secondary py-0.5">
+                          <span className="flex-1">{ex.name}</span>
+                          {ex.sets && <span>{ex.sets}×{ex.reps ?? '?'}</span>}
+                          {ex.weight_kg && <span>{ex.weight_kg}kg</span>}
+                        </div>
+                      ))}
                     </div>
-                    {day.exercises.map((ex, i) => (
-                      <div key={ex.id} className="flex gap-3 text-xs text-text-secondary py-0.5">
-                        <span className="flex-1">{ex.name}</span>
-                        {ex.sets && <span>{ex.sets}×{ex.reps ?? '?'}</span>}
-                        {ex.weight_kg && <span>{ex.weight_kg}kg</span>}
-                      </div>
-                    ))}
-                  </div>
-                )
+                  )
                 })}
               </div>
             )}

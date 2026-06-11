@@ -35,17 +35,18 @@ function saveSettings(settings: NotificationSettings): void {
 }
 
 function sendDailyReminder(): void {
-  if (!Notification.isSupported()) return
-  new Notification({
-    title: 'Hábitos — Lembrete diário',
-    body: 'Hora de anotar o dia e completar seus hábitos!',
-    silent: false
-  }).show()
+  try {
+    new Notification({
+      title: 'Hábitos — Lembrete diário',
+      body: 'Hora de anotar o dia e completar seus hábitos!',
+      silent: false
+    }).show()
+  } catch {
+    // ignore if notifications unavailable
+  }
 }
 
 function checkHabitNotifications(): void {
-  if (!Notification.isSupported()) return
-
   try {
     const now = new Date()
     const today = now.toISOString().slice(0, 10)
@@ -120,15 +121,16 @@ export function registerNotificationHandlers(): void {
   })
 
   ipcMain.handle('notifications:test', () => {
-    if (!Notification.isSupported()) {
+    try {
+      new Notification({
+        title: 'Hábitos — Lembrete diário',
+        body: 'Hora de anotar o dia e completar seus hábitos!',
+        silent: false
+      }).show()
+      return { sent: true }
+    } catch {
       return { sent: false }
     }
-    new Notification({
-      title: 'Hábitos — Lembrete diário',
-      body: 'Hora de anotar o dia e completar seus hábitos!',
-      silent: false
-    }).show()
-    return { sent: true }
   })
 
   startScheduler()

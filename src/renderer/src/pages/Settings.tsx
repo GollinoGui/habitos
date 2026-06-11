@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Bell, BellOff, Send, AlertTriangle, Download, Upload, Trash2,
-  Palette, Eye, EyeOff, User, GripVertical, Sparkles, Check
+  Palette, Eye, EyeOff, User, GripVertical, Sparkles, Check, MonitorPlay
 } from 'lucide-react'
 
 interface NotifSettings { enabled: boolean; hour: number; minute: number }
@@ -337,6 +337,22 @@ export default function Settings(): React.JSX.Element {
             </>
           )}
         </div>
+        {!window.__demoMode__ && (
+          <div className="flex items-center gap-3 pt-4 border-t border-bg-border">
+            <MonitorPlay size={18} className="text-text-muted shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text-primary">Modo Demo</p>
+              <p className="text-xs text-text-muted">Abre uma janela com dados fictícios para demonstração</p>
+            </div>
+            <button
+              onClick={() => window.api.demo.open()}
+              className="flex items-center gap-2 px-4 py-2 bg-accent-purple/15 hover:bg-accent-purple/25 border border-accent-purple/30 text-accent-purple text-sm font-medium rounded-lg transition-colors"
+            >
+              <MonitorPlay size={15} />
+              Abrir Demo
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Aparência ───────────────────────────────────────────────────────── */}
