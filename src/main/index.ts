@@ -11,7 +11,8 @@ if (typeof (globalThis as Record<string, unknown>).DOMMatrix === 'undefined') {
 }
 
 import { app, shell, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import updaterPkg from 'electron-updater'
+const { autoUpdater } = updaterPkg
 import { join } from 'path'
 import { initDb } from './db'
 import { registerHabitsHandlers } from './ipc/habits'
