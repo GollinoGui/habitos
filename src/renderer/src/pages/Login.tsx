@@ -1,28 +1,80 @@
 import React, { useState } from 'react'
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, Check, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 type Mode = 'login' | 'register' | 'forgot'
+
+interface PasswordStrength {
+  score: number
+  label: string
+  color: string
+  checks: { label: string; ok: boolean }[]
+}
+
+function getPasswordStrength(password: string): PasswordStrength {
+  const checks = [
+    { label: 'Mínimo 8 caracteres', ok: password.length >= 8 },
+    { label: 'Letra maiúscula', ok: /[A-Z]/.test(password) },
+    { label: 'Número', ok: /[0-9]/.test(password) },
+    { label: 'Caractere especial (!@#$...)', ok: /[^A-Za-z0-9]/.test(password) },
+  ]
+  const score = checks.filter(c => c.ok).length
+
+  const levels = [
+    { label: 'Muito fraca', color: 'bg-red-500' },
+    { label: 'Fraca', color: 'bg-orange-400' },
+    { label: 'Média', color: 'bg-yellow-400' },
+    { label: 'Forte', color: 'bg-green-500' },
+    { label: 'Muito forte', color: 'bg-emerald-400' },
+  ]
+
+  return { score, ...levels[score], checks }
+}
 
 export default function Login() {
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const strength = getPasswordStrength(password)
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword
 
   function reset() {
     setError('')
     setSuccess('')
   }
 
+  function switchMode(m: Mode) {
+    setMode(m)
+    reset()
+    setPassword('')
+    setConfirmPassword('')
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     reset()
+
+    if (mode === 'register') {
+      if (strength.score < 2) {
+        setError('Sua senha é muito fraca. Use pelo menos 8 caracteres e um número.')
+        return
+      }
+      if (password !== confirmPassword) {
+        setError('As senhas não coincidem.')
+        return
+      }
+    }
+
     setLoading(true)
     try {
       if (mode === 'login') {
@@ -35,7 +87,7 @@ export default function Login() {
           options: { data: { name } }
         })
         if (error) setError(translateError(error.message))
-        else setSuccess('Conta criada! Verifique seu email para confirmar.')
+        else setSuccess('Conta criada! Verifique seu email para confirmar o cadastro.')
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: 'habitos://auth/reset'
@@ -54,13 +106,20 @@ export default function Login() {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: 'habitos://auth/callback',
-          skipBrowserRedirect: true
-        }
+        options: { redirectTo: 'habitos://auth/callback', skipBrowserRedirect: true }
       })
       if (error) throw error
-      if (data.url) window.open(data.url)
+      if (!data.url) return
+
+      // Abre numa janela Electron e intercepta o redirect habitos://
+      const callbackUrl = await window.electronAuth.openOAuth(data.url)
+      if (!callbackUrl) return
+
+      const code = new URL(callbackUrl).searchParams.get('code')
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
+        if (sessionError) setError(translateError(sessionError.message))
+      }
     } catch (err: unknown) {
       setError((err as Error).message)
     } finally {
@@ -73,14 +132,12 @@ export default function Login() {
     if (msg.includes('Email not confirmed')) return 'Confirme seu email antes de entrar.'
     if (msg.includes('User already registered')) return 'Este email já está cadastrado.'
     if (msg.includes('Password should be')) return 'A senha precisa ter no mínimo 6 caracteres.'
-    if (msg.includes('Unable to validate')) return 'Email inválido.'
     if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde alguns minutos.'
     return msg
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="w-full max-w-sm">
 
         {/* Branding */}
         <div className="text-center mb-8">
@@ -92,166 +149,253 @@ export default function Login() {
         {/* Card */}
         <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 shadow-xl">
 
-          {/* Tabs login/cadastro */}
-          {mode !== 'forgot' && (
-            <div className="flex gap-1 bg-bg-primary rounded-xl p-1 mb-6">
-              {(['login', 'register'] as const).map(m => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => { setMode(m); reset() }}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                    mode === m
-                      ? 'bg-accent-purple text-white shadow-sm'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  {m === 'login' ? 'Entrar' : 'Cadastrar'}
+          {/* ── LOGIN ── */}
+          {mode === 'login' && (
+            <>
+              <h2 className="text-base font-semibold text-text-primary mb-5">Entrar na sua conta</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Field label="Email">
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      placeholder="seu@email.com" required autoComplete="email"
+                      className={inputCls('pl-9 pr-4')} />
+                  </div>
+                </Field>
+
+                <Field label="Senha" right={
+                  <button type="button" onClick={() => switchMode('forgot')}
+                    className="text-xs text-text-muted hover:text-accent-purple transition-colors">
+                    Esqueci a senha
+                  </button>
+                }>
+                  <PasswordInput value={password} onChange={setPassword}
+                    show={showPassword} onToggle={() => setShowPassword(v => !v)}
+                    placeholder="••••••••" autoComplete="current-password" />
+                </Field>
+
+                {error && <ErrorBox>{error}</ErrorBox>}
+
+                <button type="submit" disabled={loading} className={btnCls}>
+                  {loading ? <Loader2 size={15} className="animate-spin" /> : <>Entrar <ArrowRight size={15} /></>}
                 </button>
-              ))}
-            </div>
+              </form>
+
+              <Divider />
+              <GoogleButton loading={googleLoading} onClick={handleGoogle} />
+
+              <p className="text-center text-xs text-text-muted mt-5">
+                Não tem conta?{' '}
+                <button type="button" onClick={() => switchMode('register')}
+                  className="text-accent-purple hover:underline font-medium">
+                  Criar conta
+                </button>
+              </p>
+            </>
           )}
 
-          {/* Cabeçalho modo "esqueci a senha" */}
-          {mode === 'forgot' && (
-            <div className="mb-5">
-              <button
-                type="button"
-                onClick={() => { setMode('login'); reset() }}
-                className="text-sm text-text-muted hover:text-text-primary transition-colors"
-              >
-                ← Voltar
-              </button>
-              <h2 className="text-base font-semibold text-text-primary mt-3">Recuperar senha</h2>
-              <p className="text-text-muted text-xs mt-0.5">Enviaremos um link para seu email</p>
-            </div>
-          )}
+          {/* ── CADASTRO ── */}
+          {mode === 'register' && (
+            <>
+              <h2 className="text-base font-semibold text-text-primary mb-5">Criar sua conta</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Field label="Seu nome">
+                  <div className="relative">
+                    <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    <input type="text" value={name} onChange={e => setName(e.target.value)}
+                      placeholder="Como quer ser chamado?" required
+                      className={inputCls('pl-9 pr-4')} />
+                  </div>
+                </Field>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'register' && (
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">Seu nome</label>
-                <div className="relative">
-                  <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Como quer ser chamado?"
-                    required
-                    className="w-full bg-bg-primary border border-bg-border rounded-xl pl-9 pr-4 py-2.5 text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent-purple transition-colors"
-                  />
-                </div>
-              </div>
-            )}
+                <Field label="Email">
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      placeholder="seu@email.com" required autoComplete="email"
+                      className={inputCls('pl-9 pr-4')} />
+                  </div>
+                </Field>
 
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Email</label>
-              <div className="relative">
-                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  required
-                  autoComplete="email"
-                  className="w-full bg-bg-primary border border-bg-border rounded-xl pl-9 pr-4 py-2.5 text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent-purple transition-colors"
-                />
-              </div>
-            </div>
+                <div>
+                  <Field label="Senha">
+                    <PasswordInput value={password} onChange={setPassword}
+                      show={showPassword} onToggle={() => setShowPassword(v => !v)}
+                      placeholder="Mínimo 8 caracteres" autoComplete="new-password" />
+                  </Field>
 
-            {mode !== 'forgot' && (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-text-secondary">Senha</label>
-                  {mode === 'login' && (
-                    <button
-                      type="button"
-                      onClick={() => { setMode('forgot'); reset() }}
-                      className="text-xs text-text-muted hover:text-accent-purple transition-colors"
-                    >
-                      Esqueci a senha
-                    </button>
+                  {/* Barra de força */}
+                  {password.length > 0 && (
+                    <div className="mt-2.5 space-y-2">
+                      <div className="flex gap-1">
+                        {[0, 1, 2, 3].map(i => (
+                          <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                            i < strength.score ? strength.color : 'bg-bg-border'
+                          }`} />
+                        ))}
+                      </div>
+                      <p className={`text-xs font-medium ${
+                        strength.score <= 1 ? 'text-red-400' :
+                        strength.score === 2 ? 'text-yellow-400' :
+                        'text-green-400'
+                      }`}>{strength.label}</p>
+                      <ul className="space-y-1">
+                        {strength.checks.map(c => (
+                          <li key={c.label} className="flex items-center gap-1.5 text-xs">
+                            {c.ok
+                              ? <Check size={11} className="text-green-400 shrink-0" />
+                              : <X size={11} className="text-text-muted shrink-0" />}
+                            <span className={c.ok ? 'text-text-secondary' : 'text-text-muted'}>{c.label}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
-                <div className="relative">
-                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder={mode === 'register' ? 'Mínimo 6 caracteres' : '••••••••'}
-                    required
-                    minLength={6}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    className="w-full bg-bg-primary border border-bg-border rounded-xl pl-9 pr-10 py-2.5 text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent-purple transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
+
+                <div>
+                  <Field label="Confirmar senha">
+                    <PasswordInput value={confirmPassword} onChange={setConfirmPassword}
+                      show={showConfirm} onToggle={() => setShowConfirm(v => !v)}
+                      placeholder="Repita a senha" autoComplete="new-password" />
+                  </Field>
+
+                  {/* Feedback coincide */}
+                  {confirmPassword.length > 0 && (
+                    <p className={`mt-1.5 text-xs flex items-center gap-1.5 ${passwordsMatch ? 'text-green-400' : 'text-red-400'}`}>
+                      {passwordsMatch
+                        ? <><Check size={11} /> As senhas coincidem</>
+                        : <><X size={11} /> As senhas não coincidem</>}
+                    </p>
+                  )}
                 </div>
-              </div>
-            )}
 
-            {error && (
-              <p className="text-sm rounded-xl px-3 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20">
-                {error}
+                {error && <ErrorBox>{error}</ErrorBox>}
+                {success && <SuccessBox>{success}</SuccessBox>}
+
+                <button type="submit" disabled={loading} className={btnCls}>
+                  {loading ? <Loader2 size={15} className="animate-spin" /> : <>Criar conta <ArrowRight size={15} /></>}
+                </button>
+              </form>
+
+              <Divider />
+              <GoogleButton loading={googleLoading} onClick={handleGoogle} />
+
+              <p className="text-center text-xs text-text-muted mt-5">
+                Já tem conta?{' '}
+                <button type="button" onClick={() => switchMode('login')}
+                  className="text-accent-purple hover:underline font-medium">
+                  Entrar
+                </button>
               </p>
-            )}
-            {success && (
-              <p className="text-sm rounded-xl px-3 py-2.5 bg-green-500/10 text-green-400 border border-green-500/20">
-                {success}
-              </p>
-            )}
+            </>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-accent-purple hover:opacity-90 active:opacity-80 disabled:opacity-50 text-white font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 transition-opacity text-sm mt-2"
-            >
-              {loading ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <>
-                  {mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Enviar link'}
-                  <ArrowRight size={15} />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Google OAuth */}
-          {mode !== 'forgot' && (
+          {/* ── ESQUECI A SENHA ── */}
+          {mode === 'forgot' && (
             <>
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-bg-border" />
-                <span className="text-xs text-text-muted">ou</span>
-                <div className="flex-1 h-px bg-bg-border" />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGoogle}
-                disabled={googleLoading}
-                className="w-full bg-bg-primary border border-bg-border hover:border-text-muted disabled:opacity-50 text-text-primary rounded-xl py-2.5 flex items-center justify-center gap-2.5 text-sm font-medium transition-colors"
-              >
-                {googleLoading ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <GoogleIcon />
-                )}
-                Continuar com Google
+              <button type="button" onClick={() => switchMode('login')}
+                className="text-sm text-text-muted hover:text-text-primary transition-colors mb-4 block">
+                ← Voltar
               </button>
+              <h2 className="text-base font-semibold text-text-primary mb-1">Recuperar senha</h2>
+              <p className="text-text-muted text-xs mb-5">Enviaremos um link para seu email</p>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Field label="Email">
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      placeholder="seu@email.com" required autoComplete="email"
+                      className={inputCls('pl-9 pr-4')} />
+                  </div>
+                </Field>
+
+                {error && <ErrorBox>{error}</ErrorBox>}
+                {success && <SuccessBox>{success}</SuccessBox>}
+
+                <button type="submit" disabled={loading} className={btnCls}>
+                  {loading ? <Loader2 size={15} className="animate-spin" /> : <>Enviar link <ArrowRight size={15} /></>}
+                </button>
+              </form>
             </>
           )}
         </div>
       </div>
+  )
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const btnCls = 'w-full bg-accent-purple hover:opacity-90 active:opacity-80 disabled:opacity-50 text-white font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 transition-opacity text-sm mt-1'
+
+function inputCls(extra = '') {
+  return `w-full bg-bg-primary border border-bg-border rounded-xl ${extra} py-2.5 text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent-purple transition-colors`
+}
+
+function Field({ label, right, children }: { label: string; right?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium text-text-secondary">{label}</label>
+        {right}
+      </div>
+      {children}
     </div>
+  )
+}
+
+function PasswordInput({ value, onChange, show, onToggle, placeholder, autoComplete }: {
+  value: string
+  onChange: (v: string) => void
+  show: boolean
+  onToggle: () => void
+  placeholder: string
+  autoComplete?: string
+}) {
+  return (
+    <div className="relative">
+      <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+      <input type={show ? 'text' : 'password'} value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder} required minLength={6} autoComplete={autoComplete}
+        className={inputCls('pl-9 pr-10')} />
+      <button type="button" onClick={onToggle}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors">
+        {show ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+    </div>
+  )
+}
+
+function Divider() {
+  return (
+    <div className="flex items-center gap-3 my-5">
+      <div className="flex-1 h-px bg-bg-border" />
+      <span className="text-xs text-text-muted">ou</span>
+      <div className="flex-1 h-px bg-bg-border" />
+    </div>
+  )
+}
+
+function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} disabled={loading}
+      className="w-full bg-bg-primary border border-bg-border hover:border-text-muted disabled:opacity-50 text-text-primary rounded-xl py-2.5 flex items-center justify-center gap-2.5 text-sm font-medium transition-colors">
+      {loading ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon />}
+      Continuar com Google
+    </button>
+  )
+}
+
+function ErrorBox({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-sm rounded-xl px-3 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20">{children}</p>
+  )
+}
+
+function SuccessBox({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-sm rounded-xl px-3 py-2.5 bg-green-500/10 text-green-400 border border-green-500/20">{children}</p>
   )
 }
 

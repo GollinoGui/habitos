@@ -134,6 +134,33 @@ app.on('open-url', (event, url) => {
   if (mainWindow) mainWindow.webContents.send('auth:deeplink', url)
 })
 
+// Opens Google OAuth in an Electron window and intercepts the habitos:// callback
+ipcMain.handle('auth:open-oauth', (_event, url: string) => {
+  return new Promise<string | null>((resolve) => {
+    const win = new BrowserWindow({
+      width: 520,
+      height: 680,
+      show: true,
+      autoHideMenuBar: true,
+      title: 'Entrar com Google',
+      webPreferences: { nodeIntegration: false, contextIsolation: true }
+    })
+
+    win.loadURL(url)
+
+    function tryCapture(targetUrl: string) {
+      if (targetUrl.startsWith('habitos://')) {
+        win.destroy()
+        resolve(targetUrl)
+      }
+    }
+
+    win.webContents.on('will-redirect', (_e, u) => tryCapture(u))
+    win.webContents.on('will-navigate', (_e, u) => tryCapture(u))
+    win.on('closed', () => resolve(null))
+  })
+})
+
 app.whenReady().then(async () => {
   app.setAppUserModelId('com.guilherme.habitos')
 
