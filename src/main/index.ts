@@ -165,11 +165,8 @@ ipcMain.handle('auth:open-oauth-browser', (_event, oauthUrl: string, port: numbe
         const hasCode = reqUrl.includes('code=')
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
         // Page sends full URL (including hash) back via POST so we capture implicit tokens too
-        res.end(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f0f0f;color:white;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="font-size:48px">✅</div><h2>Login realizado!</h2><p>Pode fechar esta janela e voltar ao app.</p></div><script>
-          var full = window.location.href;
-          fetch('/auth/done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:full})});
-          ${hasCode ? '' : ''}
-          setTimeout(()=>window.close(),2000);
+        res.end(`<!DOCTYPE html><html><body style="background:#0f0f0f;margin:0"><script>
+          fetch('/auth/done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:window.location.href})}).finally(()=>window.close());
         </script></body></html>`)
       }
 
