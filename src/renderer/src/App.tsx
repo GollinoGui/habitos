@@ -41,11 +41,36 @@ function AppContent(): React.JSX.Element {
 
   useEffect(() => {
     if (!user || isDemo) return
-    if (!localStorage.getItem('habitos_onboarded')) {
-      setShowOnboarding(true)
-    } else if (!localStorage.getItem('habitos_tutorial_done')) {
-      setShowTutorial(true)
+
+    const onboardedKey = 'habitos_onboarded'
+    const tutorialKey = 'habitos_tutorial_done'
+
+    if (localStorage.getItem(onboardedKey) && localStorage.getItem(tutorialKey)) return
+
+    const checkExistingUser = async (): Promise<void> => {
+      try {
+        const [profile, habits] = await Promise.all([
+          window.api.profile.get(),
+          window.api.habits.list()
+        ])
+        const hasExistingData = (profile?.total_xp > 0) || (habits?.length > 0)
+        if (hasExistingData) {
+          localStorage.setItem(onboardedKey, '1')
+          localStorage.setItem(tutorialKey, '1')
+          return
+        }
+      } catch {
+        // se falhar a checagem, segue o fluxo normal
+      }
+
+      if (!localStorage.getItem(onboardedKey)) {
+        setShowOnboarding(true)
+      } else if (!localStorage.getItem(tutorialKey)) {
+        setShowTutorial(true)
+      }
     }
+
+    checkExistingUser()
   }, [user])
 
   if (loading) {

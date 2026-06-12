@@ -104,21 +104,36 @@ export default function Login() {
     reset()
     setGoogleLoading(true)
     try {
+      const CALLBACK_PORT = 54321
+      const redirectTo = `http://localhost:${CALLBACK_PORT}/auth/callback`
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'habitos://auth/callback', skipBrowserRedirect: true }
+        options: { redirectTo, skipBrowserRedirect: true }
       })
       if (error) throw error
       if (!data.url) return
 
-      // Abre numa janela Electron e intercepta o redirect habitos://
-      const callbackUrl = await window.electronAuth.openOAuth(data.url)
+      // Abre no navegador do sistema (Chrome já tem a conta Google)
+      const callbackUrl = await window.electronAuth.openOAuthBrowser(data.url, CALLBACK_PORT)
       if (!callbackUrl) return
 
-      const code = new URL(callbackUrl).searchParams.get('code')
+      const parsed = new URL(callbackUrl)
+      const code = parsed.searchParams.get('code')
+
       if (code) {
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
-        if (sessionError) setError(translateError(sessionError.message))
+        // PKCE flow: exchange code for session
+        const { error: e } = await supabase.auth.exchangeCodeForSession(code)
+        if (e) setError(translateError(e.message))
+      } else if (parsed.hash) {
+        // Implicit flow: tokens already in hash
+        const params = new URLSearchParams(parsed.hash.substring(1))
+        const access_token = params.get('access_token')
+        const refresh_token = params.get('refresh_token')
+        if (access_token && refresh_token) {
+          const { error: e } = await supabase.auth.setSession({ access_token, refresh_token })
+          if (e) setError(translateError(e.message))
+        }
       }
     } catch (err: unknown) {
       setError((err as Error).message)

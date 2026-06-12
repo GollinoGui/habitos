@@ -134,30 +134,51 @@ app.on('open-url', (event, url) => {
   if (mainWindow) mainWindow.webContents.send('auth:deeplink', url)
 })
 
-// Opens Google OAuth in an Electron window and intercepts the habitos:// callback
-ipcMain.handle('auth:open-oauth', (_event, url: string) => {
+// Opens Google OAuth in the system browser and captures the callback via a local HTTP server.
+// Handles both PKCE (?code=) and implicit (#access_token=) flows.
+ipcMain.handle('auth:open-oauth-browser', (_event, oauthUrl: string, port: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const http = require('http')
   return new Promise<string | null>((resolve) => {
-    const win = new BrowserWindow({
-      width: 520,
-      height: 680,
-      show: true,
-      autoHideMenuBar: true,
-      title: 'Entrar com Google',
-      webPreferences: { nodeIntegration: false, contextIsolation: true }
-    })
-
-    win.loadURL(url)
-
-    function tryCapture(targetUrl: string) {
-      if (targetUrl.startsWith('habitos://')) {
-        win.destroy()
-        resolve(targetUrl)
-      }
+    let resolved = false
+    function done(url: string | null) {
+      if (resolved) return
+      resolved = true
+      server.close()
+      resolve(url)
     }
 
-    win.webContents.on('will-redirect', (_e, u) => tryCapture(u))
-    win.webContents.on('will-navigate', (_e, u) => tryCapture(u))
-    win.on('closed', () => resolve(null))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const server = http.createServer((req: any, res: any) => {
+      const reqUrl = req.url as string
+
+      // PKCE flow: code arrives as query param — server receives it directly
+      if (reqUrl.startsWith('/auth/callback') && req.method === 'GET') {
+        const hasCode = reqUrl.includes('code=')
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+        // Page sends full URL (including hash) back via POST so we capture implicit tokens too
+        res.end(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f0f0f;color:white;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="font-size:48px">✅</div><h2>Login realizado!</h2><p>Pode fechar esta janela e voltar ao app.</p></div><script>
+          var full = window.location.href;
+          fetch('/auth/done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:full})});
+          ${hasCode ? '' : ''}
+          setTimeout(()=>window.close(),2000);
+        </script></body></html>`)
+      }
+
+      // Receives the full URL (with hash if implicit flow) from the page JS
+      if (reqUrl === '/auth/done' && req.method === 'POST') {
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+        req.on('end', () => {
+          res.writeHead(200); res.end()
+          try { done(JSON.parse(body).url) } catch { done(null) }
+        })
+      }
+    })
+
+    server.on('error', () => done(null))
+    server.listen(port, () => { shell.openExternal(oauthUrl) })
+    setTimeout(() => done(null), 5 * 60 * 1000)
   })
 })
 

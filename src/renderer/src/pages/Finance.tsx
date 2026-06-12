@@ -259,6 +259,13 @@ export default function Finance(): React.JSX.Element {
   const [confirmingPay, setConfirmingPay] = useState<ConfirmPay | null>(null)
   const [confirmAmount, setConfirmAmount] = useState('')
 
+  // Delete confirmation
+  const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+
+  function askDelete(message: string, onConfirm: () => Promise<void>): void {
+    setConfirmDelete({ message, onConfirm })
+  }
+
   useEffect(() => { loadAll() }, [year, month])
 
   useEffect(() => {
@@ -424,7 +431,7 @@ export default function Finance(): React.JSX.Element {
   const rowProps = {
     confirmingPay, confirmAmount, setConfirmAmount, setConfirmingPay,
     onConfirm: confirmPayment,
-    onDelete: async (id: number) => { await window.api.finance.transactions.delete(id); loadAll() }
+    onDelete: (id: number) => askDelete('Excluir esta transação permanentemente?', async () => { await window.api.finance.transactions.delete(id); loadAll() })
   }
 
   return (
@@ -799,7 +806,7 @@ export default function Finance(): React.JSX.Element {
                 <span className={`font-bold text-sm shrink-0 ${tx.type === 'income' ? 'text-accent-green' : 'text-accent-red'} ${tx.status === 'pending' ? 'opacity-60' : ''}`}>
                   {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount)}
                 </span>
-                <button onClick={async () => { await window.api.finance.transactions.delete(tx.id); loadAll() }}
+                <button onClick={() => askDelete('Excluir esta transação permanentemente?', async () => { await window.api.finance.transactions.delete(tx.id); loadAll() })}
                   className="text-text-muted hover:text-accent-red transition-colors shrink-0">
                   <Trash2 size={14} />
                 </button>
@@ -922,7 +929,7 @@ export default function Finance(): React.JSX.Element {
                       title={bill.is_active ? 'Desativar' : 'Ativar'}>
                       <Power size={14} />
                     </button>
-                    <button onClick={async () => { await window.api.finance.bills.delete(bill.id); loadAll() }}
+                    <button onClick={() => askDelete(`Excluir a conta fixa "${bill.name}"?`, async () => { await window.api.finance.bills.delete(bill.id); loadAll() })}
                       className="text-text-muted hover:text-accent-red transition-colors shrink-0">
                       <Trash2 size={14} />
                     </button>
@@ -1016,11 +1023,8 @@ export default function Finance(): React.JSX.Element {
                     )}
                     {accTxs.length === 0 && <p className="text-xs text-text-muted mt-0.5">Nenhuma transação neste mês</p>}
                   </div>
-                  <button onClick={async () => {
-                    if (!window.confirm(`Excluir conta "${account.name}"?\n\nAs transações vinculadas não serão apagadas.`)) return
-                    await window.api.finance.accounts.delete(account.id)
-                    loadAll()
-                  }} className="text-text-muted hover:text-accent-red transition-colors shrink-0">
+                  <button onClick={() => askDelete(`Excluir a conta "${account.name}"? As transações vinculadas não serão apagadas.`, async () => { await window.api.finance.accounts.delete(account.id); loadAll() })}
+                    className="text-text-muted hover:text-accent-red transition-colors shrink-0">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -1092,16 +1096,39 @@ export default function Finance(): React.JSX.Element {
                     {cat.type === 'income' ? 'Receita' : 'Despesa'}
                   </p>
                 </div>
-                <button onClick={async () => {
-                  if (!window.confirm(`Excluir "${cat.name}"?\n\nTodas as transações dessa categoria também serão apagadas.`)) return
-                  await window.api.finance.categories.delete(cat.id)
-                  loadAll()
-                }}
+                <button onClick={() => askDelete(`Excluir a categoria "${cat.name}"? Todas as transações dessa categoria também serão apagadas.`, async () => { await window.api.finance.categories.delete(cat.id); loadAll() })}
                   className="text-text-muted hover:text-accent-red transition-colors">
                   <Trash2 size={13} />
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm delete dialog ──────────────────────────────────────────────── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm mx-4 bg-bg-secondary border border-bg-border rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-accent-red" />
+              </div>
+              <div>
+                <p className="font-semibold text-text-primary">Confirmar exclusão</p>
+                <p className="text-sm text-text-secondary mt-1">{confirmDelete.message}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg hover:bg-bg-border/70 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={async () => { await confirmDelete.onConfirm(); setConfirmDelete(null) }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       )}

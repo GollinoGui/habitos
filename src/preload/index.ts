@@ -508,7 +508,8 @@ if (isDemo) contextBridge.exposeInMainWorld('__demoMode__', true)
 
 // Bridge for Google OAuth deep link callback (habitos://auth/callback?code=...)
 contextBridge.exposeInMainWorld('electronAuth', {
-  openOAuth: (url: string): Promise<string | null> => ipcRenderer.invoke('auth:open-oauth', url),
+  openOAuthBrowser: (oauthUrl: string, port: number): Promise<string | null> =>
+    ipcRenderer.invoke('auth:open-oauth-browser', oauthUrl, port),
   onDeepLink: (cb: (url: string) => void) => {
     const handler = (_: unknown, url: string) => cb(url)
     ipcRenderer.on('auth:deeplink', handler)
@@ -521,7 +522,7 @@ declare global {
     api: typeof realApi
     __demoMode__?: boolean
     electronAuth: {
-      openOAuth: (url: string) => Promise<string | null>
+      openOAuthBrowser: (oauthUrl: string, port: number) => Promise<string | null>
       onDeepLink: (cb: (url: string) => void) => () => void
     }
   }
