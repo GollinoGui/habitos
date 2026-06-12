@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Layout/Sidebar'
 import TopBar from './components/Layout/TopBar'
@@ -96,6 +96,7 @@ function AppContent(): React.JSX.Element {
   return (
     <HashRouter>
       {/* App — only rendered when logged in */}
+      <TrayNavigator />
       <div className={`flex h-screen overflow-hidden bg-bg-primary transition-all duration-300 ${showLoginOverlay ? 'hidden' : ''}`}>
         <Sidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -144,6 +145,17 @@ function AppContent(): React.JSX.Element {
       )}
     </HashRouter>
   )
+}
+
+function TrayNavigator(): null {
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!window.electronNav) return
+    return window.electronNav.onNavigate((path, action) => {
+      navigate(path, action ? { state: { trayAction: action } } : undefined)
+    })
+  }, [navigate])
+  return null
 }
 
 export default function App(): React.JSX.Element {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { format, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useLocation } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Tag, BarChart2,
   CheckCircle2, Circle, AlertCircle, Calendar, Download, Power,
@@ -195,6 +196,7 @@ function TxForm({ txType, setTxType, txDate, setTxDate, txAmount, setTxAmount, t
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Finance(): React.JSX.Element {
   const now = new Date()
+  const location = useLocation()
   const [year, setYear]   = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
 
@@ -265,6 +267,13 @@ export default function Finance(): React.JSX.Element {
   function askDelete(message: string, onConfirm: () => Promise<void>): void {
     setConfirmDelete({ message, onConfirm })
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const action = (location.state as any)?.trayAction
+    if (action === 'expense') { setTxType('expense'); setShowTxForm(true) }
+    if (action === 'income')  { setTxType('income');  setShowTxForm(true) }
+  }, [location.state])
 
   useEffect(() => { loadAll() }, [year, month])
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { format, subDays, eachDayOfInterval } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Plus, Flame, CheckCircle2, Circle, Pencil, Trash2, X, Check, BarChart2 } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { useProfileStore } from '../store/profileStore'
 
 interface Habit {
@@ -266,6 +267,7 @@ function Analytics({ habits, streaks, rangeDays }: { habits: Habit[]; streaks: R
 export default function Habits(): React.JSX.Element {
   const today = format(new Date(), 'yyyy-MM-dd')
   const { fetchProfile } = useProfileStore()
+  const location = useLocation()
   const [habits, setHabits] = useState<Habit[]>([])
   const [completedToday, setCompletedToday] = useState<Set<number>>(new Set())
   const [streaks, setStreaks] = useState<Record<number, number>>({})
@@ -276,6 +278,11 @@ export default function Habits(): React.JSX.Element {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'habits' | 'analytics'>('habits')
   const [rangeDays, setRangeDays] = useState(30)
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((location.state as any)?.trayAction === 'new') setShowModal(true)
+  }, [location.state])
 
   useEffect(() => { loadHabits() }, [])
 

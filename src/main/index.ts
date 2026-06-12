@@ -47,6 +47,7 @@ import { registerAppSettingsHandlers } from './ipc/appSettings'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let isQuitting = false
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -75,7 +76,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('close', (e) => {
-    if (tray) {
+    if (tray && !isQuitting) {
       e.preventDefault()
       mainWindow!.hide()
     }
@@ -95,12 +96,28 @@ function createWindow(): void {
 
 function createTray(): void {
   try {
-    const iconPath = join(app.isPackaged ? process.resourcesPath : join(__dirname, '../../resources'), 'icon.png')
-    const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
+    const resourcesDir = app.isPackaged ? process.resourcesPath : join(__dirname, '../../resources')
+    const iconFile = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+    const iconPath = join(resourcesDir, iconFile)
+    const icon = nativeImage.createFromPath(iconPath)
     tray = new Tray(icon)
     tray.setToolTip('Hábitos')
+
+    function trayNavigate(path: string, action?: string) {
+      if (!mainWindow) return
+      if (!mainWindow.isVisible()) mainWindow.show()
+      mainWindow.focus()
+      mainWindow.webContents.send('tray:navigate', path, action)
+    }
+
     const contextMenu = Menu.buildFromTemplate([
-      { label: 'Abrir', click: () => mainWindow?.show() },
+      { label: 'Abrir Hábitos', click: () => { mainWindow?.show(); mainWindow?.focus() } },
+      { type: 'separator' },
+      { label: 'Cadastrar hábito',  click: () => trayNavigate('/habits', 'new') },
+      { label: 'Registrar sono',    click: () => trayNavigate('/sleep') },
+      { type: 'separator' },
+      { label: 'Nova despesa',      click: () => trayNavigate('/finance', 'expense') },
+      { label: 'Nova receita',      click: () => trayNavigate('/finance', 'income') },
       { type: 'separator' },
       { label: 'Sair', click: () => { tray = null; app.quit() } }
     ])
@@ -273,10 +290,17 @@ function setupAutoUpdater(): void {
       message: 'A nova versão foi baixada. Reinicie o app para instalar.',
       buttons: ['Reiniciar agora', 'Depois']
     }).then(({ response }) => {
-      if (response === 0) autoUpdater.quitAndInstall(true, true)
+      if (response === 0) {
+        isQuitting = true
+        autoUpdater.quitAndInstall(true, true)
+      }
     })
   })
 }
+
+app.on('before-quit', () => {
+  isQuitting = true
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

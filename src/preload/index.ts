@@ -512,6 +512,15 @@ const api = isDemo ? buildDemoApi() : realApi
 contextBridge.exposeInMainWorld('api', api)
 if (isDemo) contextBridge.exposeInMainWorld('__demoMode__', true)
 
+// Bridge for tray navigation
+contextBridge.exposeInMainWorld('electronNav', {
+  onNavigate: (cb: (path: string, action?: string) => void) => {
+    const handler = (_: unknown, path: string, action?: string) => cb(path, action)
+    ipcRenderer.on('tray:navigate', handler)
+    return () => { ipcRenderer.removeListener('tray:navigate', handler) }
+  }
+})
+
 // Bridge for Google OAuth deep link callback (habitos://auth/callback?code=...)
 contextBridge.exposeInMainWorld('electronAuth', {
   openOAuthBrowser: (oauthUrl: string, port: number): Promise<string | null> =>
@@ -530,6 +539,9 @@ declare global {
     electronAuth: {
       openOAuthBrowser: (oauthUrl: string, port: number) => Promise<string | null>
       onDeepLink: (cb: (url: string) => void) => () => void
+    }
+    electronNav: {
+      onNavigate: (cb: (path: string, action?: string) => void) => () => void
     }
   }
 }
