@@ -1,6 +1,6 @@
 {
   "name": "habitos",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "App de rastreamento de hábitos com gamificação",
   "main": "./out/main/index.js",
   "type": "module",
