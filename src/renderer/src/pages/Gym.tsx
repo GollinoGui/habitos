@@ -200,6 +200,11 @@ function ProgramsTab() {
     try { return JSON.parse(localStorage.getItem('gym_last_applied_day') || '{}') } catch { return {} }
   })
   const { fetchProfile } = useProfileStore()
+  const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+
+  function askDelete(message: string, onConfirm: () => Promise<void>): void {
+    setConfirmDelete({ message, onConfirm })
+  }
 
   useEffect(() => { load() }, [])
 
@@ -303,12 +308,12 @@ function ProgramsTab() {
     alert(`Treino "${day.name}" adicionado para hoje!`)
   }
 
-  async function deleteProgram(id: number) {
-    if (confirm('Excluir este programa?')) {
+  function deleteProgram(id: number): void {
+    askDelete('Excluir este programa de treino permanentemente?', async () => {
       await window.api.gymPrograms.delete(id)
       if (editingProgramId === id) resetForm()
       load()
-    }
+    })
   }
 
   const formDays = days.map((day, di) => (
@@ -440,6 +445,32 @@ function ProgramsTab() {
           </div>
         )
       })}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm mx-4 bg-bg-secondary border border-bg-border rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-accent-red" />
+              </div>
+              <div>
+                <p className="font-semibold text-text-primary">Confirmar exclusão</p>
+                <p className="text-sm text-text-secondary mt-1">{confirmDelete.message}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg hover:bg-bg-border/70 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={async () => { await confirmDelete.onConfirm(); setConfirmDelete(null) }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -452,6 +483,11 @@ export default function Gym(): React.JSX.Element {
   const [showWorkoutModal, setShowWorkoutModal] = useState(false)
   const [showBioModal, setShowBioModal] = useState(false)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+
+  function askDelete(message: string, onConfirm: () => Promise<void>): void {
+    setConfirmDelete({ message, onConfirm })
+  }
 
   useEffect(() => { loadAll() }, [])
 
@@ -543,7 +579,7 @@ export default function Gym(): React.JSX.Element {
                       className="p-1.5 text-text-muted hover:text-text-primary">
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
-                    <button onClick={async () => { if (confirm('Excluir treino?')) { await window.api.gym.deleteWorkout(w.id); loadAll() } }}
+                    <button onClick={() => askDelete(`Excluir o treino "${w.name}"?`, async () => { await window.api.gym.deleteWorkout(w.id); loadAll() })}
                       className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded">
                       <Trash2 size={14} />
                     </button>
@@ -625,7 +661,7 @@ export default function Gym(): React.JSX.Element {
               <div key={b.id} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: `${i * 55}ms` }}>
                 <div className="flex justify-between items-start">
                   <p className="text-sm font-semibold text-text-primary">{format(new Date(b.date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
-                  <button onClick={async () => { if (confirm('Excluir medição?')) { await window.api.gym.deleteBioimpedance(b.id); loadAll() } }}
+                  <button onClick={() => askDelete('Excluir esta medição de bioimpedância?', async () => { await window.api.gym.deleteBioimpedance(b.id); loadAll() })}
                     className="p-1 text-text-muted hover:text-accent-red"><Trash2 size={13} /></button>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
@@ -644,6 +680,32 @@ export default function Gym(): React.JSX.Element {
 
       {showWorkoutModal && <WorkoutModal onClose={() => setShowWorkoutModal(false)} onSave={handleSaveWorkout} />}
       {showBioModal && <BioModal onClose={() => setShowBioModal(false)} onSave={handleSaveBio} />}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm mx-4 bg-bg-secondary border border-bg-border rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-accent-red" />
+              </div>
+              <div>
+                <p className="font-semibold text-text-primary">Confirmar exclusão</p>
+                <p className="text-sm text-text-secondary mt-1">{confirmDelete.message}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg hover:bg-bg-border/70 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={async () => { await confirmDelete.onConfirm(); setConfirmDelete(null) }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
