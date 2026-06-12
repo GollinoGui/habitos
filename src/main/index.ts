@@ -19,6 +19,14 @@ app.setAsDefaultProtocolClient('habitos')
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      if (!mainWindow.isVisible()) mainWindow.show()
+      mainWindow.focus()
+    }
+  })
 }
 import updaterPkg from 'electron-updater'
 const { autoUpdater } = updaterPkg
@@ -266,7 +274,7 @@ function setupAutoUpdater(): void {
       message: 'A nova versão foi baixada. Reinicie o app para instalar.',
       buttons: ['Reiniciar agora', 'Depois']
     }).then(({ response }) => {
-      if (response === 0) autoUpdater.quitAndInstall()
+      if (response === 0) autoUpdater.quitAndInstall(true, true)
     })
   })
 }
