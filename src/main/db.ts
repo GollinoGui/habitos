@@ -1,22 +1,43 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, copyFileSync } from 'fs'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+let SQL: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null
-let dbPath: string
+let dbPath = ''
 
 export async function initDb(): Promise<void> {
-  if (db) return
+  if (SQL) return
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const initSqlJs = require('sql.js')
-  const SQL = await initSqlJs()
-  dbPath = join(app.getPath('userData'), 'habitos.db')
-  if (existsSync(dbPath)) {
-    db = new SQL.Database(readFileSync(dbPath))
+  SQL = await initSqlJs()
+}
+
+export async function setActiveUser(userId: string | null): Promise<void> {
+  if (db) {
+    save()
+    db = null
+    dbPath = ''
+  }
+
+  if (!userId) return
+
+  const userData = app.getPath('userData')
+  const userDbPath = join(userData, `habitos_${userId}.db`)
+  const legacyDbPath = join(userData, 'habitos.db')
+
+  if (existsSync(userDbPath)) {
+    db = new SQL.Database(readFileSync(userDbPath))
+  } else if (existsSync(legacyDbPath)) {
+    copyFileSync(legacyDbPath, userDbPath)
+    db = new SQL.Database(readFileSync(userDbPath))
   } else {
     db = new SQL.Database()
   }
+
+  dbPath = userDbPath
   db.run('PRAGMA foreign_keys = ON')
   createTables()
 }

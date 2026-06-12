@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, Check, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import logo from '../assets/logo.png'
 
 type Mode = 'login' | 'register' | 'forgot'
 
@@ -156,7 +157,7 @@ export default function Login() {
 
         {/* Branding */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3 select-none">✅</div>
+          <img src={logo} alt="Hábitos" className="w-16 h-16 mx-auto mb-3 select-none drop-shadow-lg" draggable={false} />
           <h1 className="text-2xl font-bold text-text-primary tracking-tight">Hábitos</h1>
           <p className="text-text-muted text-sm mt-1">Construa melhores hábitos, todo dia</p>
         </div>

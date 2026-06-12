@@ -31,7 +31,7 @@ if (!gotTheLock) {
 import updaterPkg from 'electron-updater'
 const { autoUpdater } = updaterPkg
 import { join } from 'path'
-import { initDb } from './db'
+import { initDb, setActiveUser } from './db'
 import { registerHabitsHandlers } from './ipc/habits'
 import { registerGymHandlers } from './ipc/gym'
 import { registerAddictionsHandlers } from './ipc/addictions'
@@ -191,6 +191,8 @@ app.whenReady().then(async () => {
   app.setAppUserModelId('com.guilherme.habitos')
 
   await initDb()
+
+  ipcMain.handle('db:set-user', (_event, userId: string | null) => setActiveUser(userId))
 
   registerProfileHandlers()
   registerHabitsHandlers()

@@ -147,6 +147,9 @@ const realApi = {
   },
   demo: {
     open: () => ipcRenderer.invoke('demo:open')
+  },
+  db: {
+    setUser: (userId: string | null) => ipcRenderer.invoke('db:set-user', userId)
   }
 }
 
@@ -496,6 +499,9 @@ function buildDemoApi() {
     },
     demo: {
       open: async () => {},
+    },
+    db: {
+      setUser: async () => {},
     },
   }
 }
