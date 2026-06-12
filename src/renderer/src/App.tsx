@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Layout/Sidebar'
 import TopBar from './components/Layout/TopBar'
 import Dashboard from './pages/Dashboard'
@@ -14,8 +15,10 @@ import Sleep from './pages/Sleep'
 import Finance from './pages/Finance'
 import Reading from './pages/Reading'
 import Calendar from './pages/Calendar'
+import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function applyStoredTheme() {
   const theme = localStorage.getItem('habitos_theme') || 'dark'
@@ -27,21 +30,35 @@ function applyStoredTheme() {
   }
 }
 
+applyStoredTheme()
+
 const isDemo = typeof window !== 'undefined' && !!window.__demoMode__
 
-export default function App(): React.JSX.Element {
+function AppContent(): React.JSX.Element {
+  const { user, loading } = useAuth()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
 
   useEffect(() => {
-    applyStoredTheme()
-    if (isDemo) return
+    if (!user || isDemo) return
     if (!localStorage.getItem('habitos_onboarded')) {
       setShowOnboarding(true)
     } else if (!localStorage.getItem('habitos_tutorial_done')) {
       setShowTutorial(true)
     }
-  }, [])
+  }, [user])
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg-primary">
+        <Loader2 size={32} className="animate-spin text-accent-purple" />
+      </div>
+    )
+  }
+
+  if (!user && !isDemo) {
+    return <Login />
+  }
 
   function handleOnboardingComplete(): void {
     setShowOnboarding(false)
@@ -89,5 +106,13 @@ export default function App(): React.JSX.Element {
         </div>
       )}
     </HashRouter>
+  )
+}
+
+export default function App(): React.JSX.Element {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }

@@ -506,9 +506,21 @@ const api = isDemo ? buildDemoApi() : realApi
 contextBridge.exposeInMainWorld('api', api)
 if (isDemo) contextBridge.exposeInMainWorld('__demoMode__', true)
 
+// Bridge for Google OAuth deep link callback (habitos://auth/callback?code=...)
+contextBridge.exposeInMainWorld('electronAuth', {
+  onDeepLink: (cb: (url: string) => void) => {
+    const handler = (_: unknown, url: string) => cb(url)
+    ipcRenderer.on('auth:deeplink', handler)
+    return () => { ipcRenderer.removeListener('auth:deeplink', handler) }
+  }
+})
+
 declare global {
   interface Window {
     api: typeof realApi
     __demoMode__?: boolean
+    electronAuth: {
+      onDeepLink: (cb: (url: string) => void) => () => void
+    }
   }
 }

@@ -11,6 +11,15 @@ if (typeof (globalThis as Record<string, unknown>).DOMMatrix === 'undefined') {
 }
 
 import { app, shell, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } from 'electron'
+
+// Register custom protocol for Google OAuth deep link
+app.setAsDefaultProtocolClient('habitos')
+
+// Single-instance lock so Windows can forward deep links to the running instance
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+}
 import updaterPkg from 'electron-updater'
 const { autoUpdater } = updaterPkg
 import { join } from 'path'
@@ -78,10 +87,8 @@ function createWindow(): void {
 
 function createTray(): void {
   try {
-    // 16x16 white circle icon encoded as 1x1 PNG scaled — a simple dot works as placeholder
-    const icon = nativeImage.createFromDataURL(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABMSURBVDiNY2AYBfQBExMT0////xm0XJL+z8DAMJqBgYGBhZmZGcXIyMiAYoCRkREmn5CQgGKAiYkJJp+UlIRigKmpKSaflJSEYgAAiPAHnXvCM3AAAAAASUVORK5CYII='
-    )
+    const iconPath = join(app.isPackaged ? process.resourcesPath : join(__dirname, '../../resources'), 'icon.png')
+    const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
     tray = new Tray(icon)
     tray.setToolTip('Hábitos')
     const contextMenu = Menu.buildFromTemplate([
@@ -110,6 +117,22 @@ function setupAutoLaunch(): void {
     }
   }
 }
+
+// Windows/Linux: second-instance receives the deep link as a CLI arg
+app.on('second-instance', (_event, commandLine) => {
+  const url = commandLine.find(arg => arg.startsWith('habitos://'))
+  if (url && mainWindow) {
+    mainWindow.webContents.send('auth:deeplink', url)
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+})
+
+// macOS: deep link fires on the running instance via open-url
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (mainWindow) mainWindow.webContents.send('auth:deeplink', url)
+})
 
 app.whenReady().then(async () => {
   app.setAppUserModelId('com.guilherme.habitos')
