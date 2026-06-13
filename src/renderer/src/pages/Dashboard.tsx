@@ -41,6 +41,7 @@ export default function Dashboard(): React.JSX.Element {
   const { profile, fetchProfile } = useProfileStore()
 
   const [habits, setHabits] = useState<Habit[]>([])
+  const [allHabitsCount, setAllHabitsCount] = useState(0)
   const [completedToday, setCompletedToday] = useState<Set<number>>(new Set())
   const [addictions, setAddictions] = useState<Addiction[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
@@ -91,8 +92,9 @@ export default function Dashboard(): React.JSX.Element {
     const daysFromMon = dow === 0 ? 6 : dow - 1
     const mondayMs = Date.now() - daysFromMon * 86400000
     const mondayStr = format(new Date(mondayMs), 'yyyy-MM-dd')
-    const [h, comps, add, ach, workouts, readMins, sleepToday, allGoals, journalEntry, weekComps] = await Promise.all([
+    const [h, allH, comps, add, ach, workouts, readMins, sleepToday, allGoals, journalEntry, weekComps] = await Promise.all([
       window.api.habits.dueToday(),
+      window.api.habits.list(),
       window.api.habits.completionsRange(today, today),
       window.api.addictions.list(),
       window.api.achievements.list(),
@@ -105,15 +107,17 @@ export default function Dashboard(): React.JSX.Element {
     ])
 
     const activeHabits = (h as Habit[]).filter(x => x.is_active)
+    const allActive = (allH as Habit[]).filter(x => x.is_active)
     setHabits(activeHabits)
+    setAllHabitsCount(allActive.length)
 
-    // Weekly summary
+    // Weekly summary — use all active habits as denominator so graph shows even on days with no habits due
     const byDate = new Map<string, number>()
     for (const c of weekComps as any[]) {
       const d = c.completed_at as string
       byDate.set(d, (byDate.get(d) ?? 0) + 1)
     }
-    const total = activeHabits.length
+    const total = allActive.length
     setBarsVisible(false)
     setWeeklyData(Array.from({ length: 7 }, (_, i) => {
       const d = format(new Date(mondayMs + i * 86400000), 'yyyy-MM-dd')
@@ -354,7 +358,7 @@ export default function Dashboard(): React.JSX.Element {
           </div>
 
           {/* Weekly summary */}
-          {weeklyData.length > 0 && habits.length > 0 && !focusMode && (
+          {weeklyData.length > 0 && allHabitsCount > 0 && !focusMode && (
             <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '80ms' }}>
               <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4 animate-reveal-left">Últimos 7 dias</p>
               <div className="flex gap-2 h-12">
@@ -657,7 +661,7 @@ export default function Dashboard(): React.JSX.Element {
       )}
 
       {/* Calendar */}
-      {!focusMode && <CalendarSection refreshKey={calendarKey} />}
+      {!focusMode && <CalendarSection refreshKey={calendarKey} onHabitToggled={loadAll} />}
     </div>
   )
 }

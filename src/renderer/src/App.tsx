@@ -83,7 +83,7 @@ function AppContent(): React.JSX.Element {
     )
   }
 
-  // Mobile app (Capacitor): show login or a placeholder after authentication
+  // Mobile app (Capacitor): show login screen or the full app
   if (isMobileApp) {
     if (!user) {
       return (
@@ -92,18 +92,34 @@ function AppContent(): React.JSX.Element {
         </div>
       )
     }
+    // window.api is already installed by AuthContext via installMobileApi()
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-bg-primary p-6 text-center">
-        <span className="text-5xl">🚀</span>
-        <h1 className="text-xl font-bold text-text-primary">Olá, {user.user_metadata?.name || user.email}!</h1>
-        <p className="text-text-muted text-sm">Login funcionando. Módulos mobile em breve.</p>
-        <button
-          onClick={signOut}
-          className="mt-4 rounded-xl bg-bg-secondary border border-bg-border px-4 py-2 text-sm text-text-secondary hover:border-text-muted transition-colors"
-        >
-          Sair
-        </button>
-      </div>
+      <HashRouter>
+        <TrayNavigator />
+        <div className="flex h-screen overflow-hidden bg-bg-primary">
+          <Sidebar />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <TopBar />
+            <main className="flex-1 overflow-y-auto p-4">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/habits" element={<Habits />} />
+                <Route path="/gym" element={<Gym />} />
+                <Route path="/addictions" element={<Addictions />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/achievements" element={<Achievements />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/journal" element={<Journal />} />
+                <Route path="/sleep" element={<Sleep />} />
+                <Route path="/finance" element={<Finance />} />
+                <Route path="/reading" element={<Reading />} />
+                <Route path="/calendar" element={<Calendar />} />
+                <Route path="/analytics" element={<Analytics />} />
+              </Routes>
+            </main>
+          </div>
+        </div>
+      </HashRouter>
     )
   }
 

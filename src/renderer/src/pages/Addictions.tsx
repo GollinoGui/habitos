@@ -85,12 +85,19 @@ function Timer({ startedAt }: { startedAt: string }) {
   )
 }
 
+function localDatetimeString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 function RelapseModal({ addictionId, onClose, onRelapse }: {
   addictionId: number; onClose: () => void; onRelapse: () => void
 }) {
   const [note, setNote] = useState('')
+  const [relapseAt, setRelapseAt] = useState(() => localDatetimeString(new Date()))
   async function handleRelapse() {
-    await window.api.addictions.relapse(addictionId, note)
+    const isoDate = new Date(relapseAt).toISOString()
+    await window.api.addictions.relapse(addictionId, note, isoDate)
     onRelapse()
     onClose()
   }
@@ -99,6 +106,15 @@ function RelapseModal({ addictionId, onClose, onRelapse }: {
       <div className="bg-bg-secondary border border-red-900/60 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
         <h2 className="text-lg font-bold text-accent-red mb-1">Registrar Recaída</h2>
         <p className="text-text-secondary text-sm mb-4">O contador será reiniciado. Isso é normal — é parte do processo.</p>
+        <div className="mb-3">
+          <label className="text-xs text-text-muted block mb-1">Data e hora da recaída</label>
+          <input
+            type="datetime-local"
+            value={relapseAt}
+            onChange={e => setRelapseAt(e.target.value)}
+            className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+          />
+        </div>
         <textarea
           className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary resize-none focus:outline-none focus:border-accent-purple"
           rows={3} placeholder="Nota (opcional)..."

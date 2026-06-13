@@ -17,10 +17,18 @@ interface HabitDot {
   habit_id: number
 }
 
+interface HabitInfo {
+  id: number
+  name: string
+  icon: string
+  color: string
+  is_active: number
+}
+
 const EVENT_COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899']
 const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-export default function CalendarSection({ refreshKey }: { refreshKey?: number }): React.JSX.Element {
+export default function CalendarSection({ refreshKey, onHabitToggled }: { refreshKey?: number; onHabitToggled?: () => void }): React.JSX.Element {
   const now = new Date()
   const todayStr = format(now, 'yyyy-MM-dd')
 
@@ -29,6 +37,7 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([])
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set())
   const [habitDotsByDate, setHabitDotsByDate] = useState<Map<string, HabitDot[]>>(new Map())
+  const [allHabits, setAllHabits] = useState<HabitInfo[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [dayEvents, setDayEvents] = useState<CalendarEvent[]>([])
   const [note, setNote] = useState('')
@@ -37,6 +46,12 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
   const [newColor, setNewColor] = useState(EVENT_COLORS[0])
   const [showAddForm, setShowAddForm] = useState(false)
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    window.api.habits.list().then(h => {
+      setAllHabits((h as HabitInfo[]).filter(x => x.is_active))
+    })
+  }, [])
 
   useEffect(() => {
     async function loadMonth() {
@@ -93,6 +108,29 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
   async function reloadEvents() {
     const evts = await window.api.calendar.eventsByMonth(year, month)
     setAllEvents(evts as CalendarEvent[])
+  }
+
+  async function reloadHabitDots() {
+    const habitComps = await window.api.habits.completionsByMonth(year, month)
+    const map = new Map<string, HabitDot[]>()
+    for (const c of habitComps as { completed_at: string; color: string; habit_id: number }[]) {
+      const existing = map.get(c.completed_at) || []
+      existing.push({ color: c.color, habit_id: c.habit_id })
+      map.set(c.completed_at, existing)
+    }
+    setHabitDotsByDate(map)
+  }
+
+  async function toggleHabitDate(habitId: number, dateStr: string) {
+    const dots = habitDotsByDate.get(dateStr) || []
+    const completed = dots.some(d => d.habit_id === habitId)
+    if (completed) {
+      await window.api.habits.uncomplete(habitId, dateStr)
+    } else {
+      await window.api.habits.complete(habitId, dateStr)
+    }
+    await reloadHabitDots()
+    onHabitToggled?.()
   }
 
   async function addEvent() {
@@ -332,17 +370,18 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
                     key={evt.id}
                     className={`flex items-center gap-2 p-2 rounded-lg border border-bg-border bg-bg-secondary transition-opacity ${evt.is_done ? 'opacity-55' : ''}`}
                   >
-                    {evt.type === 'task' ? (
-                      <button
-                        onClick={() => toggleDone(evt.id)}
-                        className="shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors"
-                        style={{ borderColor: evt.color, backgroundColor: evt.is_done ? evt.color : 'transparent' }}
-                      >
-                        {!!evt.is_done && <span className="text-white text-[9px] leading-none">✓</span>}
-                      </button>
-                    ) : (
-                      <div className="shrink-0 w-2 h-2 rounded-full mt-0.5" style={{ backgroundColor: evt.color }} />
-                    )}
+                    <button
+                      onClick={() => toggleDone(evt.id)}
+                      className="shrink-0 w-4 h-4 rounded flex items-center justify-center transition-colors"
+                      style={{
+                        border: `2px solid ${evt.color}`,
+                        borderRadius: evt.type === 'task' ? '3px' : '50%',
+                        backgroundColor: evt.is_done ? evt.color : 'transparent',
+                      }}
+                      title={evt.is_done ? 'Desmarcar' : 'Marcar como feito'}
+                    >
+                      {!!evt.is_done && <span className="text-white text-[9px] leading-none">✓</span>}
+                    </button>
                     <span className={`flex-1 text-xs ${evt.is_done ? 'line-through text-text-muted' : 'text-text-primary'}`}>
                       {evt.title}
                     </span>
@@ -356,6 +395,42 @@ export default function CalendarSection({ refreshKey }: { refreshKey?: number })
                 ))}
               </div>
             </div>
+
+            {/* Habits */}
+            {allHabits.length > 0 && (
+              <div>
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Hábitos</span>
+                <div className="space-y-1.5 mt-2">
+                  {allHabits.map(habit => {
+                    const dots = habitDotsByDate.get(selectedDate) || []
+                    const completed = dots.some(d => d.habit_id === habit.id)
+                    return (
+                      <button
+                        key={habit.id}
+                        onClick={() => toggleHabitDate(habit.id, selectedDate)}
+                        className={`w-full flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
+                          completed
+                            ? 'border-accent-green bg-emerald-950/30'
+                            : 'border-bg-border bg-bg-secondary hover:bg-bg-border/30'
+                        }`}
+                      >
+                        <div
+                          className="shrink-0 w-4 h-4 rounded flex items-center justify-center"
+                          style={{
+                            border: `2px solid ${completed ? '#10b981' : '#4b5563'}`,
+                            backgroundColor: completed ? '#10b981' : 'transparent',
+                          }}
+                        >
+                          {completed && <span className="text-white text-[9px] leading-none">✓</span>}
+                        </div>
+                        <span className="text-base leading-none">{habit.icon}</span>
+                        <span className="text-xs text-text-primary flex-1">{habit.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             <div>

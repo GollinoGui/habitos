@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { installMobileApi } from '../lib/mobileApi'
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
+
+function maybeInstallMobileApi(userId: string | null): void {
+  if (!userId) return
+  installMobileApi(userId)  // installs on both desktop and mobile; Electron API saved internally
+}
 
 interface AuthContextType {
   user: User | null
@@ -20,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      maybeInstallMobileApi(session?.user?.id ?? null)
       if (session?.user && window.api?.db) {
         await window.api.db.setUser(session.user.id)
       }
@@ -29,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      maybeInstallMobileApi(session?.user?.id ?? null)
       if (session?.user) {
         if (window.api?.db) await window.api.db.setUser(session.user.id)
       } else {
