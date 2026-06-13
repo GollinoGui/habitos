@@ -86,6 +86,11 @@ export default function Settings(): React.JSX.Element {
   const [reduceMotion, setReduceMotion] = useState(getReduceMotion)
   const [exporting, setExporting] = useState(false)
   const [exportDone, setExportDone] = useState(false)
+  const [excelExporting, setExcelExporting] = useState(false)
+  const [excelStatus, setExcelStatus] = useState<'idle' | 'done' | 'error'>('idle')
+  const now = new Date()
+  const [excelYear, setExcelYear] = useState(now.getFullYear())
+  const [excelMonth, setExcelMonth] = useState(now.getMonth() + 1)
   const [importing, setImporting] = useState(false)
   const [importStatus, setImportStatus] = useState<'idle' | 'done' | 'error'>('idle')
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -276,6 +281,20 @@ export default function Settings(): React.JSX.Element {
       setImporting(false)
       if (importInputRef.current) importInputRef.current.value = ''
       setTimeout(() => setImportStatus('idle'), 4000)
+    }
+  }
+
+  async function handleExportExcel() {
+    setExcelExporting(true)
+    setExcelStatus('idle')
+    try {
+      const result = await window.api.app.exportExcel(excelYear, excelMonth)
+      setExcelStatus(result?.success ? 'done' : 'idle')
+    } catch {
+      setExcelStatus('error')
+    } finally {
+      setExcelExporting(false)
+      setTimeout(() => setExcelStatus('idle'), 4000)
     }
   }
 
@@ -597,6 +616,51 @@ export default function Settings(): React.JSX.Element {
             {resetDone ? 'Dados apagados!' : 'Resetar dados'}
           </button>
         )}
+      </div>
+
+      {/* ── Exportar relatório Excel ─────────────────────────────────────────── */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <Download size={20} className="text-accent-green" />
+          <h2 className="text-lg font-semibold text-text-primary">Exportar Relatório Excel</h2>
+        </div>
+        <p className="text-sm text-text-secondary">
+          Gera um arquivo <span className="font-medium text-text-primary">.xlsx</span> com hábitos, sono, academia e finanças do mês selecionado.
+        </p>
+        <div className="flex gap-3 items-end flex-wrap">
+          <div>
+            <label className="text-xs text-text-muted block mb-1">Mês</label>
+            <select
+              value={excelMonth}
+              onChange={e => setExcelMonth(Number(e.target.value))}
+              className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-green"
+            >
+              {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+                <option key={i} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-text-muted block mb-1">Ano</label>
+            <select
+              value={excelYear}
+              onChange={e => setExcelYear(Number(e.target.value))}
+              className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-green"
+            >
+              {[now.getFullYear() - 1, now.getFullYear()].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleExportExcel}
+            disabled={excelExporting}
+            className="flex items-center gap-2 px-4 py-2 bg-accent-green/15 hover:bg-accent-green/25 border border-accent-green/30 text-accent-green text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Download size={15} />
+            {excelExporting ? 'Gerando...' : excelStatus === 'done' ? '✓ Exportado!' : excelStatus === 'error' ? 'Erro ao exportar' : 'Exportar Excel'}
+          </button>
+        </div>
       </div>
     </div>
   )

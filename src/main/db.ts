@@ -296,6 +296,10 @@ function runMigrations(): void {
   if (!addictionCols.find((c: Record<string, unknown>) => c.name === 'is_hidden_name')) {
     db.run('ALTER TABLE addictions ADD COLUMN is_hidden_name INTEGER DEFAULT 0')
   }
+  const habitCols = dbAll('PRAGMA table_info(habits)')
+  if (!habitCols.find((c: Record<string, unknown>) => c.name === 'days_of_week')) {
+    db.run('ALTER TABLE habits ADD COLUMN days_of_week TEXT DEFAULT NULL')
+  }
   const mediaCols = dbAll('PRAGMA table_info(media_items)')
   if (!mediaCols.find((c: Record<string, unknown>) => c.name === 'rating')) {
     db.run('ALTER TABLE media_items ADD COLUMN rating INTEGER DEFAULT NULL')

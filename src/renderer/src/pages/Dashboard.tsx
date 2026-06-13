@@ -92,7 +92,7 @@ export default function Dashboard(): React.JSX.Element {
     const mondayMs = Date.now() - daysFromMon * 86400000
     const mondayStr = format(new Date(mondayMs), 'yyyy-MM-dd')
     const [h, comps, add, ach, workouts, readMins, sleepToday, allGoals, journalEntry, weekComps] = await Promise.all([
-      window.api.habits.list(),
+      window.api.habits.dueToday(),
       window.api.habits.completionsRange(today, today),
       window.api.addictions.list(),
       window.api.achievements.list(),

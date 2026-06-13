@@ -116,6 +116,23 @@ export function registerGymHandlers(): void {
     return true
   })
 
+  ipcMain.handle('gym:exercise-history', (_e, exerciseName: string) => {
+    const rows = dbAll(
+      `SELECT w.date, e.name, e.sets, e.reps, e.weight_kg
+       FROM exercises e
+       JOIN workouts w ON w.id = e.workout_id
+       WHERE LOWER(e.name) = LOWER(?)
+       ORDER BY w.date ASC`,
+      [exerciseName]
+    )
+    return rows
+  })
+
+  ipcMain.handle('gym:exercise-names', () => {
+    const rows = dbAll('SELECT DISTINCT name FROM exercises ORDER BY name ASC')
+    return rows.map(r => r.name as string)
+  })
+
   ipcMain.handle('gym:programs:update', (_e, id: number, data: {
     name: string; description?: string;
     days: { name: string; day_label?: string; exercises: { name: string; sets?: number; reps?: number; weight_kg?: number }[] }[]

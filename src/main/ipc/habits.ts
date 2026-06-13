@@ -7,14 +7,24 @@ export function registerHabitsHandlers(): void {
     return dbAll('SELECT * FROM habits ORDER BY created_at ASC')
   })
 
+  ipcMain.handle('habits:due-today', () => {
+    const all = dbAll('SELECT * FROM habits WHERE is_active = 1 ORDER BY created_at ASC')
+    const todayDow = new Date().getDay()
+    return all.filter(h => {
+      if (h.frequency !== 'custom') return true
+      if (!h.days_of_week) return true
+      return (h.days_of_week as string).split(',').map(Number).includes(todayDow)
+    })
+  })
+
   ipcMain.handle('habits:create', (_e, data: {
     name: string; description?: string; frequency: string;
-    target_time?: string; color: string; icon: string
+    target_time?: string; color: string; icon: string; days_of_week?: string
   }) => {
-    const xp = data.frequency === 'weekly' ? 25 : 10
+    const xp = data.frequency === 'weekly' ? 25 : data.frequency === 'custom' ? 15 : 10
     const result = dbRun(
-      'INSERT INTO habits (name, description, frequency, target_time, xp_reward, color, icon) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [data.name, data.description || '', data.frequency, data.target_time || null, xp, data.color, data.icon]
+      'INSERT INTO habits (name, description, frequency, target_time, xp_reward, color, icon, days_of_week) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [data.name, data.description || '', data.frequency, data.target_time || null, xp, data.color, data.icon, data.days_of_week || null]
     )
     unlockAchievement('first_habit', 'Primeiro Hábito', 'Criou seu primeiro hábito', '🌟')
     save()
@@ -23,12 +33,12 @@ export function registerHabitsHandlers(): void {
 
   ipcMain.handle('habits:update', (_e, id: number, data: {
     name: string; description?: string; frequency: string;
-    target_time?: string; color: string; icon: string
+    target_time?: string; color: string; icon: string; days_of_week?: string
   }) => {
-    const xp = data.frequency === 'weekly' ? 25 : 10
+    const xp = data.frequency === 'weekly' ? 25 : data.frequency === 'custom' ? 15 : 10
     dbRun(
-      'UPDATE habits SET name=?, description=?, frequency=?, target_time=?, xp_reward=?, color=?, icon=? WHERE id=?',
-      [data.name, data.description || '', data.frequency, data.target_time || null, xp, data.color, data.icon, id]
+      'UPDATE habits SET name=?, description=?, frequency=?, target_time=?, xp_reward=?, color=?, icon=?, days_of_week=? WHERE id=?',
+      [data.name, data.description || '', data.frequency, data.target_time || null, xp, data.color, data.icon, data.days_of_week || null, id]
     )
     save()
     return true

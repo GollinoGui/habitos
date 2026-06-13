@@ -7,11 +7,17 @@ import { useProfileStore } from '../store/profileStore'
 
 interface Habit {
   id: number; name: string; description: string; frequency: string; target_time: string;
-  xp_reward: number; color: string; icon: string; is_active: number; created_at: string
+  xp_reward: number; color: string; icon: string; is_active: number; created_at: string; days_of_week?: string
 }
 
 const ICONS = ['⭐', '💪', '🏃', '🛏', '📚', '🥗', '💧', '🧘', '🎯', '🎸', '✍️', '🌅', '🚿', '🧹', '🏋️']
 const COLORS = ['#7c3aed', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16']
+const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+function parseDaysOfWeek(val?: string): number[] {
+  if (!val) return [1, 2, 3, 4, 5]
+  return val.split(',').map(Number).filter(n => !isNaN(n))
+}
 
 function Modal({ onClose, onSave, initial, error }: {
   onClose: () => void
@@ -25,6 +31,19 @@ function Modal({ onClose, onSave, initial, error }: {
   const [targetTime, setTargetTime] = useState(initial?.target_time || '')
   const [color, setColor] = useState(initial?.color || '#7c3aed')
   const [icon, setIcon] = useState(initial?.icon || '⭐')
+  const [selectedDays, setSelectedDays] = useState<number[]>(() => parseDaysOfWeek(initial?.days_of_week))
+
+  function toggleDay(dow: number) {
+    setSelectedDays(prev => prev.includes(dow) ? prev.filter(d => d !== dow) : [...prev, dow].sort())
+  }
+
+  const xpPreview = frequency === 'weekly' ? 25 : frequency === 'custom' ? 15 : 10
+
+  function handleSave() {
+    if (!name) return
+    const days_of_week = frequency === 'custom' ? selectedDays.join(',') : undefined
+    onSave({ name, description, frequency, target_time: targetTime, color, icon, days_of_week })
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
@@ -55,8 +74,9 @@ function Modal({ onClose, onSave, initial, error }: {
                 className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple"
                 value={frequency} onChange={e => setFrequency(e.target.value)}
               >
-                <option value="daily">Diário</option>
-                <option value="weekly">Semanal</option>
+                <option value="daily">Diário (todos os dias)</option>
+                <option value="weekly">Semanal (1× por semana)</option>
+                <option value="custom">Dias específicos</option>
               </select>
             </div>
             <div className="flex-1">
@@ -81,10 +101,36 @@ function Modal({ onClose, onSave, initial, error }: {
               </div>
             </div>
           </div>
+
+          {frequency === 'custom' && (
+            <div>
+              <label className="text-xs text-text-secondary mb-2 block">Dias da semana</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {DOW_LABELS.map((label, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => toggleDay(i)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                      selectedDays.includes(i)
+                        ? 'bg-accent-purple border-accent-purple text-white'
+                        : 'border-bg-border text-text-secondary hover:border-accent-purple/50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {selectedDays.length === 0 && (
+                <p className="text-xs text-accent-red mt-1">Selecione pelo menos um dia.</p>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border border-bg-border/60 rounded-lg">
             <span className="text-accent-gold text-sm">⚡</span>
             <span className="text-xs text-text-muted">
-              XP automático: <span className="text-accent-gold font-semibold">{frequency === 'weekly' ? '25 XP' : '10 XP'}</span> por conclusão
+              XP automático: <span className="text-accent-gold font-semibold">{xpPreview} XP</span> por conclusão
             </span>
           </div>
           <div>
@@ -116,9 +162,9 @@ function Modal({ onClose, onSave, initial, error }: {
         <div className="flex gap-3 mt-4">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm">Cancelar</button>
           <button
-            onClick={() => name && onSave({ name, description, frequency, target_time: targetTime, color, icon })}
+            onClick={handleSave}
             className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm transition-colors disabled:opacity-50"
-            disabled={!name}
+            disabled={!name || (frequency === 'custom' && selectedDays.length === 0)}
           >Salvar</button>
         </div>
       </div>
@@ -433,7 +479,7 @@ export default function Habits(): React.JSX.Element {
                   </div>
                   {habit.description && <p className="text-xs text-text-muted mt-0.5">{habit.description}</p>}
                   <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
-                    <span>{habit.frequency === 'daily' ? 'Diário' : 'Semanal'}</span>
+                    <span>{habit.frequency === 'daily' ? 'Diário' : habit.frequency === 'weekly' ? 'Semanal' : habit.days_of_week ? habit.days_of_week.split(',').map(d => DOW_LABELS[Number(d)]).join(', ') : 'Personalizado'}</span>
                     {habit.target_time && <span>⏰ {habit.target_time}</span>}
                     <span style={{ color: habit.color }}>+{habit.xp_reward} XP</span>
                   </div>
