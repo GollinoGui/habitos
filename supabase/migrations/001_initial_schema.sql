@@ -342,6 +342,8 @@ BEGIN
   VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)))
   ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NEW; -- nunca bloqueia a autenticação mesmo se o perfil falhar
 END;
 $$;
 

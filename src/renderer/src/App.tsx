@@ -19,6 +19,7 @@ import Analytics from './pages/Analytics'
 import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
+import MobileNav from './components/Layout/MobileNav'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function applyStoredTheme() {
@@ -96,28 +97,26 @@ function AppContent(): React.JSX.Element {
     return (
       <HashRouter>
         <TrayNavigator />
-        <div className="flex h-screen overflow-hidden bg-bg-primary">
-          <Sidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
-            <TopBar />
-            <main className="flex-1 overflow-y-auto p-4">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/habits" element={<Habits />} />
-                <Route path="/gym" element={<Gym />} />
-                <Route path="/addictions" element={<Addictions />} />
-                <Route path="/goals" element={<Goals />} />
-                <Route path="/achievements" element={<Achievements />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/journal" element={<Journal />} />
-                <Route path="/sleep" element={<Sleep />} />
-                <Route path="/finance" element={<Finance />} />
-                <Route path="/reading" element={<Reading />} />
-                <Route path="/calendar" element={<Calendar />} />
-                <Route path="/analytics" element={<Analytics />} />
-              </Routes>
-            </main>
-          </div>
+        <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
+          <TopBar />
+          <main className="flex-1 overflow-y-auto p-4 pb-20">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/habits" element={<Habits />} />
+              <Route path="/gym" element={<Gym />} />
+              <Route path="/addictions" element={<Addictions />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/journal" element={<Journal />} />
+              <Route path="/sleep" element={<Sleep />} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/reading" element={<Reading />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/analytics" element={<Analytics />} />
+            </Routes>
+          </main>
+          <MobileNav />
         </div>
       </HashRouter>
     )

@@ -1,6 +1,6 @@
 {
   "name": "habitos",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "App de rastreamento de hábitos com gamificação",
   "main": "./out/main/index.js",
   "type": "module",
@@ -87,7 +87,8 @@
     "publish": {
       "provider": "github",
       "owner": "GollinoGui",
-      "repo": "habitos"
+      "repo": "habitos",
+      "releaseType": "release"
     }
   }
 }
