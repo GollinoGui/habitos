@@ -14,6 +14,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  authError: string | null
+  clearAuthError: () => void
   signOut: () => Promise<void>
 }
 
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -68,15 +71,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return unsubscribe
     }
 
+    // Handle cold-start: app was killed and re-opened via deep link before listener registered
+    App.getLaunchUrl().then(async (result) => {
+      if (!result?.url) return
+      try {
+        const url = new URL(result.url)
+        const code = url.searchParams.get('code')
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(result.url)
+          try { await Browser.close() } catch { /* ignore */ }
+          if (error) setAuthError('Erro ao fazer login com Google: ' + error.message)
+        }
+      } catch { /* ignore malformed URLs */ }
+    })
+
     // Capacitor: com.guilherme.habitos:// deep link via App plugin
     let handle: { remove: () => Promise<void> } | null = null
     App.addListener('appUrlOpen', async (data: { url: string }) => {
       try {
         const url = new URL(data.url)
+
+        // PKCE flow: pass the full URL so Supabase can extract both code + state
+        // (state is needed to locate the stored PKCE verifier)
         const code = url.searchParams.get('code')
         if (code) {
-          await supabase.auth.exchangeCodeForSession(code)
-          await Browser.close()
+          const { error } = await supabase.auth.exchangeCodeForSession(data.url)
+          try { await Browser.close() } catch { /* browser may already be closed */ }
+          if (error) setAuthError('Erro ao fazer login com Google: ' + error.message)
+          return
+        }
+
+        // Implicit flow fallback: tokens in hash fragment
+        const hashParams = new URLSearchParams(url.hash.substring(1))
+        const access_token = hashParams.get('access_token')
+        const refresh_token = hashParams.get('refresh_token')
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({ access_token, refresh_token })
+          try { await Browser.close() } catch { /* browser may already be closed */ }
+          if (error) setAuthError('Erro ao fazer login com Google: ' + error.message)
+          return
+        }
+
+        // OAuth error returned in URL params
+        const oauthError = url.searchParams.get('error_description') || url.searchParams.get('error')
+        if (oauthError) {
+          try { await Browser.close() } catch { /* browser may already be closed */ }
+          setAuthError('Erro Google OAuth: ' + oauthError)
         }
       } catch {
         // ignore malformed URLs
@@ -91,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, authError, clearAuthError: () => setAuthError(null), signOut }}>
       {children}
     </AuthContext.Provider>
   )
