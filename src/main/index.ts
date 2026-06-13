@@ -100,6 +100,10 @@ function createTray(): void {
     const iconFile = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
     const iconPath = join(resourcesDir, iconFile)
     const icon = nativeImage.createFromPath(iconPath)
+    if (icon.isEmpty()) {
+      console.error('Tray: ícone não encontrado em', iconPath)
+      return
+    }
     tray = new Tray(icon)
     tray.setToolTip('Hábitos')
 
@@ -119,7 +123,7 @@ function createTray(): void {
       { label: 'Nova despesa',      click: () => trayNavigate('/finance', 'expense') },
       { label: 'Nova receita',      click: () => trayNavigate('/finance', 'income') },
       { type: 'separator' },
-      { label: 'Sair', click: () => { tray = null; app.quit() } }
+      { label: 'Sair', click: () => { isQuitting = true; tray?.destroy(); tray = null; app.quit() } }
     ])
     tray.setContextMenu(contextMenu)
     tray.on('click', () => {
@@ -300,6 +304,7 @@ function setupAutoUpdater(): void {
 
 app.on('before-quit', () => {
   isQuitting = true
+  if (tray) { tray.destroy(); tray = null }
 })
 
 app.on('window-all-closed', () => {
