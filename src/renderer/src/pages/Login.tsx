@@ -105,35 +105,49 @@ export default function Login() {
     reset()
     setGoogleLoading(true)
     try {
-      const CALLBACK_PORT = 54321
-      const redirectTo = `http://localhost:${CALLBACK_PORT}/auth/callback`
+      if (window.electronAuth) {
+        // Electron: abre o navegador do sistema e captura o callback
+        const CALLBACK_PORT = 54321
+        const redirectTo = `http://localhost:${CALLBACK_PORT}/auth/callback`
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo, skipBrowserRedirect: true }
-      })
-      if (error) throw error
-      if (!data.url) return
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo, skipBrowserRedirect: true }
+        })
+        if (error) throw error
+        if (!data.url) return
 
-      // Abre no navegador do sistema (Chrome já tem a conta Google)
-      const callbackUrl = await window.electronAuth.openOAuthBrowser(data.url, CALLBACK_PORT)
-      if (!callbackUrl) return
+        const callbackUrl = await window.electronAuth.openOAuthBrowser(data.url, CALLBACK_PORT)
+        if (!callbackUrl) return
 
-      const parsed = new URL(callbackUrl)
-      const code = parsed.searchParams.get('code')
+        const parsed = new URL(callbackUrl)
+        const code = parsed.searchParams.get('code')
 
-      if (code) {
-        // PKCE flow: exchange code for session
-        const { error: e } = await supabase.auth.exchangeCodeForSession(code)
-        if (e) setError(translateError(e.message))
-      } else if (parsed.hash) {
-        // Implicit flow: tokens already in hash
-        const params = new URLSearchParams(parsed.hash.substring(1))
-        const access_token = params.get('access_token')
-        const refresh_token = params.get('refresh_token')
-        if (access_token && refresh_token) {
-          const { error: e } = await supabase.auth.setSession({ access_token, refresh_token })
+        if (code) {
+          const { error: e } = await supabase.auth.exchangeCodeForSession(code)
           if (e) setError(translateError(e.message))
+        } else if (parsed.hash) {
+          const params = new URLSearchParams(parsed.hash.substring(1))
+          const access_token = params.get('access_token')
+          const refresh_token = params.get('refresh_token')
+          if (access_token && refresh_token) {
+            const { error: e } = await supabase.auth.setSession({ access_token, refresh_token })
+            if (e) setError(translateError(e.message))
+          }
+        }
+      } else {
+        // Mobile / Capacitor: abre com Browser plugin, callback chega via deep link
+        const { Browser } = await import('@capacitor/browser')
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'com.guilherme.habitos://auth/callback',
+            skipBrowserRedirect: true
+          }
+        })
+        if (error) throw error
+        if (data.url) {
+          await Browser.open({ url: data.url })
         }
       }
     } catch (err: unknown) {

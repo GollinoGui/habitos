@@ -2,7 +2,7 @@ export {}
 
 declare global {
   interface Window {
-    api: {
+    api?: {
       profile: {
         get: () => Promise<{
           id: number

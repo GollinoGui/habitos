@@ -15,6 +15,7 @@ const realApi = {
   },
   habits: {
     list: () => ipcRenderer.invoke('habits:list'),
+    dueToday: () => ipcRenderer.invoke('habits:due-today'),
     create: (data: object) => ipcRenderer.invoke('habits:create', data),
     update: (id: number, data: object) => ipcRenderer.invoke('habits:update', id, data),
     delete: (id: number) => ipcRenderer.invoke('habits:delete', id),
@@ -138,12 +139,15 @@ const realApi = {
     list: () => ipcRenderer.invoke('gym:programs:list'),
     create: (data: object) => ipcRenderer.invoke('gym:programs:create', data),
     delete: (id: number) => ipcRenderer.invoke('gym:programs:delete', id),
-    update: (id: number, data: object) => ipcRenderer.invoke('gym:programs:update', id, data)
+    update: (id: number, data: object) => ipcRenderer.invoke('gym:programs:update', id, data),
+    exerciseHistory: (name: string) => ipcRenderer.invoke('gym:exercise-history', name),
+    exerciseNames: () => ipcRenderer.invoke('gym:exercise-names')
   },
   app: {
     exportData: () => ipcRenderer.invoke('app:export-data'),
     importData: (json: string) => ipcRenderer.invoke('app:import-data', json),
-    resetSection: (section: string) => ipcRenderer.invoke('app:reset-section', section)
+    resetSection: (section: string) => ipcRenderer.invoke('app:reset-section', section),
+    exportExcel: (year: number, month: number) => ipcRenderer.invoke('app:export-excel', year, month)
   },
   demo: {
     open: () => ipcRenderer.invoke('demo:open')
@@ -370,6 +374,7 @@ function buildDemoApi() {
     },
     habits: {
       list: async () => demoHabits,
+      dueToday: async () => demoHabits,
       create: async () => ({ id: 99 }),
       update: async () => {},
       delete: async () => {},
@@ -491,11 +496,14 @@ function buildDemoApi() {
       create: async () => ({ id: 99 }),
       delete: async () => {},
       update: async () => {},
+      exerciseHistory: async () => [],
+      exerciseNames: async () => [],
     },
     app: {
       exportData: async () => JSON.stringify({ demo: true }),
       importData: async () => {},
       resetSection: async () => {},
+      exportExcel: async () => ({ success: false }),
     },
     demo: {
       open: async () => {},
@@ -534,13 +542,13 @@ contextBridge.exposeInMainWorld('electronAuth', {
 
 declare global {
   interface Window {
-    api: typeof realApi
+    api?: typeof realApi
     __demoMode__?: boolean
-    electronAuth: {
+    electronAuth?: {
       openOAuthBrowser: (oauthUrl: string, port: number) => Promise<string | null>
       onDeepLink: (cb: (url: string) => void) => () => void
     }
-    electronNav: {
+    electronNav?: {
       onNavigate: (cb: (path: string, action?: string) => void) => () => void
     }
   }

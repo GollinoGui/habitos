@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { App } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 
 interface AuthContextType {
   user: User | null
@@ -18,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
+      if (session?.user && window.api?.db) {
         await window.api.db.setUser(session.user.id)
       }
       setSession(session)
@@ -28,9 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        await window.api.db.setUser(session.user.id)
+        if (window.api?.db) await window.api.db.setUser(session.user.id)
       } else {
-        await window.api.db.setUser(null)
+        if (window.api?.db) await window.api.db.setUser(null)
       }
       setSession(session)
       setUser(session?.user ?? null)
@@ -40,21 +42,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Handle Google OAuth deep link callback (habitos://auth/callback?code=...)
+  // Handle OAuth deep link callback — Electron or Capacitor
   useEffect(() => {
-    if (!window.electronAuth) return
-    const unsubscribe = window.electronAuth.onDeepLink(async (url: string) => {
+    if (window.electronAuth) {
+      // Electron: habitos:// deep link
+      const unsubscribe = window.electronAuth.onDeepLink(async (url: string) => {
+        try {
+          const parsed = new URL(url)
+          const code = parsed.searchParams.get('code')
+          if (code) {
+            await supabase.auth.exchangeCodeForSession(code)
+          }
+        } catch {
+          // ignore malformed URLs
+        }
+      })
+      return unsubscribe
+    }
+
+    // Capacitor: com.guilherme.habitos:// deep link via App plugin
+    let handle: { remove: () => Promise<void> } | null = null
+    App.addListener('appUrlOpen', async (data: { url: string }) => {
       try {
-        const parsed = new URL(url)
-        const code = parsed.searchParams.get('code')
+        const url = new URL(data.url)
+        const code = url.searchParams.get('code')
         if (code) {
           await supabase.auth.exchangeCodeForSession(code)
+          await Browser.close()
         }
       } catch {
         // ignore malformed URLs
       }
-    })
-    return unsubscribe
+    }).then(h => { handle = h })
+
+    return () => { handle?.remove() }
   }, [])
 
   async function signOut() {

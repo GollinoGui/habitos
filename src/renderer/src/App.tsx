@@ -15,6 +15,7 @@ import Sleep from './pages/Sleep'
 import Finance from './pages/Finance'
 import Reading from './pages/Reading'
 import Calendar from './pages/Calendar'
+import Analytics from './pages/Analytics'
 import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
@@ -33,14 +34,15 @@ function applyStoredTheme() {
 applyStoredTheme()
 
 const isDemo = typeof window !== 'undefined' && !!window.__demoMode__
+const isMobileApp = typeof window !== 'undefined' && !window.api && !window.__demoMode__
 
 function AppContent(): React.JSX.Element {
-  const { user, loading } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
 
   useEffect(() => {
-    if (!user || isDemo) return
+    if (!user || isDemo || isMobileApp) return
 
     const onboardedKey = 'habitos_onboarded'
     const tutorialKey = 'habitos_tutorial_done'
@@ -50,8 +52,8 @@ function AppContent(): React.JSX.Element {
     const checkExistingUser = async (): Promise<void> => {
       try {
         const [profile, habits] = await Promise.all([
-          window.api.profile.get(),
-          window.api.habits.list()
+          window.api!.profile.get(),
+          window.api!.habits.list()
         ])
         const hasExistingData = (profile?.total_xp > 0) || (habits?.length > 0)
         if (hasExistingData) {
@@ -77,6 +79,30 @@ function AppContent(): React.JSX.Element {
     return (
       <div className="flex h-screen items-center justify-center bg-bg-primary">
         <Loader2 size={32} className="animate-spin text-accent-purple" />
+      </div>
+    )
+  }
+
+  // Mobile app (Capacitor): show login or a placeholder after authentication
+  if (isMobileApp) {
+    if (!user) {
+      return (
+        <div className="flex h-screen items-center justify-center p-4 bg-bg-primary">
+          <Login />
+        </div>
+      )
+    }
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-bg-primary p-6 text-center">
+        <span className="text-5xl">🚀</span>
+        <h1 className="text-xl font-bold text-text-primary">Olá, {user.user_metadata?.name || user.email}!</h1>
+        <p className="text-text-muted text-sm">Login funcionando. Módulos mobile em breve.</p>
+        <button
+          onClick={signOut}
+          className="mt-4 rounded-xl bg-bg-secondary border border-bg-border px-4 py-2 text-sm text-text-secondary hover:border-text-muted transition-colors"
+        >
+          Sair
+        </button>
       </div>
     )
   }
@@ -115,6 +141,7 @@ function AppContent(): React.JSX.Element {
               <Route path="/finance" element={<Finance />} />
               <Route path="/reading" element={<Reading />} />
               <Route path="/calendar" element={<Calendar />} />
+              <Route path="/analytics" element={<Analytics />} />
             </Routes>
           </main>
         </div>
