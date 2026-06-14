@@ -94,7 +94,12 @@ export default function Login() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name } }
+          options: {
+            data: { name },
+            emailRedirectTo: window.electronAuth
+              ? undefined
+              : 'com.guilherme.habitos://auth/callback'
+          }
         })
         if (error) setError(translateError(error.message))
         else setSuccess('Conta criada! Verifique seu email para confirmar o cadastro.')
