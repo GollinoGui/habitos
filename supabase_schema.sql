@@ -86,14 +86,20 @@ create policy "own habit_completions" on habit_completions for all using (auth.u
 -- ── Academia ─────────────────────────────────────────────────
 
 create table if not exists workouts (
-  id           bigserial primary key,
-  user_id      uuid references auth.users(id) on delete cascade not null,
-  date         date not null,
-  name         text not null,
-  notes        text default '',
-  duration_min integer,
-  created_at   timestamptz default now()
+  id             bigserial primary key,
+  user_id        uuid references auth.users(id) on delete cascade not null,
+  date           date not null,
+  name           text not null,
+  notes          text default '',
+  duration_min   integer,
+  cardio_type    text,
+  cardio_minutes integer,
+  created_at     timestamptz default now()
 );
+
+-- Migration: add cardio columns to existing workouts table
+alter table workouts add column if not exists cardio_type text;
+alter table workouts add column if not exists cardio_minutes integer;
 alter table workouts enable row level security;
 create policy "own workouts" on workouts for all using (auth.uid() = user_id);
 
@@ -267,6 +273,7 @@ create table if not exists sleep_logs (
   wake_time  text not null,
   quality    integer not null default 3,
   notes      text default '',
+  cycles     integer default null,
   created_at timestamptz default now(),
   unique (user_id, date)
 );
@@ -376,3 +383,20 @@ create table if not exists notification_settings (
 );
 alter table notification_settings enable row level security;
 create policy "own notification_settings" on notification_settings for all using (auth.uid() = user_id);
+
+
+-- ── Fases de treino (Periodização) ──────────────────────────
+
+create table if not exists training_phases (
+  id          bigserial primary key,
+  user_id     uuid references auth.users(id) on delete cascade not null,
+  name        text not null,
+  type        text not null default 'personalizado',
+  start_date  date not null,
+  end_date    date not null,
+  program_id  bigint default null,
+  notes       text,
+  created_at  timestamptz default now()
+);
+alter table training_phases enable row level security;
+create policy "own training_phases" on training_phases for all using (auth.uid() = user_id);

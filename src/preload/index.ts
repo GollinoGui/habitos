@@ -85,7 +85,7 @@ const realApi = {
   sleep: {
     get: (date: string) => ipcRenderer.invoke('sleep:get', date),
     recent: (limit?: number) => ipcRenderer.invoke('sleep:recent', limit),
-    save: (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string }) =>
+    save: (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string; cycles?: number | null }) =>
       ipcRenderer.invoke('sleep:save', data),
     delete: (id: number) => ipcRenderer.invoke('sleep:delete', id)
   },
@@ -142,6 +142,12 @@ const realApi = {
     update: (id: number, data: object) => ipcRenderer.invoke('gym:programs:update', id, data),
     exerciseHistory: (name: string) => ipcRenderer.invoke('gym:exercise-history', name),
     exerciseNames: () => ipcRenderer.invoke('gym:exercise-names')
+  },
+  gymPhases: {
+    list: () => ipcRenderer.invoke('gym:phases:list'),
+    create: (data: object) => ipcRenderer.invoke('gym:phases:create', data),
+    update: (id: number, data: object) => ipcRenderer.invoke('gym:phases:update', id, data),
+    delete: (id: number) => ipcRenderer.invoke('gym:phases:delete', id)
   },
   app: {
     exportData: () => ipcRenderer.invoke('app:export-data'),
@@ -498,6 +504,12 @@ function buildDemoApi() {
       update: async () => {},
       exerciseHistory: async () => [],
       exerciseNames: async () => [],
+    },
+    gymPhases: {
+      list: async () => [],
+      create: async () => ({ id: 99 }),
+      update: async () => {},
+      delete: async () => {},
     },
     app: {
       exportData: async () => JSON.stringify({ demo: true }),

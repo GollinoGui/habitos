@@ -77,6 +77,50 @@ export function installMobileApi(
   // Always install Supabase as window.api (desktop and mobile share the same data source).
   // Desktop-only IPC calls are forwarded through _electronApi fallbacks inside buildApi().
   ;(window as unknown as Record<string, unknown>).api = buildApi()
+
+  // Background: sync recent local habit completions to Supabase so the 7-day chart is accurate
+  // after switching computers. Runs silently; errors are ignored.
+  if (_electronApi) {
+    void syncLocalHabitCompletions(userId)
+  }
+}
+
+async function syncLocalHabitCompletions(userId: string): Promise<void> {
+  try {
+    if (!_electronApi?.habits) return
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+    const localHabits = (await _electronApi.habits.list()) as { id: number; name: string }[]
+    const localComps = (await _electronApi.habits.completionsRange(fmt(thirtyDaysAgo), fmt(now))) as { habit_id: number; completed_at: string }[]
+    if (!localComps.length) return
+
+    const { data: cloudHabits } = await supabase.from('habits').select('id, name').eq('user_id', userId)
+    if (!cloudHabits?.length) return
+
+    const localNameById = new Map(localHabits.map(h => [h.id, h.name]))
+    const cloudIdByName = new Map(cloudHabits.map(h => [h.name as string, h.id as number]))
+
+    const toInsert = localComps
+      .map(c => {
+        const name = localNameById.get(c.habit_id)
+        if (!name) return null
+        const cloudId = cloudIdByName.get(name)
+        if (!cloudId) return null
+        return { user_id: userId, habit_id: cloudId, completed_at: c.completed_at }
+      })
+      .filter((r): r is { user_id: string; habit_id: number; completed_at: string } => r !== null)
+
+    if (!toInsert.length) return
+    await supabase.from('habit_completions').upsert(toInsert, {
+      onConflict: 'user_id,habit_id,completed_at',
+      ignoreDuplicates: true,
+    })
+  } catch {
+    // Silently ignore
+  }
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -336,22 +380,25 @@ function buildApi(): any {
 
       createWorkout: async (data: {
         date: string; name: string; notes?: string; duration_min?: number
+        cardio_type?: string; cardio_minutes?: number
         exercises: { name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }[]
       }) => {
         const { data: workout } = await supabase.from('workouts').insert({
           user_id: uid(), date: data.date, name: data.name,
           notes: data.notes ?? null, duration_min: data.duration_min ?? null,
+          cardio_type: data.cardio_type ?? null, cardio_minutes: data.cardio_minutes ?? null,
         }).select().single()
         if (!workout) return 0
 
         if (data.exercises?.length) {
-          await supabase.from('exercises').insert(
+          const { error: exError } = await supabase.from('exercises').insert(
             data.exercises.map(ex => ({
               user_id: uid(), workout_id: workout.id,
               name: ex.name, sets: ex.sets ?? null, reps: ex.reps ?? null,
-              weight_kg: ex.weight_kg ?? null, is_superset: ex.is_superset ?? 0,
+              weight_kg: ex.weight_kg ?? null, is_superset: !!(ex.is_superset),
             }))
           )
+          if (exError) console.error('exercises insert error:', exError)
         }
 
         let xp = 15
@@ -499,6 +546,42 @@ function buildApi(): any {
           .select('name').eq('user_id', uid())
         const names = [...new Set((data ?? []).map(e => e.name))].sort()
         return names
+      },
+    },
+
+    // ── Training Phases ───────────────────────────────────────────────────
+    gymPhases: {
+      list: async () => {
+        const { data } = await supabase.from('training_phases')
+          .select('*').eq('user_id', uid()).order('start_date', { ascending: false })
+        return data ?? []
+      },
+
+      create: async (data: {
+        name: string; type: string; start_date: string; end_date: string; program_id?: number; notes?: string
+      }) => {
+        const { data: row } = await supabase.from('training_phases').insert({
+          user_id: uid(), name: data.name, type: data.type,
+          start_date: data.start_date, end_date: data.end_date,
+          program_id: data.program_id ?? null, notes: data.notes ?? null,
+        }).select().single()
+        return row?.id ?? 0
+      },
+
+      update: async (id: number, data: {
+        name: string; type: string; start_date: string; end_date: string; program_id?: number; notes?: string
+      }) => {
+        await supabase.from('training_phases').update({
+          name: data.name, type: data.type,
+          start_date: data.start_date, end_date: data.end_date,
+          program_id: data.program_id ?? null, notes: data.notes ?? null,
+        }).eq('id', id).eq('user_id', uid())
+        return true
+      },
+
+      delete: async (id: number) => {
+        await supabase.from('training_phases').delete().eq('id', id).eq('user_id', uid())
+        return true
       },
     },
 
@@ -768,11 +851,12 @@ function buildApi(): any {
         return data ?? []
       },
 
-      save: async (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string }) => {
+      save: async (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string; cycles?: number | null }) => {
         await supabase.from('sleep_logs').upsert(
           {
             user_id: uid(), date: data.date, bedtime: data.bedtime,
-            wake_time: data.wake_time, quality: data.quality, notes: data.notes ?? null,
+            wake_time: data.wake_time, quality: data.quality,
+            notes: data.notes ?? null, cycles: data.cycles ?? null,
           },
           { onConflict: 'user_id,date' }
         )

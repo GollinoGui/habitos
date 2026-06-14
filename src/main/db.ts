@@ -185,6 +185,7 @@ function createTables(): void {
       wake_time TEXT,
       quality INTEGER DEFAULT 3,
       notes TEXT,
+      cycles INTEGER DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -277,6 +278,17 @@ function createTables(): void {
       weight_kg REAL,
       is_superset INTEGER DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS training_phases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'personalizado',
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      program_id INTEGER DEFAULT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
   runMigrations()
@@ -287,6 +299,13 @@ function runMigrations(): void {
   const cols = dbAll('PRAGMA table_info(exercises)')
   if (!cols.find((c: Record<string, unknown>) => c.name === 'is_superset')) {
     db.run('ALTER TABLE exercises ADD COLUMN is_superset INTEGER DEFAULT 0')
+  }
+  const workoutCols = dbAll('PRAGMA table_info(workouts)')
+  if (!workoutCols.find((c: Record<string, unknown>) => c.name === 'cardio_type')) {
+    db.run('ALTER TABLE workouts ADD COLUMN cardio_type TEXT DEFAULT NULL')
+  }
+  if (!workoutCols.find((c: Record<string, unknown>) => c.name === 'cardio_minutes')) {
+    db.run('ALTER TABLE workouts ADD COLUMN cardio_minutes INTEGER DEFAULT NULL')
   }
   const goalCols = dbAll('PRAGMA table_info(goals)')
   if (!goalCols.find((c: Record<string, unknown>) => c.name === 'folder_id')) {
@@ -316,6 +335,10 @@ function runMigrations(): void {
   }
   if (!txCols.find((c: Record<string, unknown>) => c.name === 'account_id')) {
     db.run('ALTER TABLE finance_transactions ADD COLUMN account_id INTEGER DEFAULT NULL')
+  }
+  const sleepCols = dbAll('PRAGMA table_info(sleep_logs)')
+  if (!sleepCols.find((c: Record<string, unknown>) => c.name === 'cycles')) {
+    db.run('ALTER TABLE sleep_logs ADD COLUMN cycles INTEGER DEFAULT NULL')
   }
 }
 

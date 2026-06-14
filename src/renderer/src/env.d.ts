@@ -58,6 +58,12 @@ declare global {
         exerciseHistory: (name: string) => Promise<unknown[]>
         exerciseNames: () => Promise<string[]>
       }
+      gymPhases: {
+        list: () => Promise<unknown[]>
+        create: (data: object) => Promise<number>
+        update: (id: number, data: object) => Promise<boolean>
+        delete: (id: number) => Promise<boolean>
+      }
       addictions: {
         list: () => Promise<unknown[]>
         create: (data: object) => Promise<number>
@@ -100,9 +106,9 @@ declare global {
         byMonth: (year: number, month: number) => Promise<unknown[]>
       }
       sleep: {
-        get: (date: string) => Promise<{ id: number; date: string; bedtime: string; wake_time: string; quality: number; notes?: string } | null>
+        get: (date: string) => Promise<{ id: number; date: string; bedtime: string; wake_time: string; quality: number; notes?: string; cycles?: number | null } | null>
         recent: (limit?: number) => Promise<unknown[]>
-        save: (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string }) => Promise<boolean>
+        save: (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string; cycles?: number | null }) => Promise<boolean>
         delete: (id: number) => Promise<boolean>
       }
       finance: {

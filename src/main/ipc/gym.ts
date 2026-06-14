@@ -21,11 +21,12 @@ export function registerGymHandlers(): void {
 
   ipcMain.handle('gym:create-workout', (_e, data: {
     date: string; name: string; notes?: string; duration_min?: number;
+    cardio_type?: string; cardio_minutes?: number;
     exercises: { name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }[]
   }) => {
     const result = dbRun(
-      'INSERT INTO workouts (date, name, notes, duration_min) VALUES (?, ?, ?, ?)',
-      [data.date, data.name, data.notes || null, data.duration_min || null]
+      'INSERT INTO workouts (date, name, notes, duration_min, cardio_type, cardio_minutes) VALUES (?, ?, ?, ?, ?, ?)',
+      [data.date, data.name, data.notes || null, data.duration_min || null, data.cardio_type || null, data.cardio_minutes || null]
     )
     const workoutId = result.lastInsertRowid
     for (const ex of data.exercises || []) {
@@ -131,6 +132,38 @@ export function registerGymHandlers(): void {
   ipcMain.handle('gym:exercise-names', () => {
     const rows = dbAll('SELECT DISTINCT name FROM exercises ORDER BY name ASC')
     return rows.map(r => r.name as string)
+  })
+
+  ipcMain.handle('gym:phases:list', () => {
+    return dbAll('SELECT * FROM training_phases ORDER BY start_date DESC')
+  })
+
+  ipcMain.handle('gym:phases:create', (_e, data: {
+    name: string; type: string; start_date: string; end_date: string; program_id?: number; notes?: string
+  }) => {
+    const result = dbRun(
+      'INSERT INTO training_phases (name, type, start_date, end_date, program_id, notes) VALUES (?, ?, ?, ?, ?, ?)',
+      [data.name, data.type, data.start_date, data.end_date, data.program_id || null, data.notes || null]
+    )
+    save()
+    return result.lastInsertRowid
+  })
+
+  ipcMain.handle('gym:phases:update', (_e, id: number, data: {
+    name: string; type: string; start_date: string; end_date: string; program_id?: number; notes?: string
+  }) => {
+    dbRun(
+      'UPDATE training_phases SET name = ?, type = ?, start_date = ?, end_date = ?, program_id = ?, notes = ? WHERE id = ?',
+      [data.name, data.type, data.start_date, data.end_date, data.program_id || null, data.notes || null, id]
+    )
+    save()
+    return true
+  })
+
+  ipcMain.handle('gym:phases:delete', (_e, id: number) => {
+    dbRun('DELETE FROM training_phases WHERE id = ?', [id])
+    save()
+    return true
   })
 
   ipcMain.handle('gym:programs:update', (_e, id: number, data: {

@@ -8,7 +8,7 @@ import {
 import { BarChart2, Moon, Dumbbell, CheckSquare } from 'lucide-react'
 
 interface Habit { id: number; name: string; icon: string; color: string; is_active: number }
-interface SleepLog { date: string; bedtime: string; wake_time: string; quality: number }
+interface SleepLog { date: string; bedtime: string; wake_time: string; quality: number; cycles?: number | null }
 interface ExerciseEntry { date: string; name: string; sets: number; reps: number; weight_kg: number }
 
 const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -128,16 +128,22 @@ function SleepAnalytics() {
   const chartData = logs.map(l => ({
     date: format(new Date(l.date + 'T12:00:00'), 'dd/MM'),
     Duração: Math.round(sleepMinutes(l.bedtime, l.wake_time) / 6) / 10,
-    Qualidade: l.quality
+    Qualidade: l.quality,
+    Ciclos: l.cycles ?? null
   }))
 
   const avgDur = logs.reduce((s, l) => s + sleepMinutes(l.bedtime, l.wake_time), 0) / logs.length
   const avgQual = logs.reduce((s, l) => s + l.quality, 0) / logs.length
   const goodNights = logs.filter(l => l.quality >= 4).length
+  const logsWithCycles = logs.filter(l => l.cycles != null && l.cycles > 0)
+  const avgCycles = logsWithCycles.length > 0
+    ? logsWithCycles.reduce((s, l) => s + (l.cycles ?? 0), 0) / logsWithCycles.length
+    : null
+  const hasCycles = logsWithCycles.length > 0
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${hasCycles ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-accent-blue">{Math.floor(avgDur / 60)}h{Math.round(avgDur % 60)}m</p>
           <p className="text-[10px] text-text-muted leading-tight">Duração média</p>
@@ -150,24 +156,34 @@ function SleepAnalytics() {
           <p className="text-xl font-bold text-accent-green">{goodNights}</p>
           <p className="text-[10px] text-text-muted leading-tight">Noites ≥4</p>
         </div>
+        {hasCycles && (
+          <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-accent-purple">{avgCycles!.toFixed(1)}</p>
+            <p className="text-[10px] text-text-muted leading-tight">Ciclos médios</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Duração (h) e qualidade — últimos {logs.length} registros</h3>
+        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Duração (h), qualidade e ciclos — últimos {logs.length} registros</h3>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} interval={Math.floor(chartData.length / 8)} />
             <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 12]} />
-            <YAxis yAxisId="right" orientation="right" domain={[0, 5]} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis yAxisId="right" orientation="right" domain={[0, hasCycles ? 7 : 5]} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Line yAxisId="left" type="monotone" dataKey="Duração" stroke="#06b6d4" strokeWidth={2} dot={false} name="Duração (h)" />
             <Line yAxisId="right" type="monotone" dataKey="Qualidade" stroke="#f59e0b" strokeWidth={2} dot={false} name="Qualidade" />
+            {hasCycles && (
+              <Line yAxisId="right" type="monotone" dataKey="Ciclos" stroke="#8b5cf6" strokeWidth={1.5} dot={false} name="Ciclos" strokeDasharray="4 2" connectNulls={false} />
+            )}
           </LineChart>
         </ResponsiveContainer>
-        <div className="flex gap-4 mt-2">
+        <div className="flex gap-4 mt-2 flex-wrap">
           <span className="flex items-center gap-1.5 text-xs text-text-muted"><span className="w-3 h-0.5 bg-accent-blue inline-block" /> Duração (h)</span>
           <span className="flex items-center gap-1.5 text-xs text-text-muted"><span className="w-3 h-0.5 bg-accent-gold inline-block" /> Qualidade</span>
+          {hasCycles && <span className="flex items-center gap-1.5 text-xs text-text-muted"><span className="w-3 h-0 border-t border-dashed border-accent-purple inline-block" style={{ borderTopWidth: 1.5 }} /> Ciclos</span>}
         </div>
       </div>
     </div>

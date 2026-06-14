@@ -1,24 +1,143 @@
-import React, { useEffect, useState } from 'react'
-import { format } from 'date-fns'
-import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell, Link2, Pencil } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { format, parseISO, differenceInDays } from 'date-fns'
+import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell, Link2, Pencil, Calendar } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useProfileStore } from '../store/profileStore'
 
 interface Exercise { id: number; name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }
-interface Workout { id: number; date: string; name: string; notes?: string; duration_min?: number; exercises: Exercise[] }
+interface Workout { id: number; date: string; name: string; notes?: string; duration_min?: number; cardio_type?: string; cardio_minutes?: number; exercises: Exercise[] }
 interface Bio { id: number; date: string; weight_kg?: number; body_fat_pct?: number; muscle_mass_kg?: number; bmr_kcal?: number }
 
-type Tab = 'workouts' | 'bio' | 'programs'
+type Tab = 'workouts' | 'bio' | 'programs' | 'phases'
 
 interface ProgramExercise { id: number; name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }
 interface ProgramDay { id: number; program_id: number; day_label?: string; name: string; exercises: ProgramExercise[] }
 interface WorkoutProgram { id: number; name: string; description?: string; days: ProgramDay[] }
+
+type PhaseType = 'resistencia' | 'forca' | 'hipertrofia' | 'personalizado'
+interface TrainingPhase { id: number; name: string; type: PhaseType; start_date: string; end_date: string; program_id?: number; notes?: string }
+
+const PHASE_CONFIG: Record<PhaseType, { label: string; color: string; bg: string; border: string; desc: string }> = {
+  resistencia: { label: 'Resistência', color: 'text-blue-400', bg: 'bg-blue-950/30', border: 'border-blue-500/30', desc: '15-20 reps · carga leve · menos descanso' },
+  forca: { label: 'Força', color: 'text-red-400', bg: 'bg-red-950/30', border: 'border-red-500/30', desc: '3-5 reps · carga máxima · mais descanso' },
+  hipertrofia: { label: 'Hipertrofia', color: 'text-accent-purple', bg: 'bg-purple-950/30', border: 'border-purple-500/30', desc: '8-12 reps · carga moderada' },
+  personalizado: { label: 'Personalizado', color: 'text-text-secondary', bg: 'bg-bg-border/30', border: 'border-bg-border', desc: '' },
+}
+
+const EXERCISE_SUGGESTIONS = [
+  { name: 'Supino Reto', group: 'Peito' },
+  { name: 'Supino Inclinado', group: 'Peito' },
+  { name: 'Supino Declinado', group: 'Peito' },
+  { name: 'Crucifixo', group: 'Peito' },
+  { name: 'Crossover', group: 'Peito' },
+  { name: 'Flexão de Braço', group: 'Peito' },
+  { name: 'Chest Press', group: 'Peito' },
+  { name: 'Barra Fixa', group: 'Costas' },
+  { name: 'Remada Curvada', group: 'Costas' },
+  { name: 'Remada Serrote', group: 'Costas' },
+  { name: 'Puxada Frontal', group: 'Costas' },
+  { name: 'Remada Baixa', group: 'Costas' },
+  { name: 'Levantamento Terra', group: 'Costas' },
+  { name: 'Remada Cavalinho', group: 'Costas' },
+  { name: 'Pullover', group: 'Costas' },
+  { name: 'Agachamento', group: 'Pernas' },
+  { name: 'Leg Press', group: 'Pernas' },
+  { name: 'Cadeira Extensora', group: 'Pernas' },
+  { name: 'Cadeira Flexora', group: 'Pernas' },
+  { name: 'Stiff', group: 'Pernas' },
+  { name: 'Afundo', group: 'Pernas' },
+  { name: 'Panturrilha em Pé', group: 'Pernas' },
+  { name: 'Hack Squat', group: 'Pernas' },
+  { name: 'Leg Curl Deitado', group: 'Pernas' },
+  { name: 'Abdutora', group: 'Pernas' },
+  { name: 'Adutora', group: 'Pernas' },
+  { name: 'Desenvolvimento com Halteres', group: 'Ombros' },
+  { name: 'Desenvolvimento com Barra', group: 'Ombros' },
+  { name: 'Elevação Lateral', group: 'Ombros' },
+  { name: 'Elevação Frontal', group: 'Ombros' },
+  { name: 'Remada Alta', group: 'Ombros' },
+  { name: 'Encolhimento', group: 'Ombros' },
+  { name: 'Face Pull', group: 'Ombros' },
+  { name: 'Rosca Direta', group: 'Bíceps' },
+  { name: 'Rosca Alternada', group: 'Bíceps' },
+  { name: 'Rosca Concentrada', group: 'Bíceps' },
+  { name: 'Rosca Martelo', group: 'Bíceps' },
+  { name: 'Rosca Scott', group: 'Bíceps' },
+  { name: 'Rosca 21', group: 'Bíceps' },
+  { name: 'Tríceps na Polia', group: 'Tríceps' },
+  { name: 'Tríceps Francês', group: 'Tríceps' },
+  { name: 'Tríceps Testa', group: 'Tríceps' },
+  { name: 'Mergulho (Tríceps)', group: 'Tríceps' },
+  { name: 'Kickback', group: 'Tríceps' },
+  { name: 'Abdominal Crunch', group: 'Abdômen' },
+  { name: 'Prancha', group: 'Abdômen' },
+  { name: 'Abdominal Oblíquo', group: 'Abdômen' },
+  { name: 'Elevação de Pernas', group: 'Abdômen' },
+  { name: 'Russian Twist', group: 'Abdômen' },
+]
+
+function ExerciseInput({ value, onChange, placeholder, className }: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const filtered = value.length === 0
+    ? EXERCISE_SUGGESTIONS.slice(0, 12)
+    : EXERCISE_SUGGESTIONS.filter(e => e.name.toLowerCase().includes(value.toLowerCase())).slice(0, 12)
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  function select(name: string) {
+    onChange(name)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder ?? 'Exercício'}
+        className={className}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-bg-secondary border border-bg-border rounded-lg shadow-xl overflow-auto max-h-48">
+          {filtered.map((ex, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={() => select(ex.name)}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-bg-border flex items-center justify-between gap-2"
+            >
+              <span className="text-text-primary">{ex.name}</span>
+              <span className="text-text-muted shrink-0">{ex.group}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: object) => void }) {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [name, setName] = useState('')
   const [notes, setNotes] = useState('')
   const [duration, setDuration] = useState('')
+  const [cardioType, setCardioType] = useState('')
+  const [cardioMinutes, setCardioMinutes] = useState('')
   const [exercises, setExercises] = useState([{ name: '', sets: '', reps: '', weight: '', superset: false }])
 
   function addEx() { setExercises([...exercises, { name: '', sets: '', reps: '', weight: '', superset: false }]) }
@@ -43,6 +162,8 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
     if (!name.trim()) return
     onSave({
       date, name, notes, duration_min: duration ? Number(duration) : null,
+      cardio_type: cardioType.trim() || null,
+      cardio_minutes: cardioMinutes ? Number(cardioMinutes) : null,
       exercises: exercises.filter(e => e.name).map(e => ({
         name: e.name, sets: e.sets ? Number(e.sets) : null,
         reps: e.reps ? Number(e.reps) : null, weight_kg: e.weight ? Number(e.weight) : null,
@@ -82,6 +203,22 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
               className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple" />
           </div>
           <div>
+            <label className="text-xs text-text-secondary mb-1 block">Cardio (opcional)</label>
+            <div className="flex gap-2">
+              <input value={cardioType} onChange={e => setCardioType(e.target.value)}
+                placeholder="Tipo (corrida, bike...)" list="cardio-types"
+                className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-purple" />
+              <datalist id="cardio-types">
+                <option value="Corrida" /><option value="Caminhada" /><option value="Bicicleta" />
+                <option value="Esteira" /><option value="Elíptico" /><option value="Natação" />
+                <option value="Pular Corda" /><option value="Remo" />
+              </datalist>
+              <input type="number" value={cardioMinutes} onChange={e => setCardioMinutes(e.target.value)}
+                placeholder="min"
+                className="w-20 bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary text-center focus:outline-none focus:border-accent-purple" />
+            </div>
+          </div>
+          <div>
             <div className="flex justify-between items-center mb-2">
               <label className="text-xs text-text-secondary">Exercícios</label>
               <button onClick={addEx} className="text-xs text-accent-purple hover:text-purple-400 flex items-center gap-1">
@@ -102,8 +239,11 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
                     )}
                     <div className={`space-y-1 py-1 ${isInSuperset ? 'border-l-2 border-orange-500/40 pl-2' : ''}`}>
                       <div className="flex gap-1.5 items-center">
-                        <input value={ex.name} onChange={e => updateEx(i, 'name', e.target.value)} placeholder="Exercício"
-                          className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
+                        <ExerciseInput
+                          value={ex.name}
+                          onChange={v => updateEx(i, 'name', v)}
+                          className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple w-full"
+                        />
                         {i < exercises.length - 1 ? (
                           <button onClick={() => toggleSuperset(i)}
                             title={ex.superset ? 'Remover superserie' : 'Linkar como superserie'}
@@ -188,6 +328,278 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       {payload.map((p: any) => (
         <p key={p.name} style={{ color: p.color }}>{p.name}: {p.value}</p>
       ))}
+    </div>
+  )
+}
+
+function PhasesTab({ programs }: { programs: WorkoutProgram[] }) {
+  const [phases, setPhases] = useState<TrainingPhase[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [name, setName] = useState('')
+  const [type, setType] = useState<PhaseType>('hipertrofia')
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [endDate, setEndDate] = useState('')
+  const [programId, setProgramId] = useState('')
+  const [notes, setNotes] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+
+  const today = format(new Date(), 'yyyy-MM-dd')
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    const data = await window.api.gymPhases.list()
+    setPhases(data as TrainingPhase[])
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setName('')
+    setType('hipertrofia')
+    setStartDate(format(new Date(), 'yyyy-MM-dd'))
+    setEndDate('')
+    setProgramId('')
+    setNotes('')
+    setShowForm(false)
+  }
+
+  function openEdit(phase: TrainingPhase) {
+    setEditingId(phase.id)
+    setName(phase.name)
+    setType(phase.type)
+    setStartDate(phase.start_date)
+    setEndDate(phase.end_date)
+    setProgramId(phase.program_id ? String(phase.program_id) : '')
+    setNotes(phase.notes ?? '')
+    setShowForm(true)
+  }
+
+  async function handleSave() {
+    if (!name.trim() || !startDate || !endDate) return
+    const payload = {
+      name: name.trim(), type, start_date: startDate, end_date: endDate,
+      program_id: programId ? Number(programId) : undefined,
+      notes: notes.trim() || undefined
+    }
+    if (editingId !== null) {
+      await window.api.gymPhases.update(editingId, payload)
+    } else {
+      await window.api.gymPhases.create(payload)
+    }
+    resetForm()
+    load()
+  }
+
+  function phaseStatus(phase: TrainingPhase): 'active' | 'upcoming' | 'done' {
+    if (phase.end_date < today) return 'done'
+    if (phase.start_date > today) return 'upcoming'
+    return 'active'
+  }
+
+  function daysLeft(phase: TrainingPhase): number {
+    return differenceInDays(parseISO(phase.end_date), new Date())
+  }
+
+  function totalDays(phase: TrainingPhase): number {
+    return differenceInDays(parseISO(phase.end_date), parseISO(phase.start_date))
+  }
+
+  const active = phases.filter(p => phaseStatus(p) === 'active')
+  const upcoming = phases.filter(p => phaseStatus(p) === 'upcoming')
+  const done = phases.filter(p => phaseStatus(p) === 'done')
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-text-secondary">{phases.length} fase{phases.length !== 1 ? 's' : ''} de treino</p>
+        <button onClick={() => { resetForm(); setShowForm(true) }}
+          className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-semibold rounded-lg transition-colors">
+          <Plus size={15} /> Nova fase
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 space-y-4">
+          <h3 className="font-semibold text-text-primary">{editingId !== null ? 'Editar fase' : 'Criar fase de treino'}</h3>
+
+          <div>
+            <label className="text-xs text-text-secondary mb-1 block">Nome da fase *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Fase 1 - Hipertrofia"
+              className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          </div>
+
+          <div>
+            <label className="text-xs text-text-secondary mb-2 block">Tipo de treino</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.entries(PHASE_CONFIG) as [PhaseType, typeof PHASE_CONFIG[PhaseType]][]).map(([key, cfg]) => (
+                <button key={key} type="button" onClick={() => setType(key)}
+                  className={`p-2.5 rounded-lg border text-left transition-all ${type === key ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-bg-border text-text-muted hover:border-bg-border/80'}`}>
+                  <p className="text-xs font-semibold">{cfg.label}</p>
+                  {cfg.desc && <p className="text-[10px] opacity-70 mt-0.5">{cfg.desc}</p>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-text-secondary mb-1 block">Início *</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+            </div>
+            <div>
+              <label className="text-xs text-text-secondary mb-1 block">Fim *</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+            </div>
+          </div>
+
+          {programs.length > 0 && (
+            <div>
+              <label className="text-xs text-text-secondary mb-1 block">Programa de treino (opcional)</label>
+              <select value={programId} onChange={e => setProgramId(e.target.value)}
+                className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple">
+                <option value="">— Sem programa vinculado —</option>
+                {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs text-text-secondary mb-1 block">Observações</label>
+            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex: foco em compostos, descanso 90s..."
+              className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={handleSave}
+              className="flex-1 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-semibold rounded-lg transition-colors">
+              {editingId !== null ? 'Salvar alterações' : 'Criar fase'}
+            </button>
+            <button onClick={resetForm} className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg">Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {phases.length === 0 && !showForm && (
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-10 text-center">
+          <Calendar size={40} className="text-text-muted mx-auto mb-2" />
+          <p className="text-text-muted">Nenhuma fase de treino criada.</p>
+          <p className="text-xs text-text-muted mt-1">Organize seu treino por períodos: resistência, força, hipertrofia.</p>
+        </div>
+      )}
+
+      {active.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Fase atual</p>
+          {active.map(phase => <PhaseCard key={phase.id} phase={phase} programs={programs} onEdit={openEdit} onDelete={msg => setConfirmDelete(msg)} daysLeft={daysLeft(phase)} totalDays={totalDays(phase)} status="active" />)}
+        </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Próximas fases</p>
+          {upcoming.map(phase => <PhaseCard key={phase.id} phase={phase} programs={programs} onEdit={openEdit} onDelete={msg => setConfirmDelete(msg)} daysLeft={daysLeft(phase)} totalDays={totalDays(phase)} status="upcoming" />)}
+        </div>
+      )}
+
+      {done.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Concluídas</p>
+          {done.map(phase => <PhaseCard key={phase.id} phase={phase} programs={programs} onEdit={openEdit} onDelete={msg => setConfirmDelete(msg)} daysLeft={daysLeft(phase)} totalDays={totalDays(phase)} status="done" />)}
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm mx-4 bg-bg-secondary border border-bg-border rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-accent-red" />
+              </div>
+              <div>
+                <p className="font-semibold text-text-primary">Confirmar exclusão</p>
+                <p className="text-sm text-text-secondary mt-1">{confirmDelete.message}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg hover:bg-bg-border/70 transition-colors">Cancelar</button>
+              <button onClick={async () => { await confirmDelete.onConfirm(); setConfirmDelete(null); load() }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PhaseCard({ phase, programs, onEdit, onDelete, daysLeft, totalDays, status }: {
+  phase: TrainingPhase
+  programs: WorkoutProgram[]
+  onEdit: (p: TrainingPhase) => void
+  onDelete: (d: { message: string; onConfirm: () => Promise<void> }) => void
+  daysLeft: number
+  totalDays: number
+  status: 'active' | 'upcoming' | 'done'
+}) {
+  const cfg = PHASE_CONFIG[phase.type]
+  const linkedProgram = programs.find(p => p.id === phase.program_id)
+
+  const progress = status === 'active'
+    ? Math.max(0, Math.min(100, Math.round(((totalDays - daysLeft) / totalDays) * 100)))
+    : status === 'done' ? 100 : 0
+
+  return (
+    <div className={`bg-bg-secondary border rounded-xl overflow-hidden ${status === 'active' ? `${cfg.border}` : 'border-bg-border'}`}>
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-bold px-2 py-0.5 rounded ${cfg.bg} ${cfg.border} border ${cfg.color}`}>{cfg.label}</span>
+              {status === 'active' && <span className="text-xs bg-accent-green/20 text-accent-green border border-accent-green/30 px-1.5 py-0.5 rounded font-bold">EM CURSO</span>}
+              {status === 'done' && <span className="text-xs text-text-muted">Concluída</span>}
+            </div>
+            <p className="font-semibold text-text-primary mt-1">{phase.name}</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              {format(parseISO(phase.start_date), 'dd/MM/yyyy')} → {format(parseISO(phase.end_date), 'dd/MM/yyyy')}
+              {' '}· {totalDays} dia{totalDays !== 1 ? 's' : ''}
+            </p>
+            {phase.notes && <p className="text-xs text-text-secondary mt-1">{phase.notes}</p>}
+            {linkedProgram && (
+              <p className="text-xs text-accent-purple mt-1">📋 {linkedProgram.name}</p>
+            )}
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <button onClick={() => onEdit(phase)}
+              className="p-1.5 text-text-muted hover:text-accent-purple hover:bg-accent-purple/10 rounded transition-colors">
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => onDelete({
+              message: `Excluir a fase "${phase.name}" permanentemente?`,
+              onConfirm: async () => { await window.api.gymPhases.delete(phase.id); }
+            })}
+              className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-950/30 rounded transition-colors">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {status === 'active' && (
+          <div className="mt-3">
+            <div className="flex justify-between text-xs text-text-muted mb-1">
+              <span>{progress}% concluído</span>
+              <span>{daysLeft > 0 ? `${daysLeft} dia${daysLeft !== 1 ? 's' : ''} restante${daysLeft !== 1 ? 's' : ''}` : 'Último dia!'}</span>
+            </div>
+            <div className="h-1.5 bg-bg-border rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${cfg.bg.replace('/30', '')} ${phase.type === 'resistencia' ? 'bg-blue-500' : phase.type === 'forca' ? 'bg-red-500' : phase.type === 'hipertrofia' ? 'bg-accent-purple' : 'bg-text-muted'}`}
+                style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -336,8 +748,11 @@ function ProgramsTab() {
       {day.exercises.map((ex, ei) => (
         <div key={ei} className="space-y-1">
           <div className="flex gap-1.5 items-center">
-            <input value={ex.name} onChange={e => updateEx(di, ei, 'name', e.target.value)} placeholder="Exercício"
-              className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+            <ExerciseInput
+              value={ex.name}
+              onChange={v => updateEx(di, ei, 'name', v)}
+              className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple w-full"
+            />
             <button onClick={() => removeEx(di, ei)} className="text-text-muted hover:text-accent-red transition-colors shrink-0">
               <X size={13} />
             </button>
@@ -488,6 +903,7 @@ export default function Gym(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('workouts')
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [bio, setBio] = useState<Bio[]>([])
+  const [programs, setPrograms] = useState<WorkoutProgram[]>([])
   const [showWorkoutModal, setShowWorkoutModal] = useState(false)
   const [showBioModal, setShowBioModal] = useState(false)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
@@ -502,9 +918,14 @@ export default function Gym(): React.JSX.Element {
 
   async function loadAll() {
     try {
-      const [w, b] = await Promise.all([window.api.gym.listWorkouts(), window.api.gym.listBioimpedance()])
+      const [w, b, p] = await Promise.all([
+        window.api.gym.listWorkouts(),
+        window.api.gym.listBioimpedance(),
+        window.api.gymPrograms.list()
+      ])
       setWorkouts(w as Workout[])
       setBio(b as Bio[])
+      setPrograms(p as WorkoutProgram[])
     } finally {
       setLoading(false)
     }
@@ -554,18 +975,22 @@ export default function Gym(): React.JSX.Element {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-3 gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 animate-slide-up" style={{ animationDelay: '120ms' }}>
+      <div className="grid grid-cols-4 gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 animate-slide-up" style={{ animationDelay: '120ms' }}>
         <button onClick={() => setTab('workouts')}
-          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === 'workouts' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-          <Dumbbell size={12} /><span>Treinos ({workouts.length})</span>
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] sm:text-sm font-medium transition-all ${tab === 'workouts' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          <Dumbbell size={11} /><span>Treinos</span>
         </button>
         <button onClick={() => setTab('bio')}
-          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === 'bio' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-          <Scale size={12} /><span>Corpo ({bio.length})</span>
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] sm:text-sm font-medium transition-all ${tab === 'bio' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          <Scale size={11} /><span>Corpo</span>
         </button>
         <button onClick={() => setTab('programs')}
-          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === 'programs' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-          📋 <span>Programas</span>
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] sm:text-sm font-medium transition-all ${tab === 'programs' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          <span className="text-[11px]">📋</span><span>Prog.</span>
+        </button>
+        <button onClick={() => setTab('phases')}
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] sm:text-sm font-medium transition-all ${tab === 'phases' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          <Calendar size={11} /><span>Períodos</span>
         </button>
       </div>
 
@@ -583,9 +1008,14 @@ export default function Gym(): React.JSX.Element {
               <div key={w.id} className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden animate-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
                 <div className="flex items-center gap-3 p-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-text-primary">{w.name}</span>
                       {w.duration_min && <span className="text-xs text-text-muted">{w.duration_min}min</span>}
+                      {w.cardio_type && (
+                        <span className="text-xs text-accent-green bg-accent-green/10 border border-accent-green/20 rounded px-1.5 py-0.5">
+                          🏃 {w.cardio_type}{w.cardio_minutes ? ` ${w.cardio_minutes}min` : ''}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-text-muted">{format(new Date(w.date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                     {w.notes && <p className="text-xs text-text-secondary mt-0.5">{w.notes}</p>}
@@ -694,6 +1124,7 @@ export default function Gym(): React.JSX.Element {
       )}
 
       {tab === 'programs' && <ProgramsTab />}
+      {tab === 'phases' && <PhasesTab programs={programs} />}
 
       {showWorkoutModal && <WorkoutModal onClose={() => setShowWorkoutModal(false)} onSave={handleSaveWorkout} />}
       {showBioModal && <BioModal onClose={() => setShowBioModal(false)} onSave={handleSaveBio} />}

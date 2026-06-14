@@ -5,7 +5,7 @@ import { Moon, Save, Star, Trash2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 
 interface SleepLog {
-  id: number; date: string; bedtime: string; wake_time: string; quality: number; notes: string
+  id: number; date: string; bedtime: string; wake_time: string; quality: number; notes: string; cycles?: number | null
 }
 
 function calcDuration(bedtime: string, wake_time: string): string {
@@ -30,6 +30,7 @@ export default function Sleep(): React.JSX.Element {
   const [bedtime, setBedtime] = useState('23:00')
   const [wakeTime, setWakeTime] = useState('07:00')
   const [quality, setQuality] = useState(3)
+  const [cycles, setCycles] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
   const [saved, setSaved] = useState(false)
   const [recent, setRecent] = useState<SleepLog[]>([])
@@ -60,12 +61,14 @@ export default function Sleep(): React.JSX.Element {
       setBedtime(entry.bedtime)
       setWakeTime(entry.wake_time)
       setQuality(entry.quality)
+      setCycles(entry.cycles ?? null)
       setNotes(entry.notes || '')
       setExistingId(entry.id)
     } else {
       setBedtime('23:00')
       setWakeTime('07:00')
       setQuality(3)
+      setCycles(null)
       setNotes('')
       setExistingId(null)
     }
@@ -77,7 +80,7 @@ export default function Sleep(): React.JSX.Element {
   }
 
   async function handleSave() {
-    await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes })
+    await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes, cycles })
     setSaved(true)
     setShowSaveFloat(true)
     setTimeout(() => setSaved(false), 2000)
@@ -92,6 +95,7 @@ export default function Sleep(): React.JSX.Element {
     await window.api.sleep.delete(existingId)
     setExistingId(null)
     setNotes('')
+    setCycles(null)
     loadRecent()
   }
 
@@ -112,6 +116,11 @@ export default function Sleep(): React.JSX.Element {
       })()
     : null
 
+  const logsWithCycles = recent.filter(l => l.cycles && l.cycles > 0)
+  const avgCycles = logsWithCycles.length > 0
+    ? (logsWithCycles.reduce((s, l) => s + (l.cycles ?? 0), 0) / logsWithCycles.length).toFixed(1)
+    : null
+
   function calcMins(bedtime: string, wake_time: string): number {
     const [bh, bm] = bedtime.split(':').map(Number)
     const [wh, wm] = wake_time.split(':').map(Number)
@@ -126,8 +135,15 @@ export default function Sleep(): React.JSX.Element {
     const label = format(subDays(new Date(), i), 'dd/MM')
     if (!log) return null
     const mins = calcMins(log.bedtime, log.wake_time)
-    return { date: label, rawDate: d, horas: parseFloat((mins / 60).toFixed(1)) }
-  }).filter(Boolean).reverse() as { date: string; rawDate: string; horas: number }[]
+    return {
+      date: label,
+      rawDate: d,
+      horas: parseFloat((mins / 60).toFixed(1)),
+      ciclos: log.cycles ?? null
+    }
+  }).filter(Boolean).reverse() as { date: string; rawDate: string; horas: number; ciclos: number | null }[]
+
+  const hasCyclesData = chartData.some(d => d.ciclos != null && d.ciclos > 0)
 
   function smoothScrollTo(element: HTMLElement) {
     const container = element.closest('main') as HTMLElement
@@ -182,9 +198,9 @@ export default function Sleep(): React.JSX.Element {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: 'Registros', value: String(recent.length), icon: '📋' },
           { label: 'Qualidade', value: avgQuality ? `${avgQuality}/5` : '—', icon: '⭐' },
-          { label: 'Duração', value: avgDuration || '—', icon: '⏱️' }
+          { label: 'Duração', value: avgDuration || '—', icon: '⏱️' },
+          { label: 'Ciclos', value: avgCycles ? `${avgCycles}` : '—', icon: '🔄' }
         ].map((s, i) => (
           <div key={s.label} className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center animate-slide-up" style={{ animationDelay: `${i * 70}ms` }}>
             <span className="text-xl animate-bounce-in" style={{ animationDelay: `${100 + i * 70}ms`, display: 'inline-block' }}>{s.icon}</span>
@@ -194,7 +210,7 @@ export default function Sleep(): React.JSX.Element {
         ))}
       </div>
 
-      {/* Duration chart - last 14 days */}
+      {/* Duration + Cycles chart - last 14 days */}
       {chartData.length > 0 && (
         <div ref={chartRef} className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '180ms' }}>
           <div className="flex items-center justify-between mb-3">
@@ -206,22 +222,48 @@ export default function Sleep(): React.JSX.Element {
                 </span>
                 <span className="text-xs text-text-muted">·</span>
                 <span className="text-xs text-text-secondary">{calcDuration(highlightedLog.bedtime, highlightedLog.wake_time)}</span>
+                {highlightedLog.cycles != null && highlightedLog.cycles > 0 && (
+                  <>
+                    <span className="text-xs text-text-muted">·</span>
+                    <span className="text-xs text-accent-purple font-medium">{highlightedLog.cycles} ciclos</span>
+                  </>
+                )}
                 <span className="text-xs text-text-muted">·</span>
                 <span className={`text-xs font-medium ${qualityColor(highlightedLog.quality)}`}>{highlightedLog.quality}/5 ⭐</span>
               </div>
             )}
           </div>
-          <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={chartData} margin={{ left: -10, right: 8, top: 4, bottom: 0 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
+          <ResponsiveContainer width="100%" height={hasCyclesData ? 160 : 140}>
+            <LineChart data={chartData} margin={{ left: -10, right: hasCyclesData ? 16 : 8, top: 4, bottom: 0 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2a4a" />
               <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={1} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 12]} tickFormatter={v => `${v}h`} />
-              <Tooltip formatter={(v: number) => [`${v}h`, 'Horas']} contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8 }} />
-              <ReferenceLine y={8} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} label={{ value: '8h', position: 'right', fill: '#10b981', fontSize: 10 }} />
-              <Line type="monotone" dataKey="horas" stroke="#06b6d4" strokeWidth={2} dot={renderDot} activeDot={{ r: 5, fill: '#06b6d4' }} connectNulls={false} />
+              <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 12]} tickFormatter={v => `${v}h`} />
+              {hasCyclesData && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 7]} tickFormatter={v => v > 0 ? `${v}c` : ''} />
+              )}
+              <Tooltip
+                formatter={(v: number, name: string) => [
+                  name === 'ciclos' ? `${v} ciclos` : `${v}h`,
+                  name === 'ciclos' ? 'Ciclos' : 'Horas'
+                ]}
+                contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8 }}
+              />
+              <ReferenceLine yAxisId="left" y={8} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} label={{ value: '8h', position: 'right', fill: '#10b981', fontSize: 10 }} />
+              <Line yAxisId="left" type="monotone" dataKey="horas" stroke="#06b6d4" strokeWidth={2} dot={renderDot} activeDot={{ r: 5, fill: '#06b6d4' }} connectNulls={false} />
+              {hasCyclesData && (
+                <Line yAxisId="right" type="monotone" dataKey="ciclos" stroke="#8b5cf6" strokeWidth={1.5} dot={{ r: 2, fill: '#8b5cf6' }} activeDot={{ r: 4, fill: '#8b5cf6' }} connectNulls={false} strokeDasharray="4 2" />
+              )}
             </LineChart>
           </ResponsiveContainer>
-          <p className="text-xs text-text-muted mt-1">Linha verde = meta de 8h · Clique em um ponto para ver o registro</p>
+          <div className="flex items-center gap-4 mt-1">
+            <p className="text-xs text-text-muted">Linha verde = meta de 8h · Clique em um ponto para ver o registro</p>
+            {hasCyclesData && (
+              <span className="flex items-center gap-1 text-xs text-text-muted ml-auto">
+                <span className="w-3 h-0 border-t border-dashed border-accent-purple inline-block" style={{ borderTopWidth: 1.5 }} />
+                Ciclos
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -301,6 +343,35 @@ export default function Sleep(): React.JSX.Element {
           </div>
 
           <div>
+            <label className="text-xs text-text-muted mb-2 block">
+              Ciclos do sono <span className="text-text-muted/60">(opcional · cada ciclo ≈ 90 min)</span>
+            </label>
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4, 5, 6].map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCycles(cycles === c ? null : c)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
+                    cycles === c
+                      ? 'border-accent-purple bg-accent-purple/20 text-accent-purple'
+                      : cycles != null && c <= cycles
+                      ? 'border-accent-purple/40 bg-accent-purple/10 text-accent-purple/70'
+                      : 'border-bg-border text-text-muted hover:bg-bg-border'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            {cycles != null && (
+              <p className="text-xs text-text-muted mt-1">
+                {cycles} ciclo{cycles !== 1 ? 's' : ''} ≈ {Math.round(cycles * 90 / 60 * 10) / 10}h de sono
+                <button onClick={() => setCycles(null)} className="ml-2 text-text-muted/60 hover:text-text-secondary text-xs underline">limpar</button>
+              </p>
+            )}
+          </div>
+
+          <div>
             <label className="text-xs text-text-muted mb-1 block">Observações (opcional)</label>
             <textarea
               value={notes}
@@ -361,10 +432,13 @@ export default function Sleep(): React.JSX.Element {
                   {log.quality}/5 ⭐
                 </span>
               </div>
-              <div className="flex gap-3 mt-0.5">
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                 <span className="text-xs text-text-muted">🌙 {log.bedtime}</span>
                 <span className="text-xs text-text-muted">☀️ {log.wake_time}</span>
                 <span className="text-xs text-accent-blue font-medium">{calcDuration(log.bedtime, log.wake_time)}</span>
+                {log.cycles != null && log.cycles > 0 && (
+                  <span className="text-xs text-accent-purple font-medium">🔄 {log.cycles} ciclo{log.cycles !== 1 ? 's' : ''}</span>
+                )}
               </div>
             </button>
           ))}
