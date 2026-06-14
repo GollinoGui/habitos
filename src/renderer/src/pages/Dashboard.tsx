@@ -75,6 +75,13 @@ export default function Dashboard(): React.JSX.Element {
   const [quickSaved, setQuickSaved] = useState(false)
 
   useEffect(() => {
+    if (weeklyData.length === 0) return
+    setBarsVisible(false)
+    const timer = setTimeout(() => setBarsVisible(true), 50)
+    return () => clearTimeout(timer)
+  }, [weeklyData])
+
+  useEffect(() => {
     loadAll()
     const interval = setInterval(() => setTick(t => t + 1), 1000)
     function onSectionsChanged() {
@@ -118,14 +125,12 @@ export default function Dashboard(): React.JSX.Element {
       byDate.set(d, (byDate.get(d) ?? 0) + 1)
     }
     const total = allActive.length
-    setBarsVisible(false)
     setWeeklyData(Array.from({ length: 7 }, (_, i) => {
       const d = format(new Date(mondayMs + i * 86400000), 'yyyy-MM-dd')
       const count = byDate.get(d) ?? 0
       const isFuture = d > today
       return { date: d, count, pct: total > 0 && !isFuture ? Math.round((count / total) * 100) : 0, isFuture }
     }))
-    setTimeout(() => setBarsVisible(true), 120)
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
     setAddictions(add as Addiction[])
     setAchievements(ach as Achievement[])
