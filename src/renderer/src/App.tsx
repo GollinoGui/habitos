@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, Cloud, X, AlertTriangle } from 'lucide-react'
 import { syncDesktopToCloud } from './lib/syncToCloud'
@@ -20,7 +20,7 @@ import Analytics from './pages/Analytics'
 import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
-import MobileNav from './components/Layout/MobileNav'
+import MobileNav, { NAV_ITEMS, NAV_TOTAL, navMod } from './components/Layout/MobileNav'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function applyStoredTheme() {
@@ -118,6 +118,61 @@ function MigrationBanner({ userId }: { userId: string }): React.JSX.Element | nu
   )
 }
 
+function MobileSwipeLayout(): React.JSX.Element {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const touchRef = useRef<{ x: number; y: number } | null>(null)
+
+  const activeIndex = (() => {
+    const idx = NAV_ITEMS.findIndex(item =>
+      item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
+    )
+    return idx === -1 ? 0 : idx
+  })()
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (!touchRef.current) return
+    const dx = e.changedTouches[0].clientX - touchRef.current.x
+    const dy = e.changedTouches[0].clientY - touchRef.current.y
+    touchRef.current = null
+    // Require clearly horizontal swipe: 80px min and more horizontal than vertical
+    if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return
+    navigate(NAV_ITEMS[navMod(activeIndex + (dx < 0 ? 1 : -1))].to)
+  }
+
+  return (
+    <div
+      className="flex flex-col h-screen overflow-hidden bg-bg-primary"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      <TopBar />
+      <main className="flex-1 overflow-y-auto p-4 pb-24">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/habits" element={<Habits />} />
+          <Route path="/gym" element={<Gym />} />
+          <Route path="/addictions" element={<Addictions />} />
+          <Route path="/goals" element={<Goals />} />
+          <Route path="/achievements" element={<Achievements />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/journal" element={<Journal />} />
+          <Route path="/sleep" element={<Sleep />} />
+          <Route path="/finance" element={<Finance />} />
+          <Route path="/reading" element={<Reading />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/analytics" element={<Analytics />} />
+        </Routes>
+      </main>
+      <MobileNav />
+    </div>
+  )
+}
+
 function AppContent(): React.JSX.Element {
   const { user, loading, signOut } = useAuth()
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -179,27 +234,7 @@ function AppContent(): React.JSX.Element {
       <HashRouter>
         <ScrollToTop />
         <TrayNavigator />
-        <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto p-4 pb-20">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/habits" element={<Habits />} />
-              <Route path="/gym" element={<Gym />} />
-              <Route path="/addictions" element={<Addictions />} />
-              <Route path="/goals" element={<Goals />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/journal" element={<Journal />} />
-              <Route path="/sleep" element={<Sleep />} />
-              <Route path="/finance" element={<Finance />} />
-              <Route path="/reading" element={<Reading />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/analytics" element={<Analytics />} />
-            </Routes>
-          </main>
-          <MobileNav />
-        </div>
+        <MobileSwipeLayout />
       </HashRouter>
     )
   }
