@@ -53,7 +53,10 @@ let _electronApi: Window['api'] | undefined  // original Electron IPC API (if on
 
 export function installMobileApi(userId: string): void {
   _userId = userId
-  if (!_electronApi && window.api) _electronApi = window.api  // save once
+  if (window.api) {
+    _electronApi = window.api  // on Electron: window.api is read-only (contextBridge), keep it as-is
+    return
+  }
   ;(window as unknown as Record<string, unknown>).api = buildApi()
 }
 
