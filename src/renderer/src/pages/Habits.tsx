@@ -46,8 +46,8 @@ function Modal({ onClose, onSave, initial, error }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-pop-in">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-5 w-full max-w-md shadow-2xl animate-pop-in max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">{initial?.id ? 'Editar' : 'Novo'} Hábito</h2>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary"><X size={18} /></button>

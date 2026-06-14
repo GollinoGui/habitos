@@ -30,8 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       maybeInstallMobileApi(session?.user?.id ?? null)
-      if (session?.user && window.api?.db) {
-        await window.api.db.setUser(session.user.id)
+      if (session?.user && window.electronApi?.db) {
+        await window.electronApi.db.setUser(session.user.id)
       }
       setSession(session)
       setUser(session?.user ?? null)
@@ -41,9 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       maybeInstallMobileApi(session?.user?.id ?? null)
       if (session?.user) {
-        if (window.api?.db) await window.api.db.setUser(session.user.id)
+        if (window.electronApi?.db) await window.electronApi.db.setUser(session.user.id)
       } else {
-        if (window.api?.db) await window.api.db.setUser(null)
+        if (window.electronApi?.db) await window.electronApi.db.setUser(null)
       }
       setSession(session)
       setUser(session?.user ?? null)

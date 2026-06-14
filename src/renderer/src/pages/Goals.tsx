@@ -39,8 +39,8 @@ function FolderModal({ onClose, onSave, initial }: {
   const [color, setColor] = useState(initial?.color || '#7c3aed')
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-pop-in max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">{initial?.id ? 'Editar' : 'Nova'} Pasta</h2>
           <button onClick={onClose}><X size={18} className="text-text-muted" /></button>
@@ -101,8 +101,8 @@ function GoalModal({ onClose, onSave, initial, folders, defaultFolderId }: {
   )
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-pop-in max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">{initial?.id ? 'Editar' : 'Nova'} Meta</h2>
           <button onClick={onClose}><X size={18} className="text-text-muted" /></button>
@@ -156,8 +156,8 @@ function CompleteGoalModal({ goal, xp, onConfirm, onClose }: {
   goal: Goal; xp: number; onConfirm: () => void; onClose: () => void
 }) {
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center animate-pop-in">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeIn p-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center animate-pop-in max-h-[90vh] overflow-y-auto">
         <div className="relative flex justify-center mb-5">
           <span className="absolute -top-4 left-4 text-2xl animate-float" style={{ animationDelay: '0s' }}>✨</span>
           <span className="absolute -top-2 right-4 text-xl animate-float" style={{ animationDelay: '0.35s' }}>🎊</span>

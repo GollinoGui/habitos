@@ -78,18 +78,18 @@ function HabitsAnalytics() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-purple">{habits.length}</p>
-          <p className="text-xs text-text-muted">Hábitos ativos</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-accent-purple">{habits.length}</p>
+          <p className="text-[10px] text-text-muted leading-tight">Hábitos ativos</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-green">{avg}%</p>
-          <p className="text-xs text-text-muted">Média últimos 12 meses</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-accent-green">{avg}%</p>
+          <p className="text-[10px] text-text-muted leading-tight">Média 12 meses</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-gold">{best.month}</p>
-          <p className="text-xs text-text-muted">Melhor mês ({best.pct}%)</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-accent-gold">{best.month}</p>
+          <p className="text-[10px] text-text-muted leading-tight">Melhor mês ({best.pct}%)</p>
         </div>
       </div>
 
@@ -137,18 +137,18 @@ function SleepAnalytics() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-blue">{Math.floor(avgDur / 60)}h{Math.round(avgDur % 60)}m</p>
-          <p className="text-xs text-text-muted">Duração média</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-accent-blue">{Math.floor(avgDur / 60)}h{Math.round(avgDur % 60)}m</p>
+          <p className="text-[10px] text-text-muted leading-tight">Duração média</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-gold">{avgQual.toFixed(1)}</p>
-          <p className="text-xs text-text-muted">Qualidade média (1-5)</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-accent-gold">{avgQual.toFixed(1)}</p>
+          <p className="text-[10px] text-text-muted leading-tight">Qualidade (1-5)</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-accent-green">{goodNights}</p>
-          <p className="text-xs text-text-muted">Noites com qualidade ≥4</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-accent-green">{goodNights}</p>
+          <p className="text-[10px] text-text-muted leading-tight">Noites ≥4</p>
         </div>
       </div>
 

@@ -49,14 +49,16 @@ function daysInMonth(year: number, month: number): number {
 // ── Install ───────────────────────────────────────────────────────────────────
 
 let _userId = ''
-let _electronApi: Window['api'] | undefined  // original Electron IPC API (if on desktop)
+let _electronApi: Window['electronApi'] | undefined  // Electron IPC API for desktop-only features
 
 export function installMobileApi(userId: string): void {
   _userId = userId
-  if (window.api) {
-    _electronApi = window.api  // on Electron: window.api is read-only (contextBridge), keep it as-is
-    return
+  // On desktop, save the Electron IPC API for desktop-only features (notifications, file export, etc.)
+  // On mobile, electronApi is undefined — that's fine, the fallbacks in buildApi() handle it.
+  if (window.electronApi) {
+    _electronApi = window.electronApi
   }
+  // Always install Supabase as window.api so desktop and mobile share the same data source
   ;(window as unknown as Record<string, unknown>).api = buildApi()
 }
 

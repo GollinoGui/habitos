@@ -167,6 +167,10 @@ declare global {
       demo: { open: () => Promise<void> }
       db: { setUser: (userId: string | null) => Promise<void> }
     }
+    // Electron-only IPC API — exposed by preload as window.electronApi
+    // Provides notifications, file export, demo mode, and other desktop-only features.
+    // On mobile/Capacitor this is undefined; the mobileApi fallbacks handle that gracefully.
+    electronApi?: Window['api']
     __demoMode__?: boolean
     electronAuth?: {
       openOAuthBrowser: (oauthUrl: string, port: number) => Promise<string | null>

@@ -486,7 +486,7 @@ export default function Finance(): React.JSX.Element {
           {/* Receitas */}
           <div className="bg-bg-secondary border border-accent-green/20 rounded-xl p-3 text-center">
             <p className="text-xs text-text-muted mb-0.5">Receitas</p>
-            <p className="text-base font-bold text-accent-green">{fmt(summary.income)}</p>
+            <p className="text-sm font-bold text-accent-green">{fmt(summary.income)}</p>
             {summary.pendingIncome > 0 && (
               <p className="text-xs text-text-muted mt-0.5">+{fmt(summary.pendingIncome)} a receber</p>
             )}
@@ -498,7 +498,7 @@ export default function Finance(): React.JSX.Element {
               <CheckCircle2 size={10} className="text-accent-green" />
               <p className="text-xs text-text-muted">Já paguei</p>
             </div>
-            <p className="text-base font-bold text-accent-red">{fmt(summary.paidExpense)}</p>
+            <p className="text-sm font-bold text-accent-red">{fmt(summary.paidExpense)}</p>
             {summary.pendingExpense > 0 && (
               <p className="text-xs text-yellow-400 mt-0.5">+{fmt(summary.pendingExpense)} falta</p>
             )}
@@ -507,7 +507,7 @@ export default function Finance(): React.JSX.Element {
           {/* Vai sobrar */}
           <div className={`rounded-xl p-3 text-center border ${summary.projectedBalance >= 0 ? 'bg-emerald-950/30 border-accent-green/30' : 'bg-red-950/30 border-accent-red/30'}`}>
             <p className="text-xs text-text-muted mb-0.5">Vai sobrar</p>
-            <p className={`text-base font-bold ${summary.projectedBalance >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+            <p className={`text-sm font-bold ${summary.projectedBalance >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
               {fmt(summary.projectedBalance)}
             </p>
             <p className="text-xs text-text-muted mt-0.5">após tudo pago</p>
@@ -532,7 +532,7 @@ export default function Finance(): React.JSX.Element {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1">
+      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 overflow-x-auto scrollbar-none">
         {[
           { key: 'pending' as const, label: pendingExpenses.length > 0 ? `A Pagar (${pendingExpenses.length})` : 'A Pagar' },
           { key: 'history' as const, label: 'Histórico' },
@@ -541,7 +541,7 @@ export default function Finance(): React.JSX.Element {
           { key: 'categories' as const, label: 'Categ.' }
         ].map(({ key, label }) => (
           <button key={key} onClick={() => setActiveTab(key)}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 py-2 px-3 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               activeTab === key ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'
             }`}>
             {label}

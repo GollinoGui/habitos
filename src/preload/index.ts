@@ -517,7 +517,8 @@ function buildDemoApi() {
 // ── Expose ────────────────────────────────────────────────────────────────────
 const api = isDemo ? buildDemoApi() : realApi
 
-contextBridge.exposeInMainWorld('api', api)
+// Exposed as electronApi so the renderer can freely set window.api to Supabase
+contextBridge.exposeInMainWorld('electronApi', api)
 if (isDemo) contextBridge.exposeInMainWorld('__demoMode__', true)
 
 // Bridge for tray navigation
@@ -542,7 +543,7 @@ contextBridge.exposeInMainWorld('electronAuth', {
 
 declare global {
   interface Window {
-    api?: typeof realApi
+    electronApi?: typeof realApi
     __demoMode__?: boolean
     electronAuth?: {
       openOAuthBrowser: (oauthUrl: string, port: number) => Promise<string | null>

@@ -173,16 +173,16 @@ export default function Sleep(): React.JSX.Element {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2">
         {[
           { label: 'Registros', value: String(recent.length), icon: '📋' },
-          { label: 'Qualidade média', value: avgQuality ? `${avgQuality}/5` : '—', icon: '⭐' },
-          { label: 'Duração média', value: avgDuration || '—', icon: '⏱️' }
+          { label: 'Qualidade', value: avgQuality ? `${avgQuality}/5` : '—', icon: '⭐' },
+          { label: 'Duração', value: avgDuration || '—', icon: '⏱️' }
         ].map((s, i) => (
-          <div key={s.label} className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center animate-slide-up" style={{ animationDelay: `${i * 70}ms` }}>
-            <span className="text-2xl animate-bounce-in" style={{ animationDelay: `${100 + i * 70}ms`, display: 'inline-block' }}>{s.icon}</span>
-            <p className="text-xl font-bold text-text-primary mt-1 animate-count-up" style={{ animationDelay: `${180 + i * 70}ms` }}>{s.value}</p>
-            <p className="text-xs text-text-muted">{s.label}</p>
+          <div key={s.label} className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center animate-slide-up" style={{ animationDelay: `${i * 70}ms` }}>
+            <span className="text-xl animate-bounce-in" style={{ animationDelay: `${100 + i * 70}ms`, display: 'inline-block' }}>{s.icon}</span>
+            <p className="text-base font-bold text-text-primary mt-1 animate-count-up" style={{ animationDelay: `${180 + i * 70}ms` }}>{s.value}</p>
+            <p className="text-[10px] text-text-muted leading-tight">{s.label}</p>
           </div>
         ))}
       </div>

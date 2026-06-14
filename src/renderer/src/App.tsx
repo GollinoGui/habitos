@@ -35,7 +35,13 @@ function applyStoredTheme() {
 applyStoredTheme()
 
 const isDemo = typeof window !== 'undefined' && !!window.__demoMode__
-const isMobileApp = typeof window !== 'undefined' && !window.api && !window.__demoMode__
+// Desktop = has electronApi (Electron preload). Mobile = no electronApi (Capacitor/browser).
+const isMobileApp = typeof window !== 'undefined' && !window.electronApi && !window.__demoMode__
+
+// Demo mode: preload exposes demo data under electronApi; copy it to api so pages work normally
+if (isDemo && window.electronApi && !window.api) {
+  ;(window as unknown as Record<string, unknown>).api = window.electronApi
+}
 
 function AppContent(): React.JSX.Element {
   const { user, loading, signOut } = useAuth()

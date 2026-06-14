@@ -102,8 +102,8 @@ function RelapseModal({ addictionId, onClose, onRelapse }: {
     onClose()
   }
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-red-900/60 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4">
+      <div className="bg-bg-secondary border border-red-900/60 rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-pop-in max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-bold text-accent-red mb-1">Registrar Recaída</h2>
         <p className="text-text-secondary text-sm mb-4">O contador será reiniciado. Isso é normal — é parte do processo.</p>
         <div className="mb-3">

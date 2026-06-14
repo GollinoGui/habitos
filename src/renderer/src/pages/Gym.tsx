@@ -52,7 +52,7 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4">
       <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto animate-pop-in">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">Registrar Treino</h2>
@@ -141,8 +141,8 @@ function BioModal({ onClose, onSave }: { onClose: () => void; onSave: (d: object
   const [bmr, setBmr] = useState('')
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
-      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop-in">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-pop-in max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-text-primary">Nova Medição</h2>
           <button onClick={onClose}><X size={18} className="text-text-muted" /></button>
