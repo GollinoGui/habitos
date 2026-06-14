@@ -83,6 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return unsubscribe
     }
 
+    // Guard against processing the same PKCE code twice — getLaunchUrl and appUrlOpen
+    // can both fire with the same URL on cold start, and a second exchangeCodeForSession
+    // call with an already-used code causes Supabase to fire SIGNED_OUT internally.
+    const handledCodes = new Set<string>()
+
     // Handle cold-start: app was killed and re-opened via deep link before listener registered
     App.getLaunchUrl().then(async (result) => {
       if (!result?.url) return
@@ -90,6 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const url = new URL(result.url)
         const code = url.searchParams.get('code')
         if (code) {
+          if (handledCodes.has(code)) return
+          handledCodes.add(code)
           const { error } = await supabase.auth.exchangeCodeForSession(result.url)
           try { await Browser.close() } catch { /* ignore */ }
           if (error) setAuthError('Erro ao fazer login com Google: ' + error.message)
@@ -107,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // (state is needed to locate the stored PKCE verifier)
         const code = url.searchParams.get('code')
         if (code) {
+          if (handledCodes.has(code)) return
+          handledCodes.add(code)
           const { error } = await supabase.auth.exchangeCodeForSession(data.url)
           try { await Browser.close() } catch { /* browser may already be closed */ }
           if (error) setAuthError('Erro ao fazer login com Google: ' + error.message)
