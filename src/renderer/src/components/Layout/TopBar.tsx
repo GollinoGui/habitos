@@ -18,31 +18,31 @@ export default function TopBar(): React.JSX.Element {
   const pct = next ? Math.min(100, Math.round((xpInLevel / xpToNext) * 100)) : 100
 
   return (
-    <header className="h-12 bg-bg-secondary border-b border-bg-border flex items-center px-4 gap-4 shrink-0">
+    <header className="h-12 bg-bg-secondary border-b border-bg-border flex items-center px-3 gap-3 shrink-0">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-xs font-semibold text-accent-gold flex items-center gap-1">
-            <Star size={11} fill="currentColor" />
-            Nv.{current.level} {current.rank}
+        <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
+          <span className="text-xs font-semibold text-accent-gold flex items-center gap-0.5 shrink-0">
+            <Star size={10} fill="currentColor" />
+            Nv.{current.level}
           </span>
-          <span className="text-xs text-text-muted">·</span>
-          <span className="text-xs text-text-secondary">{name}</span>
+          <span className="text-xs text-text-muted shrink-0 hidden sm:inline">{current.rank}</span>
+          <span className="text-xs text-text-secondary truncate">{name}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-bg-border rounded-full overflow-hidden max-w-48">
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1 h-1.5 bg-bg-border rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-accent-purple to-accent-blue rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-xs text-text-muted whitespace-nowrap">
-            {xpInLevel}/{next ? xpToNext : '∞'} XP
+          <span className="text-xs text-text-muted whitespace-nowrap shrink-0">
+            {pct}%
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-1 text-accent-gold font-bold text-sm">
-        <Zap size={14} fill="currentColor" />
-        {total_xp} XP
+      <div className="flex items-center gap-1 text-accent-gold font-bold text-sm shrink-0">
+        <Zap size={13} fill="currentColor" />
+        {total_xp}
       </div>
     </header>
   )

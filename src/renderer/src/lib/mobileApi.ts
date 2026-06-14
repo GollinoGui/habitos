@@ -50,9 +50,25 @@ function daysInMonth(year: number, month: number): number {
 
 let _userId = ''
 let _electronApi: Window['electronApi'] | undefined  // Electron IPC API for desktop-only features
+let _userMeta: { full_name?: string; name?: string; email?: string } = {}
 
-export function installMobileApi(userId: string): void {
+function getDisplayName(): string {
+  const meta = _userMeta
+  const name = meta.full_name || meta.name
+  if (name && name !== 'Herói') return name
+  if (meta.email) {
+    const local = meta.email.split('@')[0]
+    return local.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+  }
+  return 'Usuário'
+}
+
+export function installMobileApi(
+  userId: string,
+  userMeta?: { full_name?: string; name?: string; email?: string }
+): void {
   _userId = userId
+  if (userMeta) _userMeta = userMeta
   // On desktop, save the Electron IPC API for desktop-only features (notifications, file export,
   // OFX import, exportData for migration) used inside buildApi() via _electronApi fallbacks.
   if (window.electronApi) {
@@ -96,7 +112,14 @@ function buildApi(): any {
           supabase.from('xp_history').select('*').eq('user_id', uid())
             .order('id', { ascending: false }).limit(50),
         ])
-        const profile = profileRes.data ?? { user_id: uid(), name: 'Herói', total_xp: 0, level: 1 }
+        let profile = profileRes.data
+        // Auto-fix name when it's the placeholder default or profile doesn't exist yet
+        if (!profile || profile.name === 'Herói' || profile.name === 'Usuário') {
+          const displayName = getDisplayName()
+          await supabase.from('user_profile')
+            .upsert({ user_id: uid(), name: displayName, total_xp: profile?.total_xp ?? 0, level: profile?.level ?? 1 }, { onConflict: 'user_id' })
+          profile = { ...(profile ?? { total_xp: 0, level: 1 }), user_id: uid(), name: displayName }
+        }
         const history = historyRes.data ?? []
         const levelInfo = getLevelInfo(profile.total_xp ?? 0)
         return { ...profile, id: 1, levelInfo, history }

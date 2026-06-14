@@ -247,29 +247,29 @@ export default function Dashboard(): React.JSX.Element {
       ))}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">
-            {greeting}, {(profile as any)?.name || 'Herói'}! 👋
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold text-text-primary animate-slide-down truncate">
+            {greeting}, {(profile as any)?.name?.split(' ')[0] || 'Usuário'}! 👋
           </h1>
           <div className="flex items-center gap-2 mt-1 flex-wrap animate-slide-in-left" style={{ animationDelay: '80ms' }}>
-            <p className="text-text-secondary text-sm">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
+            <p className="text-text-secondary text-xs">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
             {maxStreak >= 3 && (
               <span className="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-700/40 text-orange-400 text-xs font-bold px-2 py-0.5 rounded-full animate-pulse-soft">
                 <Flame size={11} />
-                {maxStreak} dias em sequência
+                {maxStreak}d
               </span>
             )}
           </div>
         </div>
         <button
           onClick={() => setFocusMode(v => !v)}
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+          className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
             focusMode ? 'bg-accent-purple text-white border-accent-purple' : 'border-bg-border text-text-secondary hover:text-text-primary hover:bg-bg-border'
           }`}
         >
-          <Focus size={14} />
-          {focusMode ? 'Sair do foco' : 'Modo foco'}
+          <Focus size={13} />
+          {focusMode ? 'Sair' : 'Foco'}
         </button>
       </div>
 
