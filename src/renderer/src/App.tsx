@@ -222,28 +222,32 @@ function AppContent(): React.JSX.Element {
       <ScrollToTop />
       <TrayNavigator />
       <div className={`flex h-screen overflow-hidden bg-bg-primary transition-all duration-300 ${showLoginOverlay ? 'hidden' : ''}`}>
-        <Sidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <TopBar />
-          {user && !isMobileApp && <MigrationBanner userId={user.id} />}
-          <main className="flex-1 overflow-y-auto p-6">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/habits" element={<Habits />} />
-              <Route path="/gym" element={<Gym />} />
-              <Route path="/addictions" element={<Addictions />} />
-              <Route path="/goals" element={<Goals />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/journal" element={<Journal />} />
-              <Route path="/sleep" element={<Sleep />} />
-              <Route path="/finance" element={<Finance />} />
-              <Route path="/reading" element={<Reading />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/analytics" element={<Analytics />} />
-            </Routes>
-          </main>
-        </div>
+        {user && (
+          <>
+            <Sidebar />
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <TopBar />
+              {!isMobileApp && <MigrationBanner userId={user.id} />}
+              <main className="flex-1 overflow-y-auto p-6">
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/habits" element={<Habits />} />
+                  <Route path="/gym" element={<Gym />} />
+                  <Route path="/addictions" element={<Addictions />} />
+                  <Route path="/goals" element={<Goals />} />
+                  <Route path="/achievements" element={<Achievements />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/journal" element={<Journal />} />
+                  <Route path="/sleep" element={<Sleep />} />
+                  <Route path="/finance" element={<Finance />} />
+                  <Route path="/reading" element={<Reading />} />
+                  <Route path="/calendar" element={<Calendar />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                </Routes>
+              </main>
+            </div>
+          </>
+        )}
       </div>
 
       {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}

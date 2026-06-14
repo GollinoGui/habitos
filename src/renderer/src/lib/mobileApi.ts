@@ -74,8 +74,7 @@ async function grantXpInternal(amount: number, reason: string): Promise<void> {
   const newXp = (profile?.total_xp ?? 0) + amount
   const levelInfo = getLevelInfo(newXp)
   await supabase.from('user_profile')
-    .update({ total_xp: newXp, level: levelInfo.current.level })
-    .eq('user_id', uid())
+    .upsert({ user_id: uid(), total_xp: newXp, level: levelInfo.current.level }, { onConflict: 'user_id' })
 }
 
 async function unlockAchievement(key: string, name: string, description: string, icon: string): Promise<boolean> {
@@ -231,7 +230,23 @@ function buildApi(): any {
           const { data: profile } = await supabase.from('user_profile')
             .select('total_xp').eq('user_id', uid()).single()
           const newXp = Math.max(0, (profile?.total_xp ?? 0) - (habit.xp_reward ?? 10))
-          await supabase.from('user_profile').update({ total_xp: newXp }).eq('user_id', uid())
+          const newLevelInfo = getLevelInfo(newXp)
+          await supabase.from('user_profile').upsert(
+            { user_id: uid(), total_xp: newXp, level: newLevelInfo.current.level },
+            { onConflict: 'user_id' }
+          )
+
+          // Delete the most recent xp_history entry for this habit (mirrors desktop behavior)
+          const { data: histEntry } = await supabase.from('xp_history')
+            .select('id')
+            .eq('user_id', uid())
+            .eq('reason', `Hábito: ${habit.name}`)
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (histEntry) {
+            await supabase.from('xp_history').delete().eq('id', histEntry.id).eq('user_id', uid())
+          }
 
           // Remove habit line from calendar note
           const prefix = `✅ ${habit.icon} ${habit.name}`
@@ -596,7 +611,7 @@ function buildApi(): any {
     goalFolders: {
       list: async () => {
         const { data } = await supabase.from('goal_folders').select('*')
-          .eq('user_id', uid()).order('created_at')
+          .eq('user_id', uid()).order('id')
         return data ?? []
       },
 
@@ -628,7 +643,7 @@ function buildApi(): any {
           .eq('user_id', uid())
           .gte('date', `${year}-${m}-01`)
           .lte('date', `${year}-${m}-31`)
-          .order('date').order('created_at')
+          .order('date').order('id')
         return data ?? []
       },
 

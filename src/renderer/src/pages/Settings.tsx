@@ -4,7 +4,7 @@ import {
   Palette, Eye, EyeOff, User, GripVertical, Sparkles, Check, MonitorPlay, Cloud
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { syncDesktopToCloud } from '../lib/syncToCloud'
+import { syncDesktopToCloud, syncFinanceAndCalendarToCloud } from '../lib/syncToCloud'
 
 interface NotifSettings { enabled: boolean; hour: number; minute: number }
 
@@ -106,6 +106,11 @@ export default function Settings(): React.JSX.Element {
   const [syncConfirm, setSyncConfirm] = useState(false)
   const [syncError, setSyncError] = useState('')
   const [syncCounts, setSyncCounts] = useState<Record<string, number> | null>(null)
+
+  const [partialSyncing, setPartialSyncing] = useState(false)
+  const [partialSyncStatus, setPartialSyncStatus] = useState<'idle' | 'done' | 'error'>('idle')
+  const [partialSyncError, setPartialSyncError] = useState('')
+  const [partialSyncCounts, setPartialSyncCounts] = useState<Record<string, number> | null>(null)
 
   const isDesktop = !!window.electronAuth
 
@@ -326,6 +331,25 @@ export default function Settings(): React.JSX.Element {
       setSyncStatus('error')
       setSyncError(result.error ?? 'Erro desconhecido')
       setTimeout(() => setSyncStatus('idle'), 8000)
+    }
+  }
+
+  async function handlePartialSync() {
+    if (!user) return
+    setPartialSyncing(true)
+    setPartialSyncStatus('idle')
+    setPartialSyncError('')
+    setPartialSyncCounts(null)
+    const result = await syncFinanceAndCalendarToCloud(user.id)
+    setPartialSyncing(false)
+    if (result.success) {
+      setPartialSyncStatus('done')
+      setPartialSyncCounts(result.counts ?? null)
+      setTimeout(() => setPartialSyncStatus('idle'), 8000)
+    } else {
+      setPartialSyncStatus('error')
+      setPartialSyncError(result.error ?? 'Erro desconhecido')
+      setTimeout(() => setPartialSyncStatus('idle'), 8000)
     }
   }
 
@@ -595,20 +619,59 @@ export default function Settings(): React.JSX.Element {
         </button>
       </div>
 
-      {/* ── Migração SQLite → Nuvem (somente desktop, somente antes da migração) ── */}
-      {isDesktop && !localStorage.getItem('habitos_sqlite_migrated') && (
+      {/* ── Restaurar Finanças e Calendário do SQLite local ── */}
+      {isDesktop && (
+        <div className="bg-bg-secondary border border-accent-blue/30 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <Cloud size={20} className="text-accent-blue" />
+            <h2 className="text-lg font-semibold text-text-primary">Restaurar Finanças e Calendário</h2>
+          </div>
+          <p className="text-sm text-text-secondary">
+            Sincroniza apenas os dados de <strong>Finanças</strong> e <strong>Calendário</strong> do banco local (SQLite) para a nuvem.{' '}
+            <span className="text-accent-green font-medium">Os hábitos, treinos e outros dados na nuvem não são afetados.</span>
+          </p>
+          <button
+            onClick={handlePartialSync}
+            disabled={partialSyncing || !user}
+            className="flex items-center gap-2 px-4 py-2 bg-accent-blue/15 hover:bg-accent-blue/25 text-accent-blue border border-accent-blue/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
+          >
+            <Cloud size={14} />
+            {partialSyncing ? 'Restaurando...' : partialSyncStatus === 'done' ? '✓ Restaurado!' : partialSyncStatus === 'error' ? 'Erro ao restaurar' : 'Restaurar agora'}
+          </button>
+          {partialSyncStatus === 'done' && partialSyncCounts && (
+            <div className="p-3 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
+              <p className="text-xs text-accent-blue font-medium mb-1">Dados restaurados:</p>
+              <p className="text-xs text-text-secondary">
+                {Object.entries(partialSyncCounts)
+                  .filter(([, v]) => v > 0)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(' · ')}
+              </p>
+            </div>
+          )}
+          {partialSyncStatus === 'error' && (
+            <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-700/40 rounded-lg">
+              <AlertTriangle size={15} className="text-accent-red shrink-0 mt-0.5" />
+              <p className="text-xs text-accent-red">{partialSyncError}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Sincronização SQLite → Nuvem (somente desktop) ── */}
+      {isDesktop && (
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
           <div className="flex items-center gap-3">
             <Cloud size={20} className="text-accent-blue" />
-            <h2 className="text-lg font-semibold text-text-primary">Migrar dados para a Nuvem</h2>
+            <h2 className="text-lg font-semibold text-text-primary">Sincronizar dados locais para a Nuvem</h2>
           </div>
           <p className="text-sm text-text-secondary">
-            Envia todos os seus dados locais (SQLite) para o Supabase.{' '}
-            <span className="text-accent-red font-medium">Faça isso apenas uma vez — após a migração este botão some e seus dados ficam na nuvem.</span>
+            Envia todos os seus dados locais (SQLite) para o Supabase, substituindo os dados na nuvem.{' '}
+            <span className="text-accent-red font-medium">Os dados atuais na nuvem serão substituídos pelos dados locais.</span>
           </p>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={syncConfirm} onChange={e => setSyncConfirm(e.target.checked)} className="accent-accent-blue" />
-            <span className="text-sm text-text-secondary">Confirmo que quero migrar meus dados locais para a nuvem</span>
+            <span className="text-sm text-text-secondary">Confirmo que quero sobrescrever os dados na nuvem com os dados locais</span>
           </label>
           <button
             onClick={handleSyncToCloud}
@@ -616,7 +679,7 @@ export default function Settings(): React.JSX.Element {
             className="flex items-center gap-2 px-4 py-2 bg-accent-blue/15 hover:bg-accent-blue/25 text-accent-blue border border-accent-blue/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
           >
             <Cloud size={14} />
-            {syncing ? 'Migrando...' : syncStatus === 'done' ? '✓ Migrado!' : syncStatus === 'error' ? 'Erro ao migrar' : 'Migrar agora'}
+            {syncing ? 'Sincronizando...' : syncStatus === 'done' ? '✓ Sincronizado!' : syncStatus === 'error' ? 'Erro ao sincronizar' : 'Sincronizar agora'}
           </button>
           {syncStatus === 'done' && syncCounts && (
             <div className="p-3 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">

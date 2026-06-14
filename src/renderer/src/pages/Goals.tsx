@@ -24,6 +24,7 @@ interface GoalCallbacks {
   onEditGoal: (goal: Goal) => void
   onDeleteGoal: (goal: Goal) => void
   estimateXP: (goal: Goal) => number
+  onMoveToFolder: (goalId: number, folderId: number | null) => Promise<void>
 }
 
 const FOLDER_ICONS = ['📁', '🏋️', '🚀', '🎯', '📚', '🎮', '💪', '🏃', '🧘', '🎸', '🏆', '💡', '🌟', '🎨', '🔬']
@@ -236,8 +237,15 @@ function GoalCard({ goal, cbs, index = 0 }: { goal: Goal; cbs: GoalCallbacks; in
   }
 
   return (
-    <div className={`bg-bg-secondary border rounded-xl overflow-hidden flex animate-card-in hover:shadow-lg hover:shadow-accent-purple/5 ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}
-      style={{ animationDelay: `${index * 70}ms` }}>
+    <div
+      className={`bg-bg-secondary border rounded-xl overflow-hidden flex animate-card-in hover:shadow-lg hover:shadow-accent-purple/5 ${goal.is_completed ? 'border-accent-green/40 opacity-70' : 'border-bg-border'}`}
+      style={{ animationDelay: `${index * 70}ms` }}
+      draggable={!goal.is_completed}
+      onDragStart={e => {
+        e.dataTransfer.setData('text/goalid', String(goal.id))
+        e.dataTransfer.effectAllowed = 'move'
+      }}
+    >
       <div className="flex-1 p-5">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
@@ -365,11 +373,23 @@ function FolderSection({
   cbs: GoalCallbacks
   index?: number
 }) {
+  const [isDragOver, setIsDragOver] = useState(false)
   const folderGoals = active.filter(g => g.folder_id === folder.id)
   const isOpen = !collapsed[`folder-${folder.id}`]
 
   return (
-    <div className="rounded-xl border border-bg-border overflow-hidden animate-card-in" style={{ animationDelay: `${index * 80}ms` }}>
+    <div
+      className={`rounded-xl border overflow-hidden animate-card-in transition-all ${isDragOver ? 'border-accent-purple ring-2 ring-accent-purple/30' : 'border-bg-border'}`}
+      style={{ animationDelay: `${index * 80}ms` }}
+      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setIsDragOver(true) }}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false) }}
+      onDrop={async e => {
+        e.preventDefault()
+        setIsDragOver(false)
+        const goalId = Number(e.dataTransfer.getData('text/goalid'))
+        if (goalId) await cbs.onMoveToFolder(goalId, folder.id)
+      }}
+    >
       <div className="flex items-center gap-3 px-4 py-3 bg-bg-secondary cursor-pointer select-none"
         onClick={() => toggleCollapse(`folder-${folder.id}`)}>
         <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: folder.color }} />
@@ -428,6 +448,7 @@ export default function Goals(): React.JSX.Element {
   const [confirmGoal, setConfirmGoal] = useState<Goal | null>(null)
   const [undoToasts, setUndoToasts] = useState<UndoToast[]>([])
   const [loading, setLoading] = useState(true)
+  const [isDragOverUncat, setIsDragOverUncat] = useState(false)
 
   function showUndo(message: string, onUndo: () => void) {
     const id = ++undoIdCounter
@@ -534,6 +555,18 @@ export default function Goals(): React.JSX.Element {
     onCompleteGoal: (goal) => setConfirmGoal(goal),
     onLoad: load,
     onEditGoal: (goal) => { setEditGoal(goal); setShowGoalModal(true) },
+    onMoveToFolder: async (goalId, folderId) => {
+      const goal = goals.find(g => g.id === goalId)
+      if (!goal || goal.folder_id === folderId) return
+      await window.api.goals.update(goalId, {
+        title: goal.title,
+        description: goal.description ?? '',
+        target_date: goal.target_date ?? null,
+        xp_reward: goal.xp_reward,
+        folder_id: folderId,
+      })
+      load()
+    },
     onDeleteGoal: (goal) => {
       setGoals(prev => prev.filter(g => g.id !== goal.id))
       let undone = false
@@ -604,7 +637,17 @@ export default function Goals(): React.JSX.Element {
         ))}
 
         {showUncategorized && (
-          <div className="rounded-xl border border-bg-border overflow-hidden">
+          <div
+            className={`rounded-xl border overflow-hidden transition-all ${isDragOverUncat ? 'border-accent-purple ring-2 ring-accent-purple/30' : 'border-bg-border'}`}
+            onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setIsDragOverUncat(true) }}
+            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOverUncat(false) }}
+            onDrop={async e => {
+              e.preventDefault()
+              setIsDragOverUncat(false)
+              const goalId = Number(e.dataTransfer.getData('text/goalid'))
+              if (goalId) await cbs.onMoveToFolder(goalId, null)
+            }}
+          >
             <div className="flex items-center gap-3 px-4 py-3 bg-bg-secondary cursor-pointer select-none"
               onClick={() => toggleCollapse('uncategorized')}>
               <span className="text-xl">📌</span>
