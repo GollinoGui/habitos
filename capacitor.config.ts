@@ -6,7 +6,14 @@ const config: CapacitorConfig = {
   webDir: 'dist-mobile',
   plugins: {
     Browser: {},
-    App: {}
+    App: {},
+    SplashScreen: {
+      launchShowDuration: 2500,
+      backgroundColor: '#0f0f0f',
+      androidSplashResourceName: 'splash',
+      showSpinner: false,
+      launchAutoHide: true
+    }
   }
 }
 

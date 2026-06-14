@@ -20,6 +20,7 @@ import Analytics from './pages/Analytics'
 import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
+import MobileTutorialModal from './components/Tutorial/MobileTutorialModal'
 import MobileNav, { NAV_ITEMS, NAV_TOTAL, navMod } from './components/Layout/MobileNav'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
@@ -187,9 +188,10 @@ function AppContent(): React.JSX.Element {
   const { user, loading, signOut } = useAuth()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showMobileTutorial, setShowMobileTutorial] = useState(false)
 
   useEffect(() => {
-    if (!user || isDemo || isMobileApp) return
+    if (!user || isDemo) return
 
     const onboardedKey = 'habitos_onboarded'
     const tutorialKey = 'habitos_tutorial_done'
@@ -215,12 +217,35 @@ function AppContent(): React.JSX.Element {
       if (!localStorage.getItem(onboardedKey)) {
         setShowOnboarding(true)
       } else if (!localStorage.getItem(tutorialKey)) {
-        setShowTutorial(true)
+        if (isMobileApp) {
+          setShowMobileTutorial(true)
+        } else {
+          setShowTutorial(true)
+        }
       }
     }
 
     checkExistingUser()
   }, [user])
+
+  function handleOnboardingComplete(): void {
+    setShowOnboarding(false)
+    if (isMobileApp) {
+      setShowMobileTutorial(true)
+    } else {
+      setShowTutorial(true)
+    }
+  }
+
+  function handleTutorialComplete(): void {
+    localStorage.setItem('habitos_tutorial_done', '1')
+    setShowTutorial(false)
+  }
+
+  function handleMobileTutorialComplete(): void {
+    localStorage.setItem('habitos_tutorial_done', '1')
+    setShowMobileTutorial(false)
+  }
 
   if (loading) {
     return (
@@ -245,21 +270,15 @@ function AppContent(): React.JSX.Element {
         <ScrollToTop />
         <TrayNavigator />
         <MobileSwipeLayout />
+        {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
+        {showMobileTutorial && !showOnboarding && (
+          <MobileTutorialModal onComplete={handleMobileTutorialComplete} />
+        )}
       </HashRouter>
     )
   }
 
   const showLoginOverlay = !user && !isDemo
-
-  function handleOnboardingComplete(): void {
-    setShowOnboarding(false)
-    setShowTutorial(true)
-  }
-
-  function handleTutorialComplete(): void {
-    localStorage.setItem('habitos_tutorial_done', '1')
-    setShowTutorial(false)
-  }
 
   return (
     <HashRouter>
