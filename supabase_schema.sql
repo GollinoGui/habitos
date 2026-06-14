@@ -67,6 +67,7 @@ create table if not exists habits (
   color       text not null default '#7c3aed',
   icon        text not null default '✅',
   is_active   boolean not null default true,
+  days_of_week text default null,
   created_at  timestamptz default now()
 );
 alter table habits enable row level security;

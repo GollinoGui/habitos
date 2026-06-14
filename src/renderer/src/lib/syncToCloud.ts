@@ -22,10 +22,12 @@ async function bulk(
   table: string,
   sqliteRows: Row[],
   userId: string,
-  fkMaps: Record<string, IdMap> = {}
+  fkMaps: Record<string, IdMap> = {},
+  strip: string[] = []
 ): Promise<IdMap> {
   if (!sqliteRows.length) return {}
 
+  const stripSet = new Set(strip)
   const oldIds: number[] = []
   const toInsert: Row[] = []
 
@@ -35,6 +37,7 @@ async function bulk(
     let skip = false
 
     for (const [col, val] of Object.entries(rest)) {
+      if (stripSet.has(col)) continue
       if (col in fkMaps) {
         if (val == null) {
           newRow[col] = null
@@ -92,14 +95,17 @@ export async function syncDesktopToCloud(userId: string): Promise<SyncResult> {
 
     await deleteUserData(userId)
 
+    // Columns that exist in SQLite but not in Supabase (added locally via ALTER TABLE or schema drift)
+    const NO_CREATED_AT = ['created_at']
+
     const habits     = await bulk('habits',     d.habits     ?? [], userId)
     const workouts   = await bulk('workouts',   d.workouts   ?? [], userId)
     const addictions = await bulk('addictions', d.addictions ?? [], userId)
-    const folders    = await bulk('goal_folders', d.goal_folders ?? [], userId)
+    const folders    = await bulk('goal_folders', d.goal_folders ?? [], userId, {}, NO_CREATED_AT)
     const goals      = await bulk('goals', d.goals ?? [], userId, { folder_id: folders })
-    const cats       = await bulk('finance_categories', d.finance_categories ?? [], userId)
-    const accs       = await bulk('finance_accounts',   d.finance_accounts   ?? [], userId)
-    const bills      = await bulk('finance_bills', d.finance_bills ?? [], userId, { category_id: cats })
+    const cats       = await bulk('finance_categories', d.finance_categories ?? [], userId, {}, NO_CREATED_AT)
+    const accs       = await bulk('finance_accounts',   d.finance_accounts   ?? [], userId, {}, NO_CREATED_AT)
+    const bills      = await bulk('finance_bills', d.finance_bills ?? [], userId, { category_id: cats }, NO_CREATED_AT)
     const media      = await bulk('media_items',   d.media_items  ?? [], userId)
     const programs   = await bulk('workout_programs', d.workout_programs ?? [], userId)
     const pDays      = await bulk('workout_program_days', d.workout_program_days ?? [], userId, { program_id: programs })
@@ -114,9 +120,9 @@ export async function syncDesktopToCloud(userId: string): Promise<SyncResult> {
     await bulk('finance_transactions', d.finance_transactions ?? [], userId, {
       category_id: cats, bill_id: bills, account_id: accs,
     })
-    await bulk('media_logs',        d.media_logs        ?? [], userId, { media_id: media })
+    await bulk('media_logs',        d.media_logs        ?? [], userId, { media_id: media }, NO_CREATED_AT)
     await bulk('workout_program_exercises', d.workout_program_exercises ?? [], userId, { program_day_id: pDays })
-    await bulk('calendar_events',   d.calendar_events   ?? [], userId)
+    await bulk('calendar_events',   d.calendar_events   ?? [], userId, {}, NO_CREATED_AT)
     await bulk('calendar_notes',    d.calendar_notes    ?? [], userId)
     await bulk('xp_history',        d.xp_history        ?? [], userId)
     await bulk('achievements',      d.achievements      ?? [], userId)
