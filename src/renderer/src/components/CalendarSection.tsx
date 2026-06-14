@@ -223,7 +223,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
               const hasNote = noteDates.has(dateStr)
               const habitDots = habitDotsByDate.get(dateStr) || []
               const allDots = [
-                ...evts.map(e => ({ color: e.is_done ? '#6b7280' : e.color, key: `e-${e.id}` })),
+                ...evts.map(e => ({ color: e.is_done ? '#10b981' : e.color, key: `e-${e.id}` })),
                 ...habitDots.map(h => ({ color: h.color, key: `h-${h.habit_id}` }))
               ]
 
@@ -372,7 +372,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
                 {dayEvents.map(evt => (
                   <div
                     key={evt.id}
-                    className={`flex items-center gap-2 p-2 rounded-lg border border-bg-border bg-bg-secondary transition-opacity ${evt.is_done ? 'opacity-55' : ''}`}
+                    className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${evt.is_done ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary'}`}
                   >
                     <button
                       onClick={() => toggleDone(evt.id)}
