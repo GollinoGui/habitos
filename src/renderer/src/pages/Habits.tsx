@@ -334,18 +334,21 @@ export default function Habits(): React.JSX.Element {
   useEffect(() => { loadHabits() }, [])
 
   async function loadHabits() {
-    const [h, comps] = await Promise.all([
-      window.api.habits.list(),
-      window.api.habits.completionsRange(today, today)
-    ])
-    setHabits(h as Habit[])
-    setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
-    const streakMap: Record<number, number> = {}
-    await Promise.all((h as Habit[]).map(async habit => {
-      streakMap[habit.id] = await window.api.habits.streak(habit.id)
-    }))
-    setStreaks(streakMap)
-    setLoading(false)
+    try {
+      const [h, comps] = await Promise.all([
+        window.api.habits.list(),
+        window.api.habits.completionsRange(today, today)
+      ])
+      setHabits(h as Habit[])
+      setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
+      const streakMap: Record<number, number> = {}
+      await Promise.all((h as Habit[]).map(async habit => {
+        streakMap[habit.id] = await window.api.habits.streak(habit.id)
+      }))
+      setStreaks(streakMap)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleSave(data: object) {

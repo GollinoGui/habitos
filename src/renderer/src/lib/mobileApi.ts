@@ -53,12 +53,13 @@ let _electronApi: Window['electronApi'] | undefined  // Electron IPC API for des
 
 export function installMobileApi(userId: string): void {
   _userId = userId
-  // On desktop, save the Electron IPC API for desktop-only features (notifications, file export, etc.)
-  // On mobile, electronApi is undefined — that's fine, the fallbacks in buildApi() handle it.
+  // On desktop, save the Electron IPC API for desktop-only features (notifications, file export,
+  // OFX import, exportData for migration) used inside buildApi() via _electronApi fallbacks.
   if (window.electronApi) {
     _electronApi = window.electronApi
   }
-  // Always install Supabase as window.api so desktop and mobile share the same data source
+  // Always install Supabase as window.api (desktop and mobile share the same data source).
+  // Desktop-only IPC calls are forwarded through _electronApi fallbacks inside buildApi().
   ;(window as unknown as Record<string, unknown>).api = buildApi()
 }
 

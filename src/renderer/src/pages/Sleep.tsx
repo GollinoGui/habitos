@@ -46,9 +46,12 @@ export default function Sleep(): React.JSX.Element {
   useEffect(() => { loadEntry(date) }, [date])
 
   async function loadRecent() {
-    const logs = await window.api.sleep.recent(14)
-    setRecent(logs as SleepLog[])
-    setLoading(false)
+    try {
+      const logs = await window.api.sleep.recent(14)
+      setRecent(logs as SleepLog[])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function loadEntry(d: string) {

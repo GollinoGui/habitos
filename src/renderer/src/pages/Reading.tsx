@@ -73,13 +73,16 @@ export default function Reading(): React.JSX.Element {
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
-    const [its, mins] = await Promise.all([
-      window.api.media.list(),
-      window.api.media.todayMinutes(today)
-    ])
-    setItems(its as MediaItem[])
-    setTodayMins(mins as number)
-    setLoading(false)
+    try {
+      const [its, mins] = await Promise.all([
+        window.api.media.list(),
+        window.api.media.todayMinutes(today)
+      ])
+      setItems(its as MediaItem[])
+      setTodayMins(mins as number)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function addItem() {

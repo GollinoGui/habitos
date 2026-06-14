@@ -283,20 +283,23 @@ export default function Finance(): React.JSX.Element {
   }, [])
 
   async function loadAll() {
-    await window.api.finance.bills.generateMonth(year, month)
-    const [txs, cats, sum, bls, accs] = await Promise.all([
-      window.api.finance.transactions.list(year, month),
-      window.api.finance.categories.list(),
-      window.api.finance.summary(year, month),
-      window.api.finance.bills.list(),
-      window.api.finance.accounts.list().catch(() => [])
-    ])
-    setTransactions(txs as Transaction[])
-    setCategories(cats as Category[])
-    setSummary(sum as Summary)
-    setBills(bls as Bill[])
-    setAccounts(accs as Account[])
-    setLoading(false)
+    try {
+      await window.api.finance.bills.generateMonth(year, month)
+      const [txs, cats, sum, bls, accs] = await Promise.all([
+        window.api.finance.transactions.list(year, month),
+        window.api.finance.categories.list(),
+        window.api.finance.summary(year, month),
+        window.api.finance.bills.list(),
+        window.api.finance.accounts.list().catch(() => [])
+      ])
+      setTransactions(txs as Transaction[])
+      setCategories(cats as Category[])
+      setSummary(sum as Summary)
+      setBills(bls as Bill[])
+      setAccounts(accs as Account[])
+    } finally {
+      setLoading(false)
+    }
   }
 
   function shiftMonth(delta: number) {

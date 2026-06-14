@@ -133,7 +133,8 @@ export default function Login() {
         const code = parsed.searchParams.get('code')
 
         if (code) {
-          const { error: e } = await supabase.auth.exchangeCodeForSession(code)
+          // Pass the full URL so Supabase can verify the PKCE state parameter
+          const { error: e } = await supabase.auth.exchangeCodeForSession(callbackUrl)
           if (e) setError(translateError(e.message))
         } else if (parsed.hash) {
           const params = new URLSearchParams(parsed.hash.substring(1))

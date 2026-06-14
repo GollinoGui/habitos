@@ -442,15 +442,18 @@ export default function Goals(): React.JSX.Element {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const g = await window.api.goals.list()
-    setGoals(g as Goal[])
     try {
-      const f = await window.api.goalFolders.list()
-      setFolders(f as GoalFolder[])
-    } catch {
-      setFolders([])
+      const g = await window.api.goals.list()
+      setGoals(g as Goal[])
+      try {
+        const f = await window.api.goalFolders.list()
+        setFolders(f as GoalFolder[])
+      } catch {
+        setFolders([])
+      }
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleSaveGoal(data: object) {

@@ -218,8 +218,11 @@ export default function Addictions(): React.JSX.Element {
   }
 
   const load = useCallback(async () => {
-    setAddictions(await window.api.addictions.list())
-    setLoading(false)
+    try {
+      setAddictions(await window.api.addictions.list())
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])

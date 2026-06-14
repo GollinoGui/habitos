@@ -30,8 +30,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       maybeInstallMobileApi(session?.user?.id ?? null)
-      if (session?.user && window.electronApi?.db) {
-        await window.electronApi.db.setUser(session.user.id)
+      try {
+        if (session?.user && window.electronApi?.db) {
+          await window.electronApi.db.setUser(session.user.id)
+        }
+      } catch (e) {
+        console.error('db.setUser error (getSession):', e)
       }
       setSession(session)
       setUser(session?.user ?? null)
@@ -40,10 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       maybeInstallMobileApi(session?.user?.id ?? null)
-      if (session?.user) {
-        if (window.electronApi?.db) await window.electronApi.db.setUser(session.user.id)
-      } else {
-        if (window.electronApi?.db) await window.electronApi.db.setUser(null)
+      try {
+        if (session?.user) {
+          if (window.electronApi?.db) await window.electronApi.db.setUser(session.user.id)
+        } else {
+          if (window.electronApi?.db) await window.electronApi.db.setUser(null)
+        }
+      } catch (e) {
+        console.error('db.setUser error:', e)
       }
       setSession(session)
       setUser(session?.user ?? null)

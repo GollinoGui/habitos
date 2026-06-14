@@ -320,6 +320,7 @@ export default function Settings(): React.JSX.Element {
     if (result.success) {
       setSyncStatus('done')
       setSyncCounts(result.counts ?? null)
+      localStorage.setItem('habitos_sqlite_migrated', '1')
       setTimeout(() => { setSyncStatus('idle'); setSyncConfirm(false) }, 6000)
     } else {
       setSyncStatus('error')
@@ -594,20 +595,20 @@ export default function Settings(): React.JSX.Element {
         </button>
       </div>
 
-      {/* ── Sincronizar para Nuvem (somente desktop) ────────────────────────── */}
-      {isDesktop && (
+      {/* ── Migração SQLite → Nuvem (somente desktop, somente antes da migração) ── */}
+      {isDesktop && !localStorage.getItem('habitos_sqlite_migrated') && (
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
           <div className="flex items-center gap-3">
             <Cloud size={20} className="text-accent-blue" />
-            <h2 className="text-lg font-semibold text-text-primary">Sincronizar para Nuvem</h2>
+            <h2 className="text-lg font-semibold text-text-primary">Migrar dados para a Nuvem</h2>
           </div>
           <p className="text-sm text-text-secondary">
-            Envia todos os seus dados locais (SQLite) para o Supabase, permitindo que outros dispositivos acessem seus dados.{' '}
-            <span className="text-accent-red font-medium">Os dados na nuvem serão substituídos pelos dados locais.</span>
+            Envia todos os seus dados locais (SQLite) para o Supabase.{' '}
+            <span className="text-accent-red font-medium">Faça isso apenas uma vez — após a migração este botão some e seus dados ficam na nuvem.</span>
           </p>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={syncConfirm} onChange={e => setSyncConfirm(e.target.checked)} className="accent-accent-blue" />
-            <span className="text-sm text-text-secondary">Confirmo que quero substituir os dados na nuvem pelos dados locais</span>
+            <span className="text-sm text-text-secondary">Confirmo que quero migrar meus dados locais para a nuvem</span>
           </label>
           <button
             onClick={handleSyncToCloud}
@@ -615,11 +616,11 @@ export default function Settings(): React.JSX.Element {
             className="flex items-center gap-2 px-4 py-2 bg-accent-blue/15 hover:bg-accent-blue/25 text-accent-blue border border-accent-blue/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
           >
             <Cloud size={14} />
-            {syncing ? 'Sincronizando...' : syncStatus === 'done' ? '✓ Sincronizado!' : syncStatus === 'error' ? 'Erro ao sincronizar' : 'Sincronizar agora'}
+            {syncing ? 'Migrando...' : syncStatus === 'done' ? '✓ Migrado!' : syncStatus === 'error' ? 'Erro ao migrar' : 'Migrar agora'}
           </button>
           {syncStatus === 'done' && syncCounts && (
             <div className="p-3 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
-              <p className="text-xs text-accent-blue font-medium mb-1">Dados sincronizados:</p>
+              <p className="text-xs text-accent-blue font-medium mb-1">Dados migrados:</p>
               <p className="text-xs text-text-secondary">
                 {Object.entries(syncCounts)
                   .filter(([, v]) => v > 0)

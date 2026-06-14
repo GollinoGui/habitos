@@ -166,6 +166,12 @@ export default function Dashboard(): React.JSX.Element {
 
   async function toggleHabit(id: number, e: React.MouseEvent) {
     const done = completedToday.has(id)
+    // Optimistic update — instant visual feedback
+    setCompletedToday(prev => {
+      const next = new Set(prev)
+      if (done) next.delete(id); else next.add(id)
+      return next
+    })
     if (!done) {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       const habit = habits.find(h => h.id === id)
@@ -175,10 +181,9 @@ export default function Dashboard(): React.JSX.Element {
     }
     if (done) await window.api.habits.uncomplete(id, today)
     else await window.api.habits.complete(id, today)
-    await fetchProfile()
-    const comps = await window.api.habits.completionsRange(today, today)
-    setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
+    // Optimistic state is already correct — update calendar and profile in background
     setCalendarKey(k => k + 1)
+    fetchProfile()
   }
 
   async function toggleGoalTask(taskId: number, goalId: number, current: number) {

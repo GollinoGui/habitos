@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Cloud, X, AlertTriangle } from 'lucide-react'
+import { syncDesktopToCloud } from './lib/syncToCloud'
 import Sidebar from './components/Layout/Sidebar'
 import TopBar from './components/Layout/TopBar'
 import Dashboard from './pages/Dashboard'
@@ -41,6 +42,80 @@ const isMobileApp = typeof window !== 'undefined' && !window.electronApi && !win
 // Demo mode: preload exposes demo data under electronApi; copy it to api so pages work normally
 if (isDemo && window.electronApi && !window.api) {
   ;(window as unknown as Record<string, unknown>).api = window.electronApi
+}
+
+const MIGRATION_KEY = 'habitos_sqlite_migrated'
+
+function MigrationBanner({ userId }: { userId: string }): React.JSX.Element | null {
+  // null = still checking, true = needs migration, false = already migrated
+  const [needsMigration, setNeedsMigration] = useState<boolean | null>(
+    localStorage.getItem(MIGRATION_KEY) ? false : null
+  )
+  const [status, setStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (localStorage.getItem(MIGRATION_KEY)) return
+    // window.api is Supabase-backed at this point — if it has habits, migration is already done
+    Promise.resolve(window.api?.habits?.list?.())
+      .then((habits) => {
+        if (Array.isArray(habits) && habits.length > 0) {
+          localStorage.setItem(MIGRATION_KEY, '1')
+          setNeedsMigration(false)
+        } else {
+          setNeedsMigration(true)
+        }
+      })
+      .catch(() => setNeedsMigration(true))
+  }, [userId])
+
+  if (isDemo || needsMigration !== true) return null
+
+  async function handleMigrate() {
+    setStatus('syncing')
+    const result = await syncDesktopToCloud(userId)
+    if (result.success) {
+      localStorage.setItem(MIGRATION_KEY, '1')
+      setStatus('done')
+      setTimeout(() => setNeedsMigration(false), 3000)
+    } else {
+      setStatus('error')
+      setError(result.error ?? 'Erro desconhecido')
+    }
+  }
+
+  function dismiss() {
+    localStorage.setItem(MIGRATION_KEY, '1')
+    setNeedsMigration(false)
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 bg-accent-blue/10 border-b border-accent-blue/25 text-sm shrink-0">
+      <AlertTriangle size={15} className="text-accent-blue shrink-0" />
+      {status === 'done' ? (
+        <span className="text-accent-blue font-medium flex-1">Dados migrados com sucesso para a nuvem!</span>
+      ) : status === 'error' ? (
+        <span className="text-accent-red flex-1">Erro ao migrar: {error}</span>
+      ) : (
+        <>
+          <span className="text-text-secondary flex-1">
+            Seus dados locais ainda não foram migrados para a nuvem.
+          </span>
+          <button
+            onClick={handleMigrate}
+            disabled={status === 'syncing'}
+            className="flex items-center gap-1.5 px-3 py-1 bg-accent-blue/20 hover:bg-accent-blue/30 text-accent-blue border border-accent-blue/30 rounded-md font-medium transition-colors disabled:opacity-50 text-xs whitespace-nowrap"
+          >
+            <Cloud size={12} />
+            {status === 'syncing' ? 'Migrando...' : 'Migrar agora'}
+          </button>
+          <button onClick={dismiss} className="text-text-muted hover:text-text-secondary transition-colors shrink-0" title="Dispensar">
+            <X size={14} />
+          </button>
+        </>
+      )}
+    </div>
+  )
 }
 
 function AppContent(): React.JSX.Element {
@@ -150,6 +225,7 @@ function AppContent(): React.JSX.Element {
         <Sidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <TopBar />
+          {user && !isMobileApp && <MigrationBanner userId={user.id} />}
           <main className="flex-1 overflow-y-auto p-6">
             <Routes>
               <Route path="/" element={<Dashboard />} />

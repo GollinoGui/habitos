@@ -493,10 +493,13 @@ export default function Gym(): React.JSX.Element {
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
-    const [w, b] = await Promise.all([window.api.gym.listWorkouts(), window.api.gym.listBioimpedance()])
-    setWorkouts(w as Workout[])
-    setBio(b as Bio[])
-    setLoading(false)
+    try {
+      const [w, b] = await Promise.all([window.api.gym.listWorkouts(), window.api.gym.listBioimpedance()])
+      setWorkouts(w as Workout[])
+      setBio(b as Bio[])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleSaveWorkout(data: object) {
