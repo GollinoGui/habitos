@@ -400,29 +400,27 @@ export default function Habits(): React.JSX.Element {
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-3xl">
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-text-primary">Hábitos</h1>
           <p className="text-text-secondary text-sm">{active.length} ativos · {completedToday.size} concluídos hoje</p>
         </div>
-        <div className="flex gap-2">
-          {activeTab === 'habits' && (
-            <>
-              <button
-                onClick={() => setShowInactive(!showInactive)}
-                className="px-3 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm"
-              >
-                {showInactive ? 'Ver ativos' : 'Ver inativos'}
-              </button>
-              <button
-                onClick={() => { setEditingHabit(null); setShowModal(true) }}
-                className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors animate-jump-in"
-              >
-                <Plus size={16} /> Novo hábito
-              </button>
-            </>
-          )}
-        </div>
+        {activeTab === 'habits' && (
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setShowInactive(!showInactive)}
+              className="px-3 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm"
+            >
+              {showInactive ? 'Ativos' : 'Inativos'}
+            </button>
+            <button
+              onClick={() => { setEditingHabit(null); setShowModal(true) }}
+              className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors animate-jump-in"
+            >
+              <Plus size={15} /> Novo
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

@@ -534,8 +534,8 @@ export default function Gym(): React.JSX.Element {
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-3xl">
-      <div className="flex justify-between items-start gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Academia</h1>
           <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>{workouts.length} treino{workouts.length !== 1 ? 's' : ''} registrado{workouts.length !== 1 ? 's' : ''}</p>
         </div>

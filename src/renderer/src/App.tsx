@@ -151,12 +151,13 @@ function MobileSwipeLayout(): React.JSX.Element {
   return (
     <div
       className="flex flex-col h-screen overflow-hidden bg-bg-primary"
+      style={{ height: '100dvh' }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
       <TopBar />
       <main
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4"
         style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div key={location.pathname} className="animate-fadeIn">

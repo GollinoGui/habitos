@@ -18,7 +18,11 @@ export default function TopBar(): React.JSX.Element {
   const pct = next ? Math.min(100, Math.round((xpInLevel / xpToNext) * 100)) : 100
 
   return (
-    <header className="h-12 bg-bg-secondary border-b border-bg-border flex items-center px-3 gap-3 shrink-0">
+    <header
+      className="bg-bg-secondary border-b border-bg-border shrink-0"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
+    <div className="h-12 flex items-center px-3 gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
           <span className="text-xs font-semibold text-accent-gold flex items-center gap-0.5 shrink-0">
@@ -44,6 +48,7 @@ export default function TopBar(): React.JSX.Element {
         <Zap size={13} fill="currentColor" />
         {total_xp}
       </div>
+    </div>
     </header>
   )
 }

@@ -538,8 +538,9 @@ export default function Finance(): React.JSX.Element {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="grid grid-cols-5 gap-0.5 bg-bg-secondary border border-bg-border rounded-xl p-1">
+      {/* Tabs — scrolláveis no mobile */}
+      <div className="scroll-x bg-bg-secondary border border-bg-border rounded-xl p-1">
+        <div className="flex gap-0.5 sm:grid sm:grid-cols-5 min-w-max sm:min-w-0">
         {[
           { key: 'pending' as const, label: 'A Pagar', count: pendingExpenses.length },
           { key: 'history' as const, label: 'Histórico', count: 0 },
@@ -548,7 +549,7 @@ export default function Finance(): React.JSX.Element {
           { key: 'categories' as const, label: 'Categ.', count: 0 }
         ].map(({ key, label, count }) => (
           <button key={key} onClick={() => setActiveTab(key)}
-            className={`relative py-2 px-0.5 rounded-lg text-[10px] font-medium transition-colors text-center leading-tight ${
+            className={`relative py-2 px-3 sm:px-0.5 rounded-lg text-[11px] sm:text-[10px] font-medium transition-colors text-center leading-tight whitespace-nowrap ${
               activeTab === key ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'
             }`}>
             {label}
@@ -559,6 +560,7 @@ export default function Finance(): React.JSX.Element {
             )}
           </button>
         ))}
+        </div>
       </div>
 
       {/* ── TAB: A Pagar ─────────────────────────────────────────────────────── */}

@@ -203,7 +203,7 @@ export default function Reading(): React.JSX.Element {
       </div>
 
       {/* Type filter — horizontal scroll */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="scroll-x flex gap-2 pb-1">
         {TYPE_TABS.map(({ value, label }) => (
           <button key={value} onClick={() => setTypeFilter(value)}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -217,7 +217,7 @@ export default function Reading(): React.JSX.Element {
       </div>
 
       {/* Status filter — horizontal scroll */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="scroll-x flex gap-2 pb-1">
         {STATUS_TABS.map(({ value, label }) => (
           <button key={value} onClick={() => setStatusFilter(value)}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${

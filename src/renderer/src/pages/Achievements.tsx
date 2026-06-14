@@ -164,10 +164,10 @@ export default function Achievements(): React.JSX.Element {
           <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2">
             <Trophy size={14} /> Badges ({unlockedCount}/{ALL_BADGES.length})
           </h2>
-          <div className="flex gap-1 flex-wrap">
+          <div className="scroll-x flex gap-1">
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setBadgeFilter(cat)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                   badgeFilter === cat ? 'bg-accent-purple text-white' : 'bg-bg-secondary border border-bg-border text-text-secondary hover:text-text-primary'
                 }`}>
                 {cat}

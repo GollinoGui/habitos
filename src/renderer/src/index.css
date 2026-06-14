@@ -33,11 +33,18 @@
 
 button, a, input, select, textarea, [role="button"] {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, select, textarea {
+  /* Prevents iOS/Android auto-zoom when font-size < 16px */
+  font-size: max(16px, 1em);
 }
 
 html, body, #root {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -80,6 +87,22 @@ body {
 .safe-b {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+.safe-t {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Horizontal scroll strip com scrollbar oculta */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
 
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out;

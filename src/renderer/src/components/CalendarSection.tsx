@@ -47,6 +47,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
   const [showAddForm, setShowAddForm] = useState(false)
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const calSwipeRef = useRef<{ x: number; y: number } | null>(null)
+  const detailRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     window.api.habits.list().then(h => {
@@ -86,6 +87,12 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
       setNote((n as { content: string } | null)?.content || '')
     }
     loadNote()
+    // On mobile (below xl breakpoint), scroll detail panel into view
+    if (window.innerWidth < 1280) {
+      requestAnimationFrame(() => {
+        detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
   }, [selectedDate, allEvents])
 
   useEffect(() => {
@@ -322,7 +329,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
 
         {/* Day detail panel — only rendered after clicking a day */}
         {selectedDate && (
-          <div className="xl:w-72 shrink-0 border border-bg-border rounded-xl p-3 sm:p-4 bg-bg-primary space-y-4 animate-fadeIn">
+          <div ref={detailRef} className="xl:w-72 shrink-0 border border-bg-border rounded-xl p-3 sm:p-4 bg-bg-primary space-y-4 animate-fadeIn">
             <h3 className="text-sm font-semibold text-text-primary capitalize">{selectedLabel}</h3>
 
             {/* Events & Tasks */}

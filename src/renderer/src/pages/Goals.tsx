@@ -594,19 +594,19 @@ export default function Goals(): React.JSX.Element {
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-2xl">
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-text-primary">Metas</h1>
           <p className="text-text-secondary text-sm">{active.length} ativa(s) · {completed.length} concluída(s)</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <button onClick={() => { setEditFolder(null); setShowFolderModal(true) }}
-            className="flex items-center gap-2 px-3 py-2 border border-bg-border text-text-secondary hover:bg-bg-border rounded-lg text-sm transition-colors">
-            <FolderPlus size={15} /> Nova pasta
+            className="flex items-center gap-1.5 px-2.5 py-2 border border-bg-border text-text-secondary hover:bg-bg-border rounded-lg text-sm transition-colors">
+            <FolderPlus size={15} /><span className="hidden sm:inline">Nova pasta</span>
           </button>
           <button onClick={() => openNewGoal(null)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors animate-jump-in">
-            <Plus size={16} /> Nova meta
+            className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors animate-jump-in">
+            <Plus size={15} /> Meta
           </button>
         </div>
       </div>

@@ -330,6 +330,85 @@ export default function Dashboard(): React.JSX.Element {
         )}
       </div>
 
+      {/* Mobile widget strip — horizontal scroll, hidden on desktop */}
+      {!focusMode && (() => {
+        const hasAny = showW('gym') || (showW('sleep') && lastSleep) ||
+          (showW('addictions') && addictions.length > 0) ||
+          (showW('reading') && todayReadingMins > 0) ||
+          (showW('achievements') && achievements.length > 0)
+        if (!hasAny) return null
+        return (
+          <div className="lg:hidden scroll-x -mx-0 pb-0.5">
+            <div className="flex gap-2 w-max">
+              {showW('gym') && (
+                <button
+                  onClick={() => navigate('/gym')}
+                  className={`flex-none flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-colors ${
+                    workoutToday ? 'border-accent-green bg-emerald-950/30' : 'border-bg-border bg-bg-secondary'
+                  }`}
+                  style={{ minWidth: 72 }}
+                >
+                  <Dumbbell size={20} className={workoutToday ? 'text-accent-green' : 'text-text-muted'} />
+                  <span className="text-[11px] font-medium text-text-muted leading-none">Academia</span>
+                  <span className={`text-[10px] leading-none ${workoutToday ? 'text-accent-green' : 'text-text-muted opacity-50'}`}>
+                    {workoutToday ? '✓ hoje' : 'sem treino'}
+                  </span>
+                </button>
+              )}
+              {showW('sleep') && lastSleep && (
+                <button
+                  onClick={() => navigate('/sleep')}
+                  className="flex-none flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border border-bg-border bg-bg-secondary"
+                  style={{ minWidth: 72 }}
+                >
+                  <Moon size={20} className="text-accent-blue" />
+                  <span className="text-[11px] font-medium text-text-muted leading-none">Sono</span>
+                  <span className="text-[10px] font-bold text-accent-blue leading-none">{sleepDuration(lastSleep.bedtime, lastSleep.wake_time)}</span>
+                </button>
+              )}
+              {showW('addictions') && addictions.length > 0 && (() => {
+                const a = addictions[0]
+                const days = Math.floor((Date.now() - new Date(a.started_free_at).getTime()) / 86400000)
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => navigate('/addictions')}
+                    className="flex-none flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border border-bg-border bg-bg-secondary"
+                    style={{ minWidth: 72 }}
+                  >
+                    <ShieldOff size={20} className="text-accent-blue" />
+                    <span className="text-[11px] font-medium text-text-muted leading-none">Vícios</span>
+                    <span className="text-[10px] font-bold text-accent-blue leading-none">{days}d livre</span>
+                  </button>
+                )
+              })()}
+              {showW('reading') && todayReadingMins > 0 && (
+                <button
+                  onClick={() => navigate('/reading')}
+                  className="flex-none flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border border-bg-border bg-bg-secondary"
+                  style={{ minWidth: 72 }}
+                >
+                  <span className="text-xl leading-none">📚</span>
+                  <span className="text-[11px] font-medium text-text-muted leading-none">Mídia</span>
+                  <span className="text-[10px] font-bold text-accent-purple leading-none">{todayReadingMins}min</span>
+                </button>
+              )}
+              {showW('achievements') && achievements.length > 0 && (
+                <button
+                  onClick={() => navigate('/achievements')}
+                  className="flex-none flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border border-bg-border bg-bg-secondary"
+                  style={{ minWidth: 72 }}
+                >
+                  <Trophy size={20} className="text-accent-gold" />
+                  <span className="text-[11px] font-medium text-text-muted leading-none">Conquistas</span>
+                  <span className="text-[10px] leading-none">{achievements.slice(0, 3).map(a => a.icon).join('')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Main grid */}
       <div className={`grid gap-4 items-start ${focusMode ? '' : 'lg:grid-cols-3'}`}>
         {/* Habits + weekly summary */}
@@ -511,9 +590,9 @@ export default function Dashboard(): React.JSX.Element {
           )}
         </div>
 
-        {/* Widgets */}
+        {/* Widgets sidebar — desktop only (mobile usa o strip horizontal acima) */}
         {!focusMode && (
-          <div className="space-y-3">
+          <div className="hidden lg:block space-y-3">
             {/* Gym */}
             {showW('gym') && (
               <div

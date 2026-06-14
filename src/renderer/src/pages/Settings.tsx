@@ -113,6 +113,7 @@ export default function Settings(): React.JSX.Element {
   const [partialSyncCounts, setPartialSyncCounts] = useState<Record<string, number> | null>(null)
 
   const isDesktop = !!window.electronAuth
+  const isMobileApp = !isDesktop && !window.__demoMode__
 
   // Profile name
   const [profileName, setProfileName] = useState('')
@@ -371,10 +372,10 @@ export default function Settings(): React.JSX.Element {
 
   return (
     <div className="max-w-2xl space-y-6 animate-fadeIn">
-      <h1 className="text-2xl font-bold text-text-primary">Configurações</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Configurações</h1>
 
       {/* ── Perfil ──────────────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <User size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary">Perfil</h2>
@@ -412,15 +413,15 @@ export default function Settings(): React.JSX.Element {
           )}
         </div>
         {!window.__demoMode__ && (
-          <div className="flex items-center gap-3 pt-4 border-t border-bg-border">
+          <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-bg-border">
             <MonitorPlay size={18} className="text-text-muted shrink-0" />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary">Modo Demo</p>
               <p className="text-xs text-text-muted">Abre uma janela com dados fictícios para demonstração</p>
             </div>
             <button
               onClick={() => window.api.demo.open()}
-              className="flex items-center gap-2 px-4 py-2 bg-accent-purple/15 hover:bg-accent-purple/25 border border-accent-purple/30 text-accent-purple text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-accent-purple/15 hover:bg-accent-purple/25 border border-accent-purple/30 text-accent-purple text-sm font-medium rounded-lg transition-colors shrink-0"
             >
               <MonitorPlay size={15} />
               Abrir Demo
@@ -430,7 +431,7 @@ export default function Settings(): React.JSX.Element {
       </div>
 
       {/* ── Aparência ───────────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-5">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-5">
         <div className="flex items-center gap-3">
           <Palette size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary">Aparência</h2>
@@ -494,8 +495,8 @@ export default function Settings(): React.JSX.Element {
         </div>
       </div>
 
-      {/* ── Ordem das seções ─────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      {/* ── Ordem das seções (desktop only — mobile usa bottom nav fixo) ── */}
+      {!isMobileApp && <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <GripVertical size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary flex-1">Ordem das seções</h2>
@@ -525,10 +526,10 @@ export default function Settings(): React.JSX.Element {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* ── Seções visíveis ──────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <Eye size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary">Seções visíveis</h2>
@@ -539,12 +540,12 @@ export default function Settings(): React.JSX.Element {
             const hidden = hiddenSections.includes(s.key)
             return (
               <button key={s.key} onClick={() => toggleSection(s.key)}
-                className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-left ${
+                className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left min-w-0 ${
                   hidden ? 'border-bg-border text-text-muted bg-bg-primary' : 'border-accent-purple/40 bg-accent-purple/10 text-text-primary'
                 }`}>
-                <span>{s.emoji}</span>
-                <span className="text-sm font-medium flex-1">{s.label}</span>
-                {hidden ? <EyeOff size={14} className="shrink-0" /> : <Eye size={14} className="shrink-0 text-accent-purple" />}
+                <span className="shrink-0">{s.emoji}</span>
+                <span className="text-sm font-medium flex-1 truncate">{s.label}</span>
+                {hidden ? <EyeOff size={13} className="shrink-0" /> : <Eye size={13} className="shrink-0 text-accent-purple" />}
               </button>
             )
           })}
@@ -552,7 +553,7 @@ export default function Settings(): React.JSX.Element {
       </div>
 
       {/* ── Lembrete diário ─────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-5">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-5">
         <div className="flex items-center gap-3">
           <Bell size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary">Lembrete diário</h2>
@@ -566,30 +567,30 @@ export default function Settings(): React.JSX.Element {
           {notif.enabled ? <Bell size={15} className="text-accent-purple" /> : <BellOff size={15} className="text-text-secondary" />}
         </label>
         {notif.enabled && (
-          <div className="flex items-center gap-4">
-            <label className="text-sm text-text-secondary">Horário:</label>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm text-text-secondary shrink-0">Horário:</label>
+            <div className="flex items-center gap-2 shrink-0">
               <select value={notif.hour} onChange={e => setNotif(s => ({ ...s, hour: Number(e.target.value) }))}
-                className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple">
+                className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple">
                 {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2,'0')}</option>)}
               </select>
               <span className="text-text-primary font-semibold">:</span>
               <select value={notif.minute} onChange={e => setNotif(s => ({ ...s, minute: Number(e.target.value) }))}
-                className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple">
+                className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple">
                 {[0,5,10,15,20,25,30,35,40,45,50,55].map(m => <option key={m} value={m}>{String(m).padStart(2,'0')}</option>)}
               </select>
             </div>
-            <span className="text-text-secondary text-sm">Todo dia às {hourStr}:{minStr}</span>
+            <span className="text-text-muted text-xs">Todo dia às {hourStr}:{minStr}</span>
           </div>
         )}
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={handleNotifSave} className="px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors">
+          <button onClick={handleNotifSave} className="flex-1 sm:flex-none px-4 py-2.5 bg-accent-purple hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors text-center">
             {saved ? 'Salvo!' : 'Salvar'}
           </button>
           {notif.enabled && (
-            <button onClick={handleTest} className="flex items-center gap-2 px-4 py-2 bg-bg-border hover:bg-bg-border/70 text-text-primary text-sm font-medium rounded-lg transition-colors">
+            <button onClick={handleTest} className="flex items-center justify-center gap-2 flex-1 sm:flex-none px-4 py-2.5 bg-bg-border hover:bg-bg-border/70 text-text-primary text-sm font-medium rounded-lg transition-colors">
               <Send size={14} />
-              {testStatus === 'sent' ? 'Enviada!' : 'Testar notificação'}
+              {testStatus === 'sent' ? 'Enviada!' : 'Testar'}
             </button>
           )}
         </div>
@@ -604,7 +605,7 @@ export default function Settings(): React.JSX.Element {
       </div>
 
       {/* ── Exportar ────────────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <Download size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary">Exportar dados</h2>
@@ -613,7 +614,7 @@ export default function Settings(): React.JSX.Element {
           Exporta todos os seus dados (hábitos, treinos, metas, diário, sono e mais) como um arquivo JSON.
         </p>
         <button onClick={handleExport} disabled={exporting}
-          className="flex items-center gap-2 px-4 py-2 bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border border-accent-green/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+          className="flex items-center justify-center gap-2 px-4 py-2.5 w-full sm:w-auto bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border border-accent-green/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
           <Download size={14} />
           {exportDone ? 'Download iniciado!' : exporting ? 'Exportando...' : 'Baixar backup JSON'}
         </button>
@@ -702,7 +703,7 @@ export default function Settings(): React.JSX.Element {
       )}
 
       {/* ── Importar ────────────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <Upload size={20} className="text-accent-purple" />
           <h2 className="text-lg font-semibold text-text-primary">Importar dados</h2>
@@ -712,9 +713,9 @@ export default function Settings(): React.JSX.Element {
         </p>
         <input ref={importInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
         <button onClick={() => importInputRef.current?.click()} disabled={importing}
-          className="flex items-center gap-2 px-4 py-2 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+          className="flex items-center justify-center gap-2 px-4 py-2.5 w-full sm:w-auto bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
           <Upload size={14} />
-          {importing ? 'Importando...' : importStatus === 'done' ? 'Importado com sucesso!' : importStatus === 'error' ? 'Arquivo inválido' : 'Selecionar backup JSON'}
+          {importing ? 'Importando...' : importStatus === 'done' ? 'Importado!' : importStatus === 'error' ? 'Arquivo inválido' : 'Selecionar backup JSON'}
         </button>
         {importStatus === 'error' && (
           <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-700/40 rounded-lg">
@@ -725,7 +726,7 @@ export default function Settings(): React.JSX.Element {
       </div>
 
       {/* ── Resetar ─────────────────────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <Trash2 size={20} className="text-accent-red" />
           <h2 className="text-lg font-semibold text-text-primary">Resetar dados</h2>
@@ -739,16 +740,16 @@ export default function Settings(): React.JSX.Element {
           {RESET_SECTIONS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
         {resetTarget && (
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input type="checkbox" checked={resetConfirm} onChange={e => setResetConfirm(e.target.checked)} className="accent-accent-red" />
-            <span className="text-sm text-accent-red">
-              Confirmo que quero apagar permanentemente os dados de "{RESET_SECTIONS.find(s => s.key === resetTarget)?.label}"
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={resetConfirm} onChange={e => setResetConfirm(e.target.checked)} className="accent-accent-red mt-0.5 shrink-0" />
+            <span className="text-sm text-accent-red break-words">
+              Confirmo que quero apagar permanentemente "{RESET_SECTIONS.find(s => s.key === resetTarget)?.label}"
             </span>
           </label>
         )}
         {resetTarget && (
           <button onClick={handleReset} disabled={!resetConfirm}
-            className="flex items-center gap-2 px-4 py-2 bg-red-950/30 hover:bg-red-950/50 text-accent-red border border-accent-red/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40">
+            className="flex items-center justify-center gap-2 px-4 py-2.5 w-full sm:w-auto bg-red-950/30 hover:bg-red-950/50 text-accent-red border border-accent-red/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40">
             <Trash2 size={14} />
             {resetDone ? 'Dados apagados!' : 'Resetar dados'}
           </button>
@@ -756,43 +757,45 @@ export default function Settings(): React.JSX.Element {
       </div>
 
       {/* ── Exportar relatório Excel ─────────────────────────────────────────── */}
-      <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <Download size={20} className="text-accent-green" />
-          <h2 className="text-lg font-semibold text-text-primary">Exportar Relatório Excel</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Relatório Excel</h2>
         </div>
         <p className="text-sm text-text-secondary">
           Gera um arquivo <span className="font-medium text-text-primary">.xlsx</span> com hábitos, sono, academia e finanças do mês selecionado.
         </p>
-        <div className="flex gap-3 items-end flex-wrap">
-          <div>
-            <label className="text-xs text-text-muted block mb-1">Mês</label>
-            <select
-              value={excelMonth}
-              onChange={e => setExcelMonth(Number(e.target.value))}
-              className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-green"
-            >
-              {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
-                <option key={i} value={i + 1}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-text-muted block mb-1">Ano</label>
-            <select
-              value={excelYear}
-              onChange={e => setExcelYear(Number(e.target.value))}
-              className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-green"
-            >
-              {[now.getFullYear() - 1, now.getFullYear()].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div>
+              <label className="text-xs text-text-muted block mb-1">Mês</label>
+              <select
+                value={excelMonth}
+                onChange={e => setExcelMonth(Number(e.target.value))}
+                className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-green"
+              >
+                {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-text-muted block mb-1">Ano</label>
+              <select
+                value={excelYear}
+                onChange={e => setExcelYear(Number(e.target.value))}
+                className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-green"
+              >
+                {[now.getFullYear() - 1, now.getFullYear()].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <button
             onClick={handleExportExcel}
             disabled={excelExporting}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-green/15 hover:bg-accent-green/25 border border-accent-green/30 text-accent-green text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 w-full sm:w-auto bg-accent-green/15 hover:bg-accent-green/25 border border-accent-green/30 text-accent-green text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             <Download size={15} />
             {excelExporting ? 'Gerando...' : excelStatus === 'done' ? '✓ Exportado!' : excelStatus === 'error' ? 'Erro ao exportar' : 'Exportar Excel'}

@@ -249,14 +249,14 @@ export default function Addictions(): React.JSX.Element {
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-2xl">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Vícios & Sobriedade</h1>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down leading-tight">Vícios &amp; Sobriedade</h1>
           <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>{addictions.length} monitorado(s)</p>
         </div>
         <button onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold animate-jump-in">
-          <Plus size={16} /> Adicionar
+          className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold animate-jump-in shrink-0">
+          <Plus size={15} /> Adicionar
         </button>
       </div>
 
