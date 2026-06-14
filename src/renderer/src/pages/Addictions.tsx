@@ -211,6 +211,7 @@ export default function Addictions(): React.JSX.Element {
   const [relapseId, setRelapseId] = useState<number | null>(null)
   const [expandedHistory, setExpandedHistory] = useState<Set<number>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+  const [loading, setLoading] = useState(true)
 
   function askDelete(message: string, onConfirm: () => Promise<void>): void {
     setConfirmDelete({ message, onConfirm })
@@ -218,6 +219,7 @@ export default function Addictions(): React.JSX.Element {
 
   const load = useCallback(async () => {
     setAddictions(await window.api.addictions.list())
+    setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -239,6 +241,8 @@ export default function Addictions(): React.JSX.Element {
       load()
     })
   }
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-2xl">

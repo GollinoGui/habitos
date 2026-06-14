@@ -213,6 +213,7 @@ export default function Finance(): React.JSX.Element {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [showBackupBanner, setShowBackupBanner] = useState(false)
   const [activeTab, setActiveTab] = useState<'pending' | 'history' | 'bills' | 'accounts' | 'categories'>('pending')
+  const [loading, setLoading] = useState(true)
 
   // Transaction form
   const [showTxForm, setShowTxForm] = useState(false)
@@ -295,6 +296,7 @@ export default function Finance(): React.JSX.Element {
     setSummary(sum as Summary)
     setBills(bls as Bill[])
     setAccounts(accs as Account[])
+    setLoading(false)
   }
 
   function shiftMonth(delta: number) {
@@ -442,6 +444,8 @@ export default function Finance(): React.JSX.Element {
     onConfirm: confirmPayment,
     onDelete: (id: number) => askDelete('Excluir esta transação permanentemente?', async () => { await window.api.finance.transactions.delete(id); loadAll() })
   }
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-6 animate-fadeIn">

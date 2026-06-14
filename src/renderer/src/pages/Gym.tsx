@@ -484,6 +484,7 @@ export default function Gym(): React.JSX.Element {
   const [showBioModal, setShowBioModal] = useState(false)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+  const [loading, setLoading] = useState(true)
 
   function askDelete(message: string, onConfirm: () => Promise<void>): void {
     setConfirmDelete({ message, onConfirm })
@@ -495,6 +496,7 @@ export default function Gym(): React.JSX.Element {
     const [w, b] = await Promise.all([window.api.gym.listWorkouts(), window.api.gym.listBioimpedance()])
     setWorkouts(w as Workout[])
     setBio(b as Bio[])
+    setLoading(false)
   }
 
   async function handleSaveWorkout(data: object) {
@@ -516,6 +518,8 @@ export default function Gym(): React.JSX.Element {
     '% Gordura': b.body_fat_pct,
     Músculo: b.muscle_mass_kg
   }))
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-3xl">

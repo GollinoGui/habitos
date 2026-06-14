@@ -68,6 +68,7 @@ export default function Reading(): React.JSX.Element {
   const [author, setAuthor] = useState('')
   const [totalPages, setTotalPages] = useState('')
   const [emoji, setEmoji] = useState('📚')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadAll() }, [])
 
@@ -78,6 +79,7 @@ export default function Reading(): React.JSX.Element {
     ])
     setItems(its as MediaItem[])
     setTodayMins(mins as number)
+    setLoading(false)
   }
 
   async function addItem() {
@@ -160,6 +162,8 @@ export default function Reading(): React.JSX.Element {
     { value: 'paused',   label: 'Pausados' },
     { value: 'wishlist', label: 'Lista de desejos' },
   ]
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-6 animate-fadeIn">

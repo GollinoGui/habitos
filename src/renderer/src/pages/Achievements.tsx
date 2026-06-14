@@ -196,7 +196,7 @@ export default function Achievements(): React.JSX.Element {
                 </div>
                 <p className={`text-xs font-medium leading-tight ${unlocked ? 'text-text-primary' : 'text-text-muted'}`}>{badge.name}</p>
                 {unlocked && achievement && (
-                  <p className="text-xs text-text-muted mt-1">{format(new Date(achievement.unlocked_at.replace(' ', 'T') + 'Z'), 'dd/MM/yy')}</p>
+                  <p className="text-xs text-text-muted mt-1">{format(new Date(achievement.unlocked_at.replace(' ', 'T')), 'dd/MM/yy')}</p>
                 )}
               </div>
             )
@@ -217,7 +217,7 @@ export default function Achievements(): React.JSX.Element {
                 style={{ animationDelay: `${i * 35}ms` }}>
                 <span className="text-accent-gold font-bold text-sm w-14 text-right shrink-0">+{h.amount}</span>
                 <span className="text-text-secondary text-sm flex-1">{h.reason}</span>
-                <span className="text-text-muted text-xs shrink-0">{format(new Date(h.created_at.replace(' ', 'T') + 'Z'), 'dd/MM HH:mm')}</span>
+                <span className="text-text-muted text-xs shrink-0">{format(new Date(h.created_at.replace(' ', 'T')), 'dd/MM HH:mm')}</span>
               </div>
             ))}
           </div>

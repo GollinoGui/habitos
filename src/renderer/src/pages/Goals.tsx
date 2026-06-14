@@ -427,6 +427,7 @@ export default function Goals(): React.JSX.Element {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [confirmGoal, setConfirmGoal] = useState<Goal | null>(null)
   const [undoToasts, setUndoToasts] = useState<UndoToast[]>([])
+  const [loading, setLoading] = useState(true)
 
   function showUndo(message: string, onUndo: () => void) {
     const id = ++undoIdCounter
@@ -449,6 +450,7 @@ export default function Goals(): React.JSX.Element {
     } catch {
       setFolders([])
     }
+    setLoading(false)
   }
 
   async function handleSaveGoal(data: object) {
@@ -551,6 +553,8 @@ export default function Goals(): React.JSX.Element {
   const uncategorized = active.filter(g => g.folder_id === null || !folders.find(f => f.id === g.folder_id))
   const showUncategorized = uncategorized.length > 0
   const isUncatOpen = !collapsed['uncategorized']
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-2xl">

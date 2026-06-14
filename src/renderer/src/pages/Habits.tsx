@@ -324,6 +324,7 @@ export default function Habits(): React.JSX.Element {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'habits' | 'analytics'>('habits')
   const [rangeDays, setRangeDays] = useState(30)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -344,6 +345,7 @@ export default function Habits(): React.JSX.Element {
       streakMap[habit.id] = await window.api.habits.streak(habit.id)
     }))
     setStreaks(streakMap)
+    setLoading(false)
   }
 
   async function handleSave(data: object) {
@@ -390,6 +392,8 @@ export default function Habits(): React.JSX.Element {
   const active = habits.filter(h => h.is_active)
   const inactive = habits.filter(h => !h.is_active)
   const displayed = showInactive ? inactive : active
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-3xl">

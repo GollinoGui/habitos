@@ -37,6 +37,7 @@ export default function Sleep(): React.JSX.Element {
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null)
   const [qualityVersion, setQualityVersion] = useState(0)
   const [showSaveFloat, setShowSaveFloat] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const chartRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -47,6 +48,7 @@ export default function Sleep(): React.JSX.Element {
   async function loadRecent() {
     const logs = await window.api.sleep.recent(14)
     setRecent(logs as SleepLog[])
+    setLoading(false)
   }
 
   async function loadEntry(d: string) {
@@ -164,6 +166,8 @@ export default function Sleep(): React.JSX.Element {
   }
 
   const highlightedLog = highlightedDate ? recent.find(l => l.date === highlightedDate) : null
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-7 h-7 border-2 border-accent-purple border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-6 animate-fadeIn">

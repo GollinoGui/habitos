@@ -218,7 +218,11 @@ export default function Dashboard(): React.JSX.Element {
   const progressPct = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0
 
   const xpToday = ((profile as any)?.history as any[] ?? [])
-    .filter((h: any) => (h.created_at || '').startsWith(today))
+    .filter((h: any) => {
+      if (!h.created_at) return false
+      const d = new Date(h.created_at.replace(' ', 'T'))
+      return format(d, 'yyyy-MM-dd') === today
+    })
     .reduce((s: number, h: any) => s + (h.amount as number ?? 0), 0)
 
   const pad = (n: number) => String(n).padStart(2, '0')
