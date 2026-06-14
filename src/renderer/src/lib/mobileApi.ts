@@ -280,11 +280,12 @@ function buildApi(): any {
 
       completionsByMonth: async (year: number, month: number) => {
         const m = String(month).padStart(2, '0')
+        const lastDay = String(daysInMonth(year, month)).padStart(2, '0')
         const { data } = await supabase.from('habit_completions')
           .select('completed_at, habit_id, habits!inner(color)')
           .eq('user_id', uid())
           .gte('completed_at', `${year}-${m}-01`)
-          .lte('completed_at', `${year}-${m}-31`)
+          .lte('completed_at', `${year}-${m}-${lastDay}`)
         return (data ?? []).map((c) => ({
           completed_at: c.completed_at,
           habit_id: c.habit_id,
@@ -639,10 +640,11 @@ function buildApi(): any {
     calendar: {
       eventsByMonth: async (year: number, month: number) => {
         const m = String(month).padStart(2, '0')
+        const lastDay = String(daysInMonth(year, month)).padStart(2, '0')
         const { data } = await supabase.from('calendar_events').select('*')
           .eq('user_id', uid())
           .gte('date', `${year}-${m}-01`)
-          .lte('date', `${year}-${m}-31`)
+          .lte('date', `${year}-${m}-${lastDay}`)
           .order('date').order('id')
         return data ?? []
       },
@@ -682,9 +684,10 @@ function buildApi(): any {
 
       notesByMonth: async (year: number, month: number) => {
         const m = String(month).padStart(2, '0')
+        const lastDay = String(daysInMonth(year, month)).padStart(2, '0')
         const { data } = await supabase.from('calendar_notes')
           .select('date').eq('user_id', uid())
-          .gte('date', `${year}-${m}-01`).lte('date', `${year}-${m}-31`)
+          .gte('date', `${year}-${m}-01`).lte('date', `${year}-${m}-${lastDay}`)
           .neq('content', '')
         return data ?? []
       },
@@ -719,9 +722,10 @@ function buildApi(): any {
 
       byMonth: async (year: number, month: number) => {
         const m = String(month).padStart(2, '0')
+        const lastDay = String(daysInMonth(year, month)).padStart(2, '0')
         const { data } = await supabase.from('journal_entries').select('*')
           .eq('user_id', uid())
-          .gte('date', `${year}-${m}-01`).lte('date', `${year}-${m}-31`)
+          .gte('date', `${year}-${m}-01`).lte('date', `${year}-${m}-${lastDay}`)
           .order('date', { ascending: false })
         return data ?? []
       },
@@ -880,10 +884,11 @@ function buildApi(): any {
       transactions: {
         list: async (year: number, month: number) => {
           const prefix = `${year}-${String(month).padStart(2, '0')}`
+          const lastDay = String(daysInMonth(year, month)).padStart(2, '0')
           const { data } = await supabase.from('finance_transactions')
             .select('*, finance_categories(name, icon, color), finance_accounts(name, icon, color)')
             .eq('user_id', uid())
-            .gte('date', `${prefix}-01`).lte('date', `${prefix}-31`)
+            .gte('date', `${prefix}-01`).lte('date', `${prefix}-${lastDay}`)
             .order('date', { ascending: false }).order('created_at', { ascending: false })
           return (data ?? []).map(({ finance_categories: cat, finance_accounts: acc, ...t }) => ({
             ...t,
@@ -926,9 +931,10 @@ function buildApi(): any {
 
       summary: async (year: number, month: number) => {
         const prefix = `${year}-${String(month).padStart(2, '0')}`
+        const lastDay = String(daysInMonth(year, month)).padStart(2, '0')
         const { data: txs } = await supabase.from('finance_transactions').select('type, status, amount')
           .eq('user_id', uid())
-          .gte('date', `${prefix}-01`).lte('date', `${prefix}-31`)
+          .gte('date', `${prefix}-01`).lte('date', `${prefix}-${lastDay}`)
 
         const sum = (type: string, status: string) =>
           (txs ?? []).filter(t => t.type === type && t.status === status)
