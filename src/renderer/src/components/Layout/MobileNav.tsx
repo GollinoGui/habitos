@@ -79,18 +79,23 @@ export default function MobileNav(): React.JSX.Element {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 h-20 bg-bg-secondary border-t border-bg-border z-40 safe-b overflow-hidden select-none"
+      className="fixed bottom-0 left-0 right-0 bg-bg-secondary border-t border-bg-border z-40 select-none safe-b"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Center highlight ring */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-2xl pointer-events-none"
-        style={{ backgroundColor: NAV_ITEMS[activeIndex].color + '20' }}
-      />
+      <div className="relative w-full h-20 flex items-center justify-center overflow-hidden">
+        {/* Center highlight ring — active item sits 12px above nav center */}
+        <div
+          className="absolute w-14 h-14 rounded-2xl pointer-events-none"
+          style={{
+            backgroundColor: NAV_ITEMS[activeIndex].color + '22',
+            left: '50%',
+            top: 'calc(50% - 12px)',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
 
-      <div className="relative w-full h-full flex items-center justify-center">
         {OFFSETS.map(offset => {
           const itemIndex = navMod(activeIndex + offset)
           const item = NAV_ITEMS[itemIndex]

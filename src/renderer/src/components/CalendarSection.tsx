@@ -26,7 +26,7 @@ interface HabitInfo {
 }
 
 const EVENT_COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899']
-const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const DOW_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
 export default function CalendarSection({ refreshKey, onHabitToggled }: { refreshKey?: number; onHabitToggled?: () => void }): React.JSX.Element {
   const now = new Date()
@@ -46,6 +46,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
   const [newColor, setNewColor] = useState(EVENT_COLORS[0])
   const [showAddForm, setShowAddForm] = useState(false)
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const calSwipeRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     window.api.habits.list().then(h => {
@@ -166,6 +167,20 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
     else setMonth(m => m + 1)
   }
 
+  function onCalSwipeStart(e: React.TouchEvent) {
+    calSwipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+
+  function onCalSwipeEnd(e: React.TouchEvent) {
+    if (!calSwipeRef.current) return
+    const dx = e.changedTouches[0].clientX - calSwipeRef.current.x
+    const dy = e.changedTouches[0].clientY - calSwipeRef.current.y
+    calSwipeRef.current = null
+    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    if (dx > 0) prevMonth()
+    else nextMonth()
+  }
+
   const firstDow = new Date(year, month - 1, 1).getDay()
   const daysInMonth = new Date(year, month, 0).getDate()
   const cells: (number | null)[] = [
@@ -180,23 +195,27 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
     : ''
 
   return (
-    <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
+    <div
+      className="bg-bg-secondary border border-bg-border rounded-xl p-5"
+      onTouchStart={onCalSwipeStart}
+      onTouchEnd={onCalSwipeEnd}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
           📅 Calendário
         </h2>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0">
           <button
             onClick={prevMonth}
-            className="p-1.5 rounded-lg hover:bg-bg-border transition-colors text-text-muted hover:text-text-primary"
+            className="p-1.5 rounded-lg hover:bg-bg-border transition-colors text-text-muted hover:text-text-primary shrink-0"
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-sm font-semibold text-text-primary capitalize w-44 text-center">{monthLabel}</span>
+          <span className="text-sm font-semibold text-text-primary capitalize text-center flex-1 min-w-0 truncate px-1">{monthLabel}</span>
           <button
             onClick={nextMonth}
-            className="p-1.5 rounded-lg hover:bg-bg-border transition-colors text-text-muted hover:text-text-primary"
+            className="p-1.5 rounded-lg hover:bg-bg-border transition-colors text-text-muted hover:text-text-primary shrink-0"
           >
             <ChevronRight size={16} />
           </button>
@@ -211,9 +230,9 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
               <div key={d} className="text-center text-xs font-medium text-text-muted py-1">{d}</div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5">
             {cells.map((day, idx) => {
-              if (!day) return <div key={idx} className="min-h-[64px]" />
+              if (!day) return <div key={idx} className="min-h-[48px]" />
               const m = String(month).padStart(2, '0')
               const d = String(day).padStart(2, '0')
               const dateStr = `${year}-${m}-${d}`
@@ -247,7 +266,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
                 <button
                   key={idx}
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`relative flex flex-col items-center py-2 px-1 rounded-lg border transition-all duration-100 min-h-[64px] ${dayBorderClass}`}
+                  className={`relative flex flex-col items-center py-1.5 px-0.5 rounded-lg border transition-all duration-100 min-h-[48px] ${dayBorderClass}`}
                 >
                   <span className={`text-sm leading-none mb-1.5 ${
                     isToday ? 'font-bold text-accent-purple' :

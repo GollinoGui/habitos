@@ -15,6 +15,7 @@
     "build:mobile": "vite build --config vite.mobile.config.ts",
     "cap:sync": "npm run build:mobile && npx cap sync",
     "cap:android": "npm run build:mobile && npx cap sync && npx cap open android",
+    "cap:apk": "npm run build:mobile && npx cap sync && cd android && gradlew assembleRelease",
     "icon:generate": "npx @capacitor/assets generate --iconBackgroundColor '#0f0f0f' --iconBackgroundColorDark '#0f0f0f' --splashBackgroundColor '#0f0f0f' --splashBackgroundColorDark '#0f0f0f' --android"
   },
   "dependencies": {

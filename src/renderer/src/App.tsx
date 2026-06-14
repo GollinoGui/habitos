@@ -134,11 +134,15 @@ function MobileSwipeLayout(): React.JSX.Element {
     touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   }
 
+  const NO_SWIPE_ROUTES = ['/calendar', '/journal', '/reading', '/finance']
+
   function onTouchEnd(e: React.TouchEvent) {
     if (!touchRef.current) return
     const dx = e.changedTouches[0].clientX - touchRef.current.x
     const dy = e.changedTouches[0].clientY - touchRef.current.y
     touchRef.current = null
+    // Disable page swipe on routes that use horizontal gestures internally
+    if (NO_SWIPE_ROUTES.some(r => location.pathname.startsWith(r))) return
     // Require clearly horizontal swipe: 80px min and more horizontal than vertical
     if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return
     navigate(NAV_ITEMS[navMod(activeIndex + (dx < 0 ? 1 : -1))].to)
@@ -151,7 +155,10 @@ function MobileSwipeLayout(): React.JSX.Element {
       onTouchEnd={onTouchEnd}
     >
       <TopBar />
-      <main className="flex-1 overflow-y-auto p-4 pb-24">
+      <main
+        className="flex-1 overflow-y-auto p-4"
+        style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/habits" element={<Habits />} />
