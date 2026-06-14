@@ -156,9 +156,10 @@ function MobileSwipeLayout(): React.JSX.Element {
     >
       <TopBar />
       <main
-        className="flex-1 overflow-y-auto p-4"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4"
         style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
       >
+        <div key={location.pathname} className="animate-fadeIn">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/habits" element={<Habits />} />
@@ -174,6 +175,7 @@ function MobileSwipeLayout(): React.JSX.Element {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/analytics" element={<Analytics />} />
         </Routes>
+        </div>
       </main>
       <MobileNav />
     </div>

@@ -489,35 +489,35 @@ export default function Finance(): React.JSX.Element {
 
       {/* Dashboard */}
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
           {/* Receitas */}
-          <div className="bg-bg-secondary border border-accent-green/20 rounded-xl p-3 text-center">
-            <p className="text-xs text-text-muted mb-0.5">Receitas</p>
-            <p className="text-sm font-bold text-accent-green">{fmt(summary.income)}</p>
+          <div className="bg-bg-secondary border border-accent-green/20 rounded-xl p-2.5 text-center">
+            <p className="text-[11px] text-text-muted mb-0.5">Receitas</p>
+            <p className="text-sm font-bold text-accent-green leading-tight">{fmt(summary.income)}</p>
             {summary.pendingIncome > 0 && (
-              <p className="text-xs text-text-muted mt-0.5">+{fmt(summary.pendingIncome)} a receber</p>
+              <p className="text-[10px] text-text-muted mt-0.5 leading-tight">+{fmt(summary.pendingIncome)} a receber</p>
             )}
           </div>
 
           {/* Já paguei */}
-          <div className="bg-bg-secondary border border-red-500/20 rounded-xl p-3 text-center">
+          <div className="bg-bg-secondary border border-red-500/20 rounded-xl p-2.5 text-center">
             <div className="flex items-center justify-center gap-1 mb-0.5">
               <CheckCircle2 size={10} className="text-accent-green" />
-              <p className="text-xs text-text-muted">Já paguei</p>
+              <p className="text-[11px] text-text-muted">Já paguei</p>
             </div>
-            <p className="text-sm font-bold text-accent-red">{fmt(summary.paidExpense)}</p>
+            <p className="text-sm font-bold text-accent-red leading-tight">{fmt(summary.paidExpense)}</p>
             {summary.pendingExpense > 0 && (
-              <p className="text-xs text-yellow-400 mt-0.5">+{fmt(summary.pendingExpense)} falta</p>
+              <p className="text-[10px] text-yellow-400 mt-0.5 leading-tight">+{fmt(summary.pendingExpense)} falta</p>
             )}
           </div>
 
           {/* Vai sobrar */}
-          <div className={`rounded-xl p-3 text-center border ${summary.projectedBalance >= 0 ? 'bg-emerald-950/30 border-accent-green/30' : 'bg-red-950/30 border-accent-red/30'}`}>
-            <p className="text-xs text-text-muted mb-0.5">Vai sobrar</p>
-            <p className={`text-sm font-bold ${summary.projectedBalance >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+          <div className={`col-span-2 sm:col-span-1 rounded-xl p-2.5 text-center border ${summary.projectedBalance >= 0 ? 'bg-emerald-950/30 border-accent-green/30' : 'bg-red-950/30 border-accent-red/30'}`}>
+            <p className="text-[11px] text-text-muted mb-0.5">Vai sobrar</p>
+            <p className={`text-sm font-bold leading-tight ${summary.projectedBalance >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
               {fmt(summary.projectedBalance)}
             </p>
-            <p className="text-xs text-text-muted mt-0.5">após tudo pago</p>
+            <p className="text-[10px] text-text-muted mt-0.5">após tudo pago</p>
           </div>
         </div>
 
@@ -539,19 +539,24 @@ export default function Finance(): React.JSX.Element {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 overflow-x-auto scrollbar-none">
+      <div className="grid grid-cols-5 gap-0.5 bg-bg-secondary border border-bg-border rounded-xl p-1">
         {[
-          { key: 'pending' as const, label: pendingExpenses.length > 0 ? `A Pagar (${pendingExpenses.length})` : 'A Pagar' },
-          { key: 'history' as const, label: 'Histórico' },
-          { key: 'bills' as const, label: 'Fixas' },
-          { key: 'accounts' as const, label: 'Bancos' },
-          { key: 'categories' as const, label: 'Categ.' }
-        ].map(({ key, label }) => (
+          { key: 'pending' as const, label: 'A Pagar', count: pendingExpenses.length },
+          { key: 'history' as const, label: 'Histórico', count: 0 },
+          { key: 'bills' as const, label: 'Fixas', count: 0 },
+          { key: 'accounts' as const, label: 'Bancos', count: 0 },
+          { key: 'categories' as const, label: 'Categ.', count: 0 }
+        ].map(({ key, label, count }) => (
           <button key={key} onClick={() => setActiveTab(key)}
-            className={`shrink-0 py-2 px-3 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`relative py-2 px-0.5 rounded-lg text-[10px] font-medium transition-colors text-center leading-tight ${
               activeTab === key ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'
             }`}>
             {label}
+            {count > 0 && (
+              <span className={`absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center px-0.5 ${activeTab === key ? 'bg-white text-accent-purple' : 'bg-accent-red text-white'}`}>
+                {count > 9 ? '9+' : count}
+              </span>
+            )}
           </button>
         ))}
       </div>

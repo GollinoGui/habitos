@@ -87,12 +87,16 @@ export default function MobileNav(): React.JSX.Element {
       <div className="relative w-full h-20 flex items-center justify-center overflow-hidden">
         {/* Center highlight ring — active item sits 12px above nav center */}
         <div
-          className="absolute w-14 h-14 rounded-2xl pointer-events-none"
+          className="absolute rounded-2xl pointer-events-none"
           style={{
+            width: `${ITEM_WIDTH}px`,
+            height: '56px',
             backgroundColor: NAV_ITEMS[activeIndex].color + '22',
+            border: `1.5px solid ${NAV_ITEMS[activeIndex].color}44`,
             left: '50%',
             top: 'calc(50% - 12px)',
             transform: 'translate(-50%, -50%)',
+            transition: 'background-color 300ms ease, border-color 300ms ease',
           }}
         />
 
@@ -133,7 +137,7 @@ export default function MobileNav(): React.JSX.Element {
                 style={{ color: isActive ? item.color : 'var(--text-muted)' }}
               />
               <span
-                className="text-[10px] font-medium leading-none"
+                className="text-[9px] font-medium leading-none text-center w-full px-0.5 truncate"
                 style={{ color: isActive ? item.color : 'var(--text-muted)' }}
               >
                 {item.label}

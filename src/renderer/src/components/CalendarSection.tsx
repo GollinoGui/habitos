@@ -196,7 +196,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
 
   return (
     <div
-      className="bg-bg-secondary border border-bg-border rounded-xl p-5"
+      className="bg-bg-secondary border border-bg-border rounded-xl p-3 sm:p-5 overflow-hidden"
       onTouchStart={onCalSwipeStart}
       onTouchEnd={onCalSwipeEnd}
     >
@@ -266,9 +266,9 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
                 <button
                   key={idx}
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`relative flex flex-col items-center py-1.5 px-0.5 rounded-lg border transition-all duration-100 min-h-[48px] ${dayBorderClass}`}
+                  className={`relative flex flex-col items-center py-1 px-0.5 rounded-lg border transition-all duration-100 min-h-[42px] sm:min-h-[48px] ${dayBorderClass}`}
                 >
-                  <span className={`text-sm leading-none mb-1.5 ${
+                  <span className={`text-xs leading-none mb-1 ${
                     isToday ? 'font-bold text-accent-purple' :
                     isSelected ? 'font-medium text-text-primary' :
                     'text-text-secondary'
@@ -322,7 +322,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
 
         {/* Day detail panel — only rendered after clicking a day */}
         {selectedDate && (
-          <div className="xl:w-72 shrink-0 border border-bg-border rounded-xl p-4 bg-bg-primary space-y-4 animate-fadeIn">
+          <div className="xl:w-72 shrink-0 border border-bg-border rounded-xl p-3 sm:p-4 bg-bg-primary space-y-4 animate-fadeIn">
             <h3 className="text-sm font-semibold text-text-primary capitalize">{selectedLabel}</h3>
 
             {/* Events & Tasks */}

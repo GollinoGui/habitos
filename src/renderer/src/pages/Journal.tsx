@@ -104,13 +104,13 @@ export default function Journal(): React.JSX.Element {
           {/* Mood */}
           <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '210ms' }}>
             <p className="text-sm font-medium text-text-secondary mb-3">Como você está se sentindo?</p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-1.5 justify-center flex-wrap">
               {MOODS.map((m, i) => (
                 <button
                   key={m.value}
                   onClick={() => setMood(m.value)}
                   title={m.label}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all animate-pop-in ${
+                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-all animate-pop-in ${
                     mood === m.value
                       ? 'bg-accent-purple/20 ring-2 ring-accent-purple scale-110'
                       : 'hover:bg-bg-border'
@@ -118,7 +118,7 @@ export default function Journal(): React.JSX.Element {
                   style={{ animationDelay: `${270 + i * 55}ms` }}
                 >
                   <span className="text-2xl">{m.emoji}</span>
-                  <span className="text-xs text-text-muted">{m.label}</span>
+                  <span className="text-[10px] text-text-muted">{m.label}</span>
                 </button>
               ))}
             </div>
