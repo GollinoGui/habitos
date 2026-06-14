@@ -170,35 +170,43 @@ export default function Reading(): React.JSX.Element {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Mídia & Entretenimento</h1>
-        <p className="text-text-secondary text-sm mt-1">Rastreie seus livros, filmes, séries, mangás e mais</p>
+      <div className="flex justify-between items-start gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Mídia</h1>
+          <p className="text-text-secondary text-sm mt-1">Livros, filmes, séries, mangás e mais</p>
+        </div>
+        <button
+          onClick={() => setShowForm(v => !v)}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          <Plus size={14} /> Adicionar
+        </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <span className="text-2xl">▶️</span>
-          <p className="text-xl font-bold text-text-primary mt-1">{inProgress}</p>
-          <p className="text-xs text-text-muted">Em andamento</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <span className="text-xl">▶️</span>
+          <p className="text-lg font-bold text-text-primary mt-0.5">{inProgress}</p>
+          <p className="text-[10px] text-text-muted leading-tight">Em andamento</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <span className="text-2xl">✅</span>
-          <p className="text-xl font-bold text-text-primary mt-1">{done}</p>
-          <p className="text-xs text-text-muted">Concluídos</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <span className="text-xl">✅</span>
+          <p className="text-lg font-bold text-text-primary mt-0.5">{done}</p>
+          <p className="text-[10px] text-text-muted leading-tight">Concluídos</p>
         </div>
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-          <span className="text-2xl">⏱️</span>
-          <p className="text-xl font-bold text-text-primary mt-1">{todayMins}min</p>
-          <p className="text-xs text-text-muted">Registrados hoje</p>
+        <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+          <span className="text-xl">⏱️</span>
+          <p className="text-lg font-bold text-text-primary mt-0.5">{todayMins}min</p>
+          <p className="text-[10px] text-text-muted leading-tight">Hoje</p>
         </div>
       </div>
 
-      {/* Type filter */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Type filter — horizontal scroll */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {TYPE_TABS.map(({ value, label }) => (
           <button key={value} onClick={() => setTypeFilter(value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               typeFilter === value
                 ? 'bg-accent-purple text-white'
                 : 'bg-bg-secondary border border-bg-border text-text-secondary hover:text-text-primary'
@@ -208,11 +216,11 @@ export default function Reading(): React.JSX.Element {
         ))}
       </div>
 
-      {/* Status filter + Add button */}
-      <div className="flex gap-2 flex-wrap items-center">
+      {/* Status filter — horizontal scroll */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {STATUS_TABS.map(({ value, label }) => (
           <button key={value} onClick={() => setStatusFilter(value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               statusFilter === value
                 ? 'bg-bg-border text-text-primary'
                 : 'text-text-muted hover:text-text-secondary'
@@ -220,12 +228,6 @@ export default function Reading(): React.JSX.Element {
             {label}
           </button>
         ))}
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-accent-purple hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus size={14} /> Adicionar
-        </button>
       </div>
 
       {/* Add form */}

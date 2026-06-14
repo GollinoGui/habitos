@@ -257,18 +257,18 @@ function GymAnalytics() {
 
       {selected && history.length > 0 && (
         <>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-accent-purple">{history.length}</p>
-              <p className="text-xs text-text-muted">Registros</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-accent-purple">{history.length}</p>
+              <p className="text-[10px] text-text-muted leading-tight">Registros</p>
             </div>
-            <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-accent-green">{maxWeight}kg</p>
-              <p className="text-xs text-text-muted">Máximo histórico</p>
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-accent-green">{maxWeight}kg</p>
+              <p className="text-[10px] text-text-muted leading-tight">Máx. histórico</p>
             </div>
-            <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-accent-gold">{lastEntry?.weight_kg || 0}kg</p>
-              <p className="text-xs text-text-muted">Último registro</p>
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-accent-gold">{lastEntry?.weight_kg || 0}kg</p>
+              <p className="text-[10px] text-text-muted leading-tight">Último</p>
             </div>
           </div>
 
@@ -322,17 +322,17 @@ export default function Analytics(): React.JSX.Element {
         <p className="text-text-secondary text-sm">Tendências e evolução ao longo do tempo</p>
       </div>
 
-      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 w-fit">
+      <div className="grid grid-cols-3 gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all ${
               tab === t.id ? 'text-white' : 'text-text-secondary hover:text-text-primary'
             }`}
             style={tab === t.id ? { backgroundColor: t.color } : {}}
           >
-            {t.icon}{t.label}
+            {t.icon}<span>{t.label}</span>
           </button>
         ))}
       </div>

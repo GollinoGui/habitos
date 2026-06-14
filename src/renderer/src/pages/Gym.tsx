@@ -100,23 +100,27 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
                         <span className="text-[10px] text-orange-400 font-bold tracking-widest">SUPERSERIE</span>
                       </div>
                     )}
-                    <div className={`flex gap-2 items-center py-1 ${isInSuperset ? 'border-l-2 border-orange-500/40 pl-2' : ''}`}>
-                      <input value={ex.name} onChange={e => updateEx(i, 'name', e.target.value)} placeholder="Exercício"
-                        className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                      <input value={ex.sets} onChange={e => updateEx(i, 'sets', e.target.value)} placeholder="Séries" type="number"
-                        className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                      <input value={ex.reps} onChange={e => updateEx(i, 'reps', e.target.value)} placeholder="Reps" type="number"
-                        className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                      <input value={ex.weight} onChange={e => updateEx(i, 'weight', e.target.value)} placeholder="kg" type="number"
-                        className="w-14 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
-                      {i < exercises.length - 1 ? (
-                        <button onClick={() => toggleSuperset(i)}
-                          title={ex.superset ? 'Remover superserie' : 'Linkar como superserie'}
-                          className={`shrink-0 p-1.5 rounded-lg transition-colors ${ex.superset ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30' : 'text-text-muted hover:text-orange-400 hover:bg-orange-950/20'}`}>
-                          <Link2 size={13} />
-                        </button>
-                      ) : <div className="w-[26px] shrink-0" />}
-                      <button onClick={() => removeEx(i)} className="shrink-0 text-text-muted hover:text-accent-red"><X size={14} /></button>
+                    <div className={`space-y-1 py-1 ${isInSuperset ? 'border-l-2 border-orange-500/40 pl-2' : ''}`}>
+                      <div className="flex gap-1.5 items-center">
+                        <input value={ex.name} onChange={e => updateEx(i, 'name', e.target.value)} placeholder="Exercício"
+                          className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent-purple" />
+                        {i < exercises.length - 1 ? (
+                          <button onClick={() => toggleSuperset(i)}
+                            title={ex.superset ? 'Remover superserie' : 'Linkar como superserie'}
+                            className={`shrink-0 p-1.5 rounded-lg transition-colors ${ex.superset ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30' : 'text-text-muted hover:text-orange-400 hover:bg-orange-950/20'}`}>
+                            <Link2 size={13} />
+                          </button>
+                        ) : <div className="w-[28px] shrink-0" />}
+                        <button onClick={() => removeEx(i)} className="shrink-0 text-text-muted hover:text-accent-red"><X size={14} /></button>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <input value={ex.sets} onChange={e => updateEx(i, 'sets', e.target.value)} placeholder="Séries" type="number"
+                          className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary text-center focus:outline-none focus:border-accent-purple" />
+                        <input value={ex.reps} onChange={e => updateEx(i, 'reps', e.target.value)} placeholder="Reps" type="number"
+                          className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary text-center focus:outline-none focus:border-accent-purple" />
+                        <input value={ex.weight} onChange={e => updateEx(i, 'weight', e.target.value)} placeholder="kg" type="number"
+                          className="flex-1 bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5 text-xs text-text-primary text-center focus:outline-none focus:border-accent-purple" />
+                      </div>
                     </div>
                   </div>
                 )
@@ -330,18 +334,22 @@ function ProgramsTab() {
         )}
       </div>
       {day.exercises.map((ex, ei) => (
-        <div key={ei} className="flex gap-1.5 items-center">
-          <input value={ex.name} onChange={e => updateEx(di, ei, 'name', e.target.value)} placeholder="Exercício"
-            className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-          <input value={ex.sets} onChange={e => updateEx(di, ei, 'sets', e.target.value)} placeholder="Séries" type="number"
-            className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-          <input value={ex.reps} onChange={e => updateEx(di, ei, 'reps', e.target.value)} placeholder="Reps" type="number"
-            className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-          <input value={ex.weight} onChange={e => updateEx(di, ei, 'weight', e.target.value)} placeholder="Kg" type="number"
-            className="w-14 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
-          <button onClick={() => removeEx(di, ei)} className="text-text-muted hover:text-accent-red transition-colors">
-            <X size={13} />
-          </button>
+        <div key={ei} className="space-y-1">
+          <div className="flex gap-1.5 items-center">
+            <input value={ex.name} onChange={e => updateEx(di, ei, 'name', e.target.value)} placeholder="Exercício"
+              className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+            <button onClick={() => removeEx(di, ei)} className="text-text-muted hover:text-accent-red transition-colors shrink-0">
+              <X size={13} />
+            </button>
+          </div>
+          <div className="flex gap-1.5">
+            <input value={ex.sets} onChange={e => updateEx(di, ei, 'sets', e.target.value)} placeholder="Séries" type="number"
+              className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+            <input value={ex.reps} onChange={e => updateEx(di, ei, 'reps', e.target.value)} placeholder="Reps" type="number"
+              className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+            <input value={ex.weight} onChange={e => updateEx(di, ei, 'weight', e.target.value)} placeholder="Kg" type="number"
+              className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent-purple" />
+          </div>
         </div>
       ))}
       <button onClick={() => addExToDay(di)} className="text-xs text-accent-purple hover:text-purple-400 transition-colors">
@@ -526,36 +534,38 @@ export default function Gym(): React.JSX.Element {
 
   return (
     <div className="space-y-4 animate-fadeIn max-w-3xl">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Academia</h1>
           <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>{workouts.length} treino{workouts.length !== 1 ? 's' : ''} registrado{workouts.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="flex gap-2 animate-slide-up" style={{ animationDelay: '80ms' }}>
+        <div className="flex gap-2 shrink-0 animate-slide-up" style={{ animationDelay: '80ms' }}>
           <button onClick={() => setShowBioModal(true)}
-            className="flex items-center gap-2 px-3 py-2 border border-bg-border hover:bg-bg-border text-text-secondary rounded-lg text-sm">
-            <Scale size={15} /> Bioimpedância
+            className="flex items-center gap-1.5 px-2.5 py-2 border border-bg-border hover:bg-bg-border text-text-secondary rounded-lg text-sm"
+            title="Bioimpedância">
+            <Scale size={15} />
+            <span className="hidden sm:inline">Bioimpedância</span>
           </button>
           <button onClick={() => setShowWorkoutModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold animate-jump-in">
-            <Plus size={16} /> Treino
+            className="flex items-center gap-1.5 px-3 py-2 bg-accent-purple hover:bg-purple-600 text-white rounded-lg text-sm font-semibold animate-jump-in">
+            <Plus size={15} /> Treino
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 w-fit animate-slide-up" style={{ animationDelay: '120ms' }}>
+      <div className="grid grid-cols-3 gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 animate-slide-up" style={{ animationDelay: '120ms' }}>
         <button onClick={() => setTab('workouts')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === 'workouts' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-          <Dumbbell className="inline mr-1.5" size={13} />Treinos ({workouts.length})
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === 'workouts' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          <Dumbbell size={12} /><span>Treinos ({workouts.length})</span>
         </button>
         <button onClick={() => setTab('bio')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === 'bio' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-          <Scale className="inline mr-1.5" size={13} />Corpo ({bio.length})
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === 'bio' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          <Scale size={12} /><span>Corpo ({bio.length})</span>
         </button>
         <button onClick={() => setTab('programs')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === 'programs' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-          📋 Programas
+          className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === 'programs' ? 'bg-accent-purple text-white' : 'text-text-secondary hover:text-text-primary'}`}>
+          📋 <span>Programas</span>
         </button>
       </div>
 
