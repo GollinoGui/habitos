@@ -180,6 +180,7 @@ function GymAnalytics() {
   const [selected, setSelected] = useState<string>('')
   const [history, setHistory] = useState<ExerciseEntry[]>([])
   const [search, setSearch] = useState('')
+  const [focused, setFocused] = useState(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -214,11 +215,13 @@ function GymAnalytics() {
         <div className="flex-1 relative">
           <input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setSelected('') }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 150)}
             placeholder="Buscar exercício..."
             className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-purple placeholder:text-text-muted"
           />
-          {search && filtered.length > 0 && !selected && (
+          {(focused || search) && filtered.length > 0 && !selected && (
             <div className="absolute top-full mt-1 left-0 right-0 bg-bg-secondary border border-bg-border rounded-lg shadow-xl z-10 max-h-48 overflow-y-auto">
               {filtered.slice(0, 10).map(name => (
                 <button

@@ -229,15 +229,19 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
 
               const isPastOrToday = dateStr <= todayStr
               const allEvtsDone = evts.length > 0 && evts.every(e => e.is_done)
-              const dayBorderClass = isSelected
-                ? 'bg-accent-purple/20 border-accent-purple/60'
+              const dayBorderClass = isPastOrToday && allEvtsDone
+                ? isSelected
+                  ? 'bg-accent-green/20 border-accent-green/60'
+                  : 'border-accent-green/60 bg-accent-green/5 hover:bg-accent-green/10'
                 : isPastOrToday && evts.length > 0
-                  ? allEvtsDone
-                    ? 'border-accent-green/60 bg-accent-green/5 hover:bg-accent-green/10'
+                  ? isSelected
+                    ? 'bg-red-500/20 border-red-500/60'
                     : 'border-red-500/60 bg-red-500/5 hover:bg-red-500/10'
-                  : isToday
-                    ? 'border-accent-purple/30 bg-accent-purple/5'
-                    : 'border-transparent hover:bg-bg-border/50'
+                  : isSelected
+                    ? 'bg-accent-purple/20 border-accent-purple/60'
+                    : isToday
+                      ? 'border-accent-purple/30 bg-accent-purple/5'
+                      : 'border-transparent hover:bg-bg-border/50'
 
               return (
                 <button

@@ -162,9 +162,9 @@ function computeStreak(completions: Record<string, unknown>[]): number {
   let current = new Date()
   current.setHours(0, 0, 0, 0)
   for (const c of completions) {
-    const date = new Date(c.completed_at as string)
-    date.setHours(0, 0, 0, 0)
-    const diff = Math.round((current.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    const [y, m, d] = (c.completed_at as string).split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    const diff = Math.round((current.getTime() - date.getTime()) / 86400000)
     if (diff === streak) {
       streak++
       current = date

@@ -183,12 +183,22 @@ ipcMain.handle('auth:open-oauth-browser', (_event, oauthUrl: string, port: numbe
 
       // PKCE flow: code arrives as query param — server receives it directly
       if (reqUrl.startsWith('/auth/callback') && req.method === 'GET') {
-        const hasCode = reqUrl.includes('code=')
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-        // Page sends full URL (including hash) back via POST so we capture implicit tokens too
-        res.end(`<!DOCTYPE html><html><body style="background:#0f0f0f;margin:0"><script>
-          fetch('/auth/done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:window.location.href})}).finally(()=>window.close());
-        </script></body></html>`)
+        res.end(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Hábitos — Login</title></head>
+<body style="background:#0f0f0f;margin:0;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#f1f5f9">
+  <div style="text-align:center;padding:2rem">
+    <div style="font-size:3rem;margin-bottom:1rem">✅</div>
+    <h1 style="font-size:1.25rem;font-weight:600;margin:0 0 0.5rem">Login realizado com sucesso!</h1>
+    <p style="color:#94a3b8;margin:0 0 1.5rem;font-size:0.875rem">Você pode fechar esta janela e voltar ao app Hábitos.</p>
+    <button onclick="window.close()" style="background:#7c3aed;color:#fff;border:none;padding:0.625rem 1.5rem;border-radius:0.75rem;font-size:0.875rem;font-weight:600;cursor:pointer">Fechar janela</button>
+  </div>
+  <script>
+    fetch('/auth/done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:window.location.href})}).finally(()=>window.close());
+  </script>
+</body>
+</html>`)
       }
 
       // Receives the full URL (with hash if implicit flow) from the page JS

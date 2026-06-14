@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Layout/Sidebar'
 import TopBar from './components/Layout/TopBar'
@@ -96,6 +96,7 @@ function AppContent(): React.JSX.Element {
     // window.api is already installed by AuthContext via installMobileApi()
     return (
       <HashRouter>
+        <ScrollToTop />
         <TrayNavigator />
         <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
           <TopBar />
@@ -137,6 +138,7 @@ function AppContent(): React.JSX.Element {
   return (
     <HashRouter>
       {/* App — only rendered when logged in */}
+      <ScrollToTop />
       <TrayNavigator />
       <div className={`flex h-screen overflow-hidden bg-bg-primary transition-all duration-300 ${showLoginOverlay ? 'hidden' : ''}`}>
         <Sidebar />
@@ -187,6 +189,14 @@ function AppContent(): React.JSX.Element {
       )}
     </HashRouter>
   )
+}
+
+function ScrollToTop(): null {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    document.querySelector('main')?.scrollTo(0, 0)
+  }, [pathname])
+  return null
 }
 
 function TrayNavigator(): null {
