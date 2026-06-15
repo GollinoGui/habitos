@@ -371,11 +371,20 @@ function buildApi(): any {
     // ── Gym ───────────────────────────────────────────────────────────────
     gym: {
       listWorkouts: async (limit = 50) => {
-        const { data } = await supabase.from('workouts')
-          .select('*, exercises(*)')
-          .eq('user_id', uid())
+        const { data: ws } = await supabase.from('workouts')
+          .select('*').eq('user_id', uid())
           .order('date', { ascending: false }).limit(limit)
-        return data ?? []
+        if (!ws?.length) return []
+        const ids = ws.map(w => w.id as number)
+        const { data: exs } = await supabase.from('exercises')
+          .select('*').eq('user_id', uid()).in('workout_id', ids)
+        const byWid: Record<number, unknown[]> = {}
+        for (const ex of exs ?? []) {
+          const wid = ex.workout_id as number
+          if (!byWid[wid]) byWid[wid] = []
+          byWid[wid].push(ex)
+        }
+        return ws.map(w => ({ ...w, exercises: byWid[w.id as number] ?? [] }))
       },
 
       createWorkout: async (data: {
@@ -395,7 +404,7 @@ function buildApi(): any {
             data.exercises.map(ex => ({
               user_id: uid(), workout_id: workout.id,
               name: ex.name, sets: ex.sets ?? null, reps: ex.reps ?? null,
-              weight_kg: ex.weight_kg ?? null, is_superset: !!(ex.is_superset),
+              weight_kg: ex.weight_kg ?? null, is_superset: ex.is_superset ? 1 : 0,
             }))
           )
           if (exError) console.error('exercises insert error:', exError)

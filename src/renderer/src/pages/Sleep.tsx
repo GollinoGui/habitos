@@ -8,14 +8,25 @@ interface SleepLog {
   id: number; date: string; bedtime: string; wake_time: string; quality: number; notes: string; cycles?: number | null
 }
 
-function calcDuration(bedtime: string, wake_time: string): string {
+function calcMinsFromTimes(bedtime: string, wake_time: string): number {
   const [bh, bm] = bedtime.split(':').map(Number)
   const [wh, wm] = wake_time.split(':').map(Number)
   let mins = (wh * 60 + wm) - (bh * 60 + bm)
   if (mins < 0) mins += 24 * 60
+  return mins
+}
+
+function calcDuration(bedtime: string, wake_time: string): string {
+  const mins = calcMinsFromTimes(bedtime, wake_time)
   const h = Math.floor(mins / 60)
   const m = mins % 60
   return `${h}h${m > 0 ? `${m}m` : ''}`
+}
+
+function calcCycles(bedtime: string, wake_time: string): number {
+  const mins = calcMinsFromTimes(bedtime, wake_time)
+  if (mins < 45) return 0
+  return Math.min(Math.round(mins / 90), 7)
 }
 
 function qualityColor(q: number): string {
@@ -30,7 +41,6 @@ export default function Sleep(): React.JSX.Element {
   const [bedtime, setBedtime] = useState('23:00')
   const [wakeTime, setWakeTime] = useState('07:00')
   const [quality, setQuality] = useState(3)
-  const [cycles, setCycles] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
   const [saved, setSaved] = useState(false)
   const [recent, setRecent] = useState<SleepLog[]>([])
@@ -61,14 +71,12 @@ export default function Sleep(): React.JSX.Element {
       setBedtime(entry.bedtime)
       setWakeTime(entry.wake_time)
       setQuality(entry.quality)
-      setCycles(entry.cycles ?? null)
       setNotes(entry.notes || '')
       setExistingId(entry.id)
     } else {
       setBedtime('23:00')
       setWakeTime('07:00')
       setQuality(3)
-      setCycles(null)
       setNotes('')
       setExistingId(null)
     }
@@ -80,7 +88,7 @@ export default function Sleep(): React.JSX.Element {
   }
 
   async function handleSave() {
-    await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes, cycles })
+    await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes, cycles: calcCycles(bedtime, wakeTime) || null })
     setSaved(true)
     setShowSaveFloat(true)
     setTimeout(() => setSaved(false), 2000)
@@ -95,7 +103,6 @@ export default function Sleep(): React.JSX.Element {
     await window.api.sleep.delete(existingId)
     setExistingId(null)
     setNotes('')
-    setCycles(null)
     loadRecent()
   }
 
@@ -105,13 +112,7 @@ export default function Sleep(): React.JSX.Element {
 
   const avgDuration = recent.length > 0
     ? (() => {
-        const totalMins = recent.reduce((s, l) => {
-          const [bh, bm] = l.bedtime.split(':').map(Number)
-          const [wh, wm] = l.wake_time.split(':').map(Number)
-          let m = (wh * 60 + wm) - (bh * 60 + bm)
-          if (m < 0) m += 24 * 60
-          return s + m
-        }, 0) / recent.length
+        const totalMins = recent.reduce((s, l) => s + calcMinsFromTimes(l.bedtime, l.wake_time), 0) / recent.length
         return `${Math.floor(totalMins / 60)}h${Math.round(totalMins % 60) > 0 ? `${Math.round(totalMins % 60)}m` : ''}`
       })()
     : null
@@ -121,20 +122,12 @@ export default function Sleep(): React.JSX.Element {
     ? (logsWithCycles.reduce((s, l) => s + (l.cycles ?? 0), 0) / logsWithCycles.length).toFixed(1)
     : null
 
-  function calcMins(bedtime: string, wake_time: string): number {
-    const [bh, bm] = bedtime.split(':').map(Number)
-    const [wh, wm] = wake_time.split(':').map(Number)
-    let m = (wh * 60 + wm) - (bh * 60 + bm)
-    if (m < 0) m += 24 * 60
-    return m
-  }
-
   const chartData = Array.from({ length: 14 }, (_, i) => {
     const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
     const log = recent.find(l => l.date === d)
     const label = format(subDays(new Date(), i), 'dd/MM')
     if (!log) return null
-    const mins = calcMins(log.bedtime, log.wake_time)
+    const mins = calcMinsFromTimes(log.bedtime, log.wake_time)
     return {
       date: label,
       rawDate: d,
@@ -342,34 +335,17 @@ export default function Sleep(): React.JSX.Element {
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-text-muted mb-2 block">
-              Ciclos do sono <span className="text-text-muted/60">(opcional · cada ciclo ≈ 90 min)</span>
-            </label>
-            <div className="flex gap-1.5">
-              {[1, 2, 3, 4, 5, 6].map(c => (
-                <button
-                  key={c}
-                  onClick={() => setCycles(cycles === c ? null : c)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
-                    cycles === c
-                      ? 'border-accent-purple bg-accent-purple/20 text-accent-purple'
-                      : cycles != null && c <= cycles
-                      ? 'border-accent-purple/40 bg-accent-purple/10 text-accent-purple/70'
-                      : 'border-bg-border text-text-muted hover:bg-bg-border'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-            {cycles != null && (
-              <p className="text-xs text-text-muted mt-1">
-                {cycles} ciclo{cycles !== 1 ? 's' : ''} ≈ {Math.round(cycles * 90 / 60 * 10) / 10}h de sono
-                <button onClick={() => setCycles(null)} className="ml-2 text-text-muted/60 hover:text-text-secondary text-xs underline">limpar</button>
-              </p>
-            )}
-          </div>
+          {(() => {
+            const c = calcCycles(bedtime, wakeTime)
+            return c > 0 ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary rounded-lg">
+                <span className="text-sm">🔄</span>
+                <span className="text-sm text-text-secondary">Ciclos estimados:</span>
+                <span className="font-bold text-accent-purple">{c}</span>
+                <span className="text-xs text-text-muted">(cada ciclo ≈ 90 min)</span>
+              </div>
+            ) : null
+          })()}
 
           <div>
             <label className="text-xs text-text-muted mb-1 block">Observações (opcional)</label>

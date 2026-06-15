@@ -41,7 +41,9 @@ CREATE TABLE IF NOT EXISTS workouts (
   date DATE NOT NULL,
   name TEXT NOT NULL,
   notes TEXT,
-  duration_min INTEGER
+  duration_min INTEGER,
+  cardio_type TEXT,
+  cardio_minutes INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS exercises (
