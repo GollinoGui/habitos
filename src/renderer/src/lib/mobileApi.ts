@@ -404,10 +404,13 @@ function buildApi(): any {
             data.exercises.map(ex => ({
               user_id: uid(), workout_id: workout.id,
               name: ex.name, sets: ex.sets ?? null, reps: ex.reps ?? null,
-              weight_kg: ex.weight_kg ?? null, is_superset: ex.is_superset ? 1 : 0,
+              weight_kg: ex.weight_kg ?? null, is_superset: !!ex.is_superset,
             }))
           )
-          if (exError) console.error('exercises insert error:', exError)
+          if (exError) {
+            console.error('exercises insert error:', exError)
+            throw new Error('Erro ao salvar exercícios: ' + exError.message)
+          }
         }
 
         let xp = 15

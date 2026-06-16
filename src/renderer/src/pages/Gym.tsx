@@ -211,7 +211,7 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
               <datalist id="cardio-types">
                 <option value="Corrida" /><option value="Caminhada" /><option value="Bicicleta" />
                 <option value="Esteira" /><option value="Elíptico" /><option value="Natação" />
-                <option value="Pular Corda" /><option value="Remo" />
+                <option value="Pular Corda" /><option value="Remo" /><option value="Escada" />
               </datalist>
               <input type="number" value={cardioMinutes} onChange={e => setCardioMinutes(e.target.value)}
                 placeholder="min"
@@ -932,10 +932,14 @@ export default function Gym(): React.JSX.Element {
   }
 
   async function handleSaveWorkout(data: object) {
-    await window.api.gym.createWorkout(data)
-    await fetchProfile()
-    setShowWorkoutModal(false)
-    loadAll()
+    try {
+      await window.api.gym.createWorkout(data)
+      await fetchProfile()
+      setShowWorkoutModal(false)
+      loadAll()
+    } catch (err) {
+      alert('Erro ao salvar treino: ' + (err instanceof Error ? err.message : String(err)))
+    }
   }
 
   async function handleSaveBio(data: object) {
