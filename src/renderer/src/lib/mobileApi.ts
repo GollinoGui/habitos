@@ -392,11 +392,15 @@ function buildApi(): any {
         cardio_type?: string; cardio_minutes?: number
         exercises: { name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }[]
       }) => {
-        const { data: workout } = await supabase.from('workouts').insert({
+        const { data: workout, error: workoutError } = await supabase.from('workouts').insert({
           user_id: uid(), date: data.date, name: data.name,
           notes: data.notes ?? null, duration_min: data.duration_min ?? null,
           cardio_type: data.cardio_type ?? null, cardio_minutes: data.cardio_minutes ?? null,
         }).select().single()
+        if (workoutError) {
+          console.error('workout insert error:', workoutError)
+          throw new Error('Erro ao salvar treino: ' + workoutError.message)
+        }
         if (!workout) return 0
 
         if (data.exercises?.length) {
@@ -864,7 +868,7 @@ function buildApi(): any {
       },
 
       save: async (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string; cycles?: number | null }) => {
-        await supabase.from('sleep_logs').upsert(
+        const { error } = await supabase.from('sleep_logs').upsert(
           {
             user_id: uid(), date: data.date, bedtime: data.bedtime,
             wake_time: data.wake_time, quality: data.quality,
@@ -872,6 +876,10 @@ function buildApi(): any {
           },
           { onConflict: 'user_id,date' }
         )
+        if (error) {
+          console.error('sleep save error:', error)
+          throw new Error('Erro ao salvar sono: ' + error.message)
+        }
         return true
       },
 

@@ -49,6 +49,7 @@ export default function Sleep(): React.JSX.Element {
   const [qualityVersion, setQualityVersion] = useState(0)
   const [showSaveFloat, setShowSaveFloat] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [savingEntry, setSavingEntry] = useState(false)
 
   const chartRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -88,14 +89,22 @@ export default function Sleep(): React.JSX.Element {
   }
 
   async function handleSave() {
-    await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes, cycles: calcCycles(bedtime, wakeTime) || null })
-    setSaved(true)
-    setShowSaveFloat(true)
-    setTimeout(() => setSaved(false), 2000)
-    setTimeout(() => setShowSaveFloat(false), 950)
-    loadRecent()
-    const entry = await window.api.sleep.get(date) as SleepLog | null
-    if (entry) setExistingId(entry.id)
+    if (savingEntry) return
+    setSavingEntry(true)
+    try {
+      await window.api.sleep.save({ date, bedtime, wake_time: wakeTime, quality, notes, cycles: calcCycles(bedtime, wakeTime) || null })
+      setSaved(true)
+      setShowSaveFloat(true)
+      setTimeout(() => setSaved(false), 2000)
+      setTimeout(() => setShowSaveFloat(false), 950)
+      await loadRecent()
+      const entry = await window.api.sleep.get(date) as SleepLog | null
+      if (entry) setExistingId(entry.id)
+    } catch (err) {
+      alert('Erro ao salvar sono: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSavingEntry(false)
+    }
   }
 
   async function handleDelete() {
@@ -366,10 +375,11 @@ export default function Sleep(): React.JSX.Element {
             )}
             <button
               onClick={handleSave}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-white text-sm font-medium rounded-lg transition-all ${saved ? 'bg-accent-green' : 'bg-accent-purple hover:bg-purple-600'}`}
+              disabled={savingEntry}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-60 ${saved ? 'bg-accent-green' : 'bg-accent-purple hover:bg-purple-600'}`}
             >
               <Save size={14} className={saved ? 'animate-check-pop' : ''} />
-              {saved ? 'Salvo! ✓' : existingId ? 'Atualizar' : 'Salvar'}
+              {saved ? 'Salvo! ✓' : savingEntry ? 'Salvando...' : existingId ? 'Atualizar' : 'Salvar'}
             </button>
             {existingId && (
               <button

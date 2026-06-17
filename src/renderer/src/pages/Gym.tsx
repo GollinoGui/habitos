@@ -131,7 +131,7 @@ function ExerciseInput({ value, onChange, placeholder, className }: {
   )
 }
 
-function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: object) => void }) {
+function WorkoutModal({ onClose, onSave, saving }: { onClose: () => void; onSave: (d: object) => void; saving: boolean }) {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [name, setName] = useState('')
   const [notes, setNotes] = useState('')
@@ -159,7 +159,7 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
   }
 
   function handleSave() {
-    if (!name.trim()) return
+    if (!name.trim() || saving) return
     onSave({
       date, name, notes, duration_min: duration ? Number(duration) : null,
       cardio_type: cardioType.trim() || null,
@@ -270,7 +270,9 @@ function WorkoutModal({ onClose, onSave }: { onClose: () => void; onSave: (d: ob
         </div>
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-bg-border text-text-secondary hover:bg-bg-border text-sm">Cancelar</button>
-          <button onClick={handleSave} className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm">Salvar (+{calcXpPreview()} XP)</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2 rounded-lg bg-accent-purple hover:bg-purple-600 text-white font-semibold text-sm disabled:opacity-60">
+            {saving ? 'Salvando...' : `Salvar (+${calcXpPreview()} XP)`}
+          </button>
         </div>
       </div>
     </div>
@@ -617,6 +619,7 @@ function ProgramsTab() {
   })
   const { fetchProfile } = useProfileStore()
   const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
+  const [applyingDayId, setApplyingDayId] = useState<number | null>(null)
 
   function askDelete(message: string, onConfirm: () => Promise<void>): void {
     setConfirmDelete({ message, onConfirm })
@@ -710,18 +713,26 @@ function ProgramsTab() {
   }
 
   async function applyDay(day: ProgramDay) {
-    const today = format(new Date(), 'yyyy-MM-dd')
-    await window.api.gym.createWorkout({
-      date: today, name: day.name,
-      exercises: day.exercises.map(e => ({
-        name: e.name, sets: e.sets, reps: e.reps, weight_kg: e.weight_kg, is_superset: e.is_superset ?? 0
-      }))
-    })
-    await fetchProfile()
-    const updated = { ...lastApplied, [day.program_id]: day.id }
-    setLastApplied(updated)
-    localStorage.setItem('gym_last_applied_day', JSON.stringify(updated))
-    alert(`Treino "${day.name}" adicionado para hoje!`)
+    if (applyingDayId !== null) return
+    setApplyingDayId(day.id)
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd')
+      await window.api.gym.createWorkout({
+        date: today, name: day.name,
+        exercises: day.exercises.map(e => ({
+          name: e.name, sets: e.sets, reps: e.reps, weight_kg: e.weight_kg, is_superset: e.is_superset ?? 0
+        }))
+      })
+      await fetchProfile()
+      const updated = { ...lastApplied, [day.program_id]: day.id }
+      setLastApplied(updated)
+      localStorage.setItem('gym_last_applied_day', JSON.stringify(updated))
+      alert(`Treino "${day.name}" adicionado para hoje!`)
+    } catch (err) {
+      alert('Erro ao salvar treino: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setApplyingDayId(null)
+    }
   }
 
   function deleteProgram(id: number): void {
@@ -848,9 +859,9 @@ function ProgramsTab() {
                             <span className="text-[10px] bg-accent-purple/20 text-accent-purple border border-accent-purple/30 px-1.5 py-0.5 rounded font-bold">Último usado</span>
                           )}
                         </div>
-                        <button onClick={() => applyDay(day)}
-                          className="text-xs px-2.5 py-1 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg hover:bg-accent-green/30 transition-colors">
-                          Usar hoje
+                        <button onClick={() => applyDay(day)} disabled={applyingDayId !== null}
+                          className="text-xs px-2.5 py-1 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg hover:bg-accent-green/30 transition-colors disabled:opacity-60">
+                          {applyingDayId === day.id ? 'Salvando...' : 'Usar hoje'}
                         </button>
                       </div>
                       {day.exercises.map((ex) => (
@@ -909,6 +920,7 @@ export default function Gym(): React.JSX.Element {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savingWorkout, setSavingWorkout] = useState(false)
 
   function askDelete(message: string, onConfirm: () => Promise<void>): void {
     setConfirmDelete({ message, onConfirm })
@@ -932,6 +944,8 @@ export default function Gym(): React.JSX.Element {
   }
 
   async function handleSaveWorkout(data: object) {
+    if (savingWorkout) return
+    setSavingWorkout(true)
     try {
       await window.api.gym.createWorkout(data)
       await fetchProfile()
@@ -939,6 +953,8 @@ export default function Gym(): React.JSX.Element {
       loadAll()
     } catch (err) {
       alert('Erro ao salvar treino: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSavingWorkout(false)
     }
   }
 
@@ -1130,7 +1146,7 @@ export default function Gym(): React.JSX.Element {
       {tab === 'programs' && <ProgramsTab />}
       {tab === 'phases' && <PhasesTab programs={programs} />}
 
-      {showWorkoutModal && <WorkoutModal onClose={() => setShowWorkoutModal(false)} onSave={handleSaveWorkout} />}
+      {showWorkoutModal && <WorkoutModal onClose={() => setShowWorkoutModal(false)} onSave={handleSaveWorkout} saving={savingWorkout} />}
       {showBioModal && <BioModal onClose={() => setShowBioModal(false)} onSave={handleSaveBio} />}
 
       {confirmDelete && (
