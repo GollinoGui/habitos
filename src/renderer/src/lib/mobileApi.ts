@@ -771,12 +771,27 @@ function buildApi(): any {
         return data ?? []
       },
 
-      createEvent: async (data: { title: string; date: string; type: string; color: string }) => {
+      eventsByRange: async (from: string, to: string) => {
+        const { data } = await supabase.from('calendar_events').select('*')
+          .eq('user_id', uid())
+          .gte('date', from).lte('date', to)
+          .order('date').order('id')
+        return data ?? []
+      },
+
+      createEvent: async (data: { title: string; date: string; type: string; color: string; device_event_id?: string | null }) => {
         const { data: row } = await supabase.from('calendar_events').insert({
           user_id: uid(), title: data.title, date: data.date,
           type: data.type ?? 'event', color: data.color ?? '#7c3aed',
+          device_event_id: data.device_event_id ?? null,
         }).select().single()
         return row
+      },
+
+      linkDevice: async (id: number, deviceEventId: string) => {
+        await supabase.from('calendar_events')
+          .update({ device_event_id: deviceEventId })
+          .eq('id', id).eq('user_id', uid())
       },
 
       toggleDone: async (id: number) => {
@@ -868,14 +883,16 @@ function buildApi(): any {
       },
 
       save: async (data: { date: string; bedtime: string; wake_time: string; quality: number; notes?: string; cycles?: number | null }) => {
-        const { error } = await supabase.from('sleep_logs').upsert(
-          {
-            user_id: uid(), date: data.date, bedtime: data.bedtime,
-            wake_time: data.wake_time, quality: data.quality,
-            notes: data.notes ?? null, cycles: data.cycles ?? null,
-          },
-          { onConflict: 'user_id,date' }
-        )
+        const payload = {
+          user_id: uid(), date: data.date, bedtime: data.bedtime,
+          wake_time: data.wake_time, quality: data.quality,
+          notes: data.notes ?? null, cycles: data.cycles ?? null,
+        }
+        const { data: existing } = await supabase.from('sleep_logs')
+          .select('id').eq('user_id', uid()).eq('date', data.date).maybeSingle()
+        const { error } = existing
+          ? await supabase.from('sleep_logs').update(payload).eq('id', existing.id)
+          : await supabase.from('sleep_logs').insert(payload)
         if (error) {
           console.error('sleep save error:', error)
           throw new Error('Erro ao salvar sono: ' + error.message)
@@ -1126,6 +1143,7 @@ function buildApi(): any {
           user_id: uid(), title: data.title, type: data.type,
           author: data.author ?? null, total_pages: data.total_pages ?? null,
           cover_emoji: data.cover_emoji, started_at: data.started_at ?? null,
+          status: 'reading',
         }).select().single()
         return row?.id ?? 0
       },

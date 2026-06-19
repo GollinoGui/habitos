@@ -265,7 +265,7 @@ export default function Reading(): React.JSX.Element {
             />
             <input
               value={author} onChange={e => setAuthor(e.target.value)}
-              placeholder={cfg(type).creator}
+              placeholder={`${cfg(type).creator} (opcional)`}
               className="bg-bg-primary border border-bg-border text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple"
             />
             <input

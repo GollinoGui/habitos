@@ -26,6 +26,7 @@
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@capacitor/splash-screen": "^8.0.1",
+    "@ebarooni/capacitor-calendar": "^8.2.0",
     "@supabase/supabase-js": "^2.108.1",
     "date-fns": "^3.6.0",
     "electron-auto-launch": "^5.0.6",

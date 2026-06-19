@@ -1,41 +1,10 @@
 import React, { useState } from 'react'
-import { ArrowRight, CheckSquare, Dumbbell, ShieldOff, Target } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useProfileStore } from '../../store/profileStore'
 
-const STEPS = ['welcome', 'name', 'tour', 'done'] as const
+const STEPS = ['welcome', 'name', 'done'] as const
 type Step = (typeof STEPS)[number]
-
-const features = [
-  {
-    icon: CheckSquare,
-    color: 'text-accent-green',
-    bg: 'bg-emerald-950/40',
-    title: 'Hábitos',
-    desc: 'Crie hábitos diários e ganhe XP ao completá-los.'
-  },
-  {
-    icon: Dumbbell,
-    color: 'text-accent-blue',
-    bg: 'bg-blue-950/40',
-    title: 'Academia',
-    desc: 'Registre treinos e acompanhe sua evolução.'
-  },
-  {
-    icon: ShieldOff,
-    color: 'text-accent-red',
-    bg: 'bg-red-950/40',
-    title: 'Vícios',
-    desc: 'Monitore a sobriedade e celebre cada marco.'
-  },
-  {
-    icon: Target,
-    color: 'text-accent-gold',
-    bg: 'bg-yellow-950/40',
-    title: 'Metas',
-    desc: 'Defina metas com subtarefas e vença-as.'
-  }
-]
 
 interface Props {
   onComplete: () => void
@@ -54,7 +23,7 @@ export default function OnboardingModal({ onComplete }: Props): React.JSX.Elemen
     await window.api.profile.updateName(trimmed)
     await fetchProfile()
     setSaving(false)
-    setStep('tour')
+    setStep('done')
   }
 
   function handleFinish(): void {
@@ -130,33 +99,6 @@ export default function OnboardingModal({ onComplete }: Props): React.JSX.Elemen
                   {saving ? 'Salvando...' : (<>Continuar <ArrowRight size={16} /></>)}
                 </button>
               </div>
-            </div>
-          )}
-
-          {step === 'tour' && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <h2 className="text-xl font-bold text-text-primary">Explore o app</h2>
-                <p className="text-text-muted text-sm mt-1">Tudo que você pode fazer</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {features.map(({ icon: Icon, color, bg, title, desc }) => (
-                  <div
-                    key={title}
-                    className={`p-4 ${bg} rounded-xl border border-bg-border`}
-                  >
-                    <Icon size={20} className={`${color} mb-2`} />
-                    <p className="text-text-primary font-semibold text-sm">{title}</p>
-                    <p className="text-text-muted text-xs mt-1 leading-snug">{desc}</p>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => setStep('done')}
-                className="w-full py-2.5 bg-accent-purple hover:bg-purple-600 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                Próximo <ArrowRight size={16} />
-              </button>
             </div>
           )}
 

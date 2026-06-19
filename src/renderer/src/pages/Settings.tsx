@@ -135,6 +135,7 @@ export default function Settings(): React.JSX.Element {
 
   // Color animation
   const accentAnimRef = useRef<number | null>(null)
+  const accentFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const displayedAccentRef = useRef(getAccent())
 
   useEffect(() => {
@@ -164,8 +165,12 @@ export default function Settings(): React.JSX.Element {
     setAccent(toHex)
     localStorage.setItem('habitos_accent', toHex)
     if (accentAnimRef.current) cancelAnimationFrame(accentAnimRef.current)
+    if (accentFallbackRef.current) clearTimeout(accentFallbackRef.current)
     const fromHex = displayedAccentRef.current
-    if (fromHex === toHex) return
+    if (fromHex === toHex) {
+      document.documentElement.style.setProperty('--accent-purple', toHex)
+      return
+    }
     const start = performance.now()
     const duration = 550
     const [r1, g1, b1] = hexToRgb(fromHex)
@@ -184,6 +189,14 @@ export default function Settings(): React.JSX.Element {
       else accentAnimRef.current = null
     }
     accentAnimRef.current = requestAnimationFrame(step)
+    // Safety net: some Android WebViews stall requestAnimationFrame (e.g. when the
+    // view isn't fully composited yet), which would leave the accent stuck mid-transition.
+    accentFallbackRef.current = setTimeout(() => {
+      if (displayedAccentRef.current !== toHex) {
+        displayedAccentRef.current = toHex
+        document.documentElement.style.setProperty('--accent-purple', toHex)
+      }
+    }, duration + 150)
   }
 
   function handlePickerInput(e: React.ChangeEvent<HTMLInputElement>) {

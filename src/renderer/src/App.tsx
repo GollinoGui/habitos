@@ -21,7 +21,7 @@ import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 import MobileTutorialModal from './components/Tutorial/MobileTutorialModal'
-import MobileNav, { NAV_ITEMS, NAV_TOTAL, navMod } from './components/Layout/MobileNav'
+import MobileNav, { useNavItems, navMod } from './components/Layout/MobileNav'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function applyStoredTheme() {
@@ -123,9 +123,10 @@ function MobileSwipeLayout(): React.JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const touchRef = useRef<{ x: number; y: number } | null>(null)
+  const navItems = useNavItems()
 
   const activeIndex = (() => {
-    const idx = NAV_ITEMS.findIndex(item =>
+    const idx = navItems.findIndex(item =>
       item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
     )
     return idx === -1 ? 0 : idx
@@ -146,7 +147,7 @@ function MobileSwipeLayout(): React.JSX.Element {
     if (NO_SWIPE_ROUTES.some(r => location.pathname.startsWith(r))) return
     // Require clearly horizontal swipe: 80px min and more horizontal than vertical
     if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return
-    navigate(NAV_ITEMS[navMod(activeIndex + (dx < 0 ? 1 : -1))].to)
+    navigate(navItems[navMod(activeIndex + (dx < 0 ? 1 : -1), navItems.length)].to)
   }
 
   return (

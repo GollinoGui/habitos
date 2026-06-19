@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Plus, Trash2, X, StickyNote } from 'lucide-react'
+import { isNativeCalendarAvailable, deleteDeviceEvent } from '../lib/nativeCalendarSync'
 
 interface CalendarEvent {
   id: number
@@ -10,6 +11,7 @@ interface CalendarEvent {
   type: 'event' | 'task'
   color: string
   is_done: number
+  device_event_id?: string | null
 }
 
 interface HabitDot {
@@ -160,6 +162,10 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
   }
 
   async function deleteEvent(id: number) {
+    const evt = allEvents.find(e => e.id === id)
+    if (evt?.device_event_id && isNativeCalendarAvailable()) {
+      await deleteDeviceEvent(evt.device_event_id)
+    }
     await window.api.calendar.deleteEvent(id)
     reloadEvents()
   }

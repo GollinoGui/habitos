@@ -227,13 +227,14 @@ create policy "own goal_tasks" on goal_tasks for all using (auth.uid() = user_id
 -- ── Calendário ───────────────────────────────────────────────
 
 create table if not exists calendar_events (
-  id      bigserial primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  title   text not null,
-  date    date not null,
-  type    text default 'personal',
-  color   text default '#7c3aed',
-  is_done boolean not null default false
+  id               bigserial primary key,
+  user_id          uuid references auth.users(id) on delete cascade not null,
+  title            text not null,
+  date             date not null,
+  type             text default 'personal',
+  color            text default '#7c3aed',
+  is_done          boolean not null default false,
+  device_event_id  text default null
 );
 alter table calendar_events enable row level security;
 create policy "own calendar_events" on calendar_events for all using (auth.uid() = user_id);

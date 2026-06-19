@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, Moon, DollarSign,
@@ -6,24 +6,56 @@ import {
   Calendar, BarChart2, Settings
 } from 'lucide-react'
 
-export const NAV_ITEMS = [
-  { to: '/',             icon: LayoutDashboard, label: 'Início',     color: '#7c3aed' },
-  { to: '/habits',       icon: CheckSquare,     label: 'Hábitos',    color: '#10b981' },
-  { to: '/sleep',        icon: Moon,            label: 'Sono',       color: '#06b6d4' },
-  { to: '/finance',      icon: DollarSign,      label: 'Finanças',   color: '#10b981' },
-  { to: '/gym',          icon: Dumbbell,        label: 'Academia',   color: '#ef4444' },
-  { to: '/addictions',   icon: ShieldOff,       label: 'Vícios',     color: '#3b82f6' },
-  { to: '/goals',        icon: Target,          label: 'Metas',      color: '#f59e0b' },
-  { to: '/journal',      icon: BookOpen,        label: 'Diário',     color: '#8b5cf6' },
-  { to: '/reading',      icon: BookMarked,      label: 'Mídia',      color: '#ec4899' },
-  { to: '/calendar',     icon: Calendar,        label: 'Calendário', color: '#0ea5e9' },
-  { to: '/analytics',    icon: BarChart2,       label: 'Analytics',  color: '#a855f7' },
-  { to: '/achievements', icon: Trophy,          label: 'Conquistas', color: '#f59e0b' },
-  { to: '/settings',     icon: Settings,        label: 'Config.',    color: '#6b7280' },
+const ALL_NAV_ITEMS = [
+  { to: '/',             key: 'dashboard',    icon: LayoutDashboard, label: 'Início',     color: '#7c3aed' },
+  { to: '/habits',       key: 'habits',       icon: CheckSquare,     label: 'Hábitos',    color: '#10b981' },
+  { to: '/sleep',        key: 'sleep',        icon: Moon,            label: 'Sono',       color: '#06b6d4' },
+  { to: '/finance',      key: 'finance',      icon: DollarSign,      label: 'Finanças',   color: '#10b981' },
+  { to: '/gym',          key: 'gym',          icon: Dumbbell,        label: 'Academia',   color: '#ef4444' },
+  { to: '/addictions',   key: 'addictions',   icon: ShieldOff,       label: 'Vícios',     color: '#3b82f6' },
+  { to: '/goals',        key: 'goals',        icon: Target,          label: 'Metas',      color: '#f59e0b' },
+  { to: '/journal',      key: 'journal',      icon: BookOpen,        label: 'Diário',     color: '#8b5cf6' },
+  { to: '/reading',      key: 'reading',      icon: BookMarked,      label: 'Mídia',      color: '#ec4899' },
+  { to: '/calendar',     key: 'calendar',     icon: Calendar,        label: 'Calendário', color: '#0ea5e9' },
+  { to: '/analytics',    key: 'analytics',    icon: BarChart2,       label: 'Analytics',  color: '#a855f7' },
+  { to: '/achievements', key: 'achievements', icon: Trophy,          label: 'Conquistas', color: '#f59e0b' },
+  { to: '/settings',     key: 'settings',     icon: Settings,        label: 'Config.',    color: '#6b7280' },
 ]
 
-export const NAV_TOTAL = NAV_ITEMS.length
-export function navMod(n: number): number { return ((n % NAV_TOTAL) + NAV_TOTAL) % NAV_TOTAL }
+function getHiddenSections(): string[] {
+  try { return JSON.parse(localStorage.getItem('habitos_hidden_sections') || '[]') } catch { return [] }
+}
+
+function getSectionOrder(): string[] {
+  try { return JSON.parse(localStorage.getItem('habitos_section_order') || '[]') } catch { return [] }
+}
+
+function computeNavItems(): typeof ALL_NAV_ITEMS {
+  const hidden = getHiddenSections()
+  const order = getSectionOrder()
+  const ordered = order.length
+    ? [...ALL_NAV_ITEMS].sort((a, b) => {
+        const ai = order.indexOf(a.key)
+        const bi = order.indexOf(b.key)
+        if (ai === -1) return 1
+        if (bi === -1) return -1
+        return ai - bi
+      })
+    : ALL_NAV_ITEMS
+  return ordered.filter(item => !hidden.includes(item.key))
+}
+
+export function useNavItems(): typeof ALL_NAV_ITEMS {
+  const [items, setItems] = useState(computeNavItems)
+  useEffect(() => {
+    function onChange(): void { setItems(computeNavItems()) }
+    window.addEventListener('habitos_sections_changed', onChange)
+    return () => window.removeEventListener('habitos_sections_changed', onChange)
+  }, [])
+  return items
+}
+
+export function navMod(n: number, total: number): number { return ((n % total) + total) % total }
 
 const ITEM_WIDTH = 72 // px per slot
 const OFFSETS = [-3, -2, -1, 0, 1, 2, 3] as const
@@ -31,9 +63,11 @@ const OFFSETS = [-3, -2, -1, 0, 1, 2, 3] as const
 export default function MobileNav(): React.JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
+  const navItems = useNavItems()
+  const total = navItems.length
 
   const activeIndex = (() => {
-    const idx = NAV_ITEMS.findIndex(item =>
+    const idx = navItems.findIndex(item =>
       item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
     )
     return idx === -1 ? 0 : idx
@@ -74,7 +108,7 @@ export default function MobileNav(): React.JSX.Element {
     setDragX(0)
 
     if (Math.abs(dx) < 40) return
-    navigate(NAV_ITEMS[navMod(activeIndex + (dx < 0 ? 1 : -1))].to)
+    navigate(navItems[navMod(activeIndex + (dx < 0 ? 1 : -1), total)].to)
   }
 
   return (
@@ -91,8 +125,8 @@ export default function MobileNav(): React.JSX.Element {
           style={{
             width: `${ITEM_WIDTH}px`,
             height: '56px',
-            backgroundColor: NAV_ITEMS[activeIndex].color + '22',
-            border: `1.5px solid ${NAV_ITEMS[activeIndex].color}44`,
+            backgroundColor: navItems[activeIndex].color + '22',
+            border: `1.5px solid ${navItems[activeIndex].color}44`,
             left: '50%',
             top: 'calc(50% - 12px)',
             transform: 'translate(-50%, -50%)',
@@ -101,8 +135,8 @@ export default function MobileNav(): React.JSX.Element {
         />
 
         {OFFSETS.map(offset => {
-          const itemIndex = navMod(activeIndex + offset)
-          const item = NAV_ITEMS[itemIndex]
+          const itemIndex = navMod(activeIndex + offset, total)
+          const item = navItems[itemIndex]
           const Icon = item.icon
 
           const dragItems = dragX / ITEM_WIDTH

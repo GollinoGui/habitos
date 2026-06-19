@@ -91,7 +91,9 @@ declare global {
       }
       calendar: {
         eventsByMonth: (year: number, month: number) => Promise<unknown[]>
+        eventsByRange?: (from: string, to: string) => Promise<unknown[]>
         createEvent: (data: object) => Promise<unknown>
+        linkDevice?: (id: number, deviceEventId: string) => Promise<void>
         toggleDone: (id: number) => Promise<void>
         deleteEvent: (id: number) => Promise<void>
         getNote: (date: string) => Promise<{ content: string } | null>
