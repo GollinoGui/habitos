@@ -102,7 +102,7 @@ export default function MobileTutorialModal({ onComplete }: Props): React.JSX.El
       />
 
       {/* Skip button */}
-      <div className="relative z-10 flex justify-end px-6 pt-12 pb-2">
+      <div className="relative z-10 flex justify-end px-4 pb-2 shrink-0" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 0px))' }}>
         <button
           onClick={onComplete}
           className="text-text-muted text-sm px-3 py-1.5 rounded-lg active:bg-bg-secondary transition-colors"
@@ -112,26 +112,33 @@ export default function MobileTutorialModal({ onComplete }: Props): React.JSX.El
       </div>
 
       {/* Slide content */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 text-center">
-        <div key={`emoji-${current}`} className="text-8xl mb-8 select-none animate-fadeIn">
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 text-center">
+        <div
+          key={`emoji-${current}`}
+          className="mb-4 select-none animate-fadeIn"
+          style={{ fontSize: 'clamp(2.75rem, 16vh, 6rem)', lineHeight: 1 }}
+        >
           {slide.emoji}
         </div>
         <h1
           key={`title-${current}`}
-          className="text-2xl font-bold text-text-primary mb-4 animate-fadeIn"
+          className="text-xl sm:text-2xl font-bold text-text-primary mb-3 animate-fadeIn"
         >
           {slide.title}
         </h1>
         <p
           key={`desc-${current}`}
-          className="text-text-secondary text-base leading-relaxed max-w-xs animate-fadeIn"
+          className="text-text-secondary text-sm sm:text-base leading-relaxed animate-fadeIn"
         >
           {slide.description}
         </p>
       </div>
 
       {/* Bottom controls */}
-      <div className="relative z-10 px-6 pb-12 space-y-6">
+      <div
+        className="relative z-10 px-4 space-y-4 shrink-0"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
+      >
         {/* Progress dots */}
         <div className="flex justify-center gap-2">
           {SLIDES.map((_, i) => (
