@@ -372,7 +372,10 @@ export default function Settings(): React.JSX.Element {
 
   return (
     <div className="max-w-2xl space-y-6 animate-fadeIn">
-      <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Configurações</h1>
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Configurações</h1>
+        <p className="text-text-secondary text-sm mt-1">Edite seu perfil, organize as seções do menu e ajuste preferências do app</p>
+      </div>
 
       {/* ── Perfil ──────────────────────────────────────────────────────────── */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">
@@ -425,6 +428,22 @@ export default function Settings(): React.JSX.Element {
             >
               <MonitorPlay size={15} />
               Abrir Demo
+            </button>
+          </div>
+        )}
+        {!window.__demoMode__ && (
+          <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-bg-border">
+            <Sparkles size={18} className="text-text-muted shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-text-primary">Tutorial</p>
+              <p className="text-xs text-text-muted">Reveja a explicação de cada seção e o que ela faz</p>
+            </div>
+            <button
+              onClick={() => window.dispatchEvent(new Event('habitos-replay-tutorial'))}
+              className="flex items-center gap-2 px-4 py-2 bg-accent-purple/15 hover:bg-accent-purple/25 border border-accent-purple/30 text-accent-purple text-sm font-medium rounded-lg transition-colors shrink-0"
+            >
+              <Sparkles size={15} />
+              Ver tutorial
             </button>
           </div>
         )}

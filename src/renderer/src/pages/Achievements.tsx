@@ -90,7 +90,10 @@ export default function Achievements(): React.JSX.Element {
 
   return (
     <div className="space-y-6 animate-fadeIn max-w-2xl">
-      <h1 className="text-2xl font-bold text-text-primary">Conquistas & Perfil</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary">Conquistas & Perfil</h1>
+        <p className="text-text-secondary text-sm mt-1">Seu perfil de herói, nível, XP e conquistas desbloqueadas</p>
+      </div>
 
       {/* Profile card */}
       <div className="bg-bg-secondary border border-bg-border rounded-2xl p-6">

@@ -978,7 +978,7 @@ export default function Gym(): React.JSX.Element {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Academia</h1>
-          <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>{workouts.length} treino{workouts.length !== 1 ? 's' : ''} registrado{workouts.length !== 1 ? 's' : ''}</p>
+          <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>Faça seu registro de treinos e atividades físicas aqui · {workouts.length} treino{workouts.length !== 1 ? 's' : ''} registrado{workouts.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex gap-2 shrink-0 animate-slide-up" style={{ animationDelay: '80ms' }}>
           <button onClick={() => setShowBioModal(true)}

@@ -9,6 +9,20 @@ const SLIDES = [
     color: '#7c3aed'
   },
   {
+    emoji: '👉',
+    title: 'Como Navegar',
+    description:
+      'Use a barra de ícones no rodapé para ir de uma seção para outra: deslize o dedo para o lado ou toque direto no ícone da seção que você quer abrir.',
+    color: '#7c3aed'
+  },
+  {
+    emoji: '🏠',
+    title: 'Dashboard',
+    description:
+      'Sua tela inicial. Mostra de relance os hábitos pendentes de hoje, seus contadores de sobriedade e as conquistas mais recentes.',
+    color: '#7c3aed'
+  },
+  {
     emoji: '✅',
     title: 'Hábitos Diários',
     description:
@@ -16,10 +30,24 @@ const SLIDES = [
     color: '#10b981'
   },
   {
+    emoji: '🌙',
+    title: 'Sono',
+    description:
+      'Registre quantas horas e ciclos você dormiu cada noite e acompanhe a qualidade do seu sono ao longo do tempo.',
+    color: '#06b6d4'
+  },
+  {
+    emoji: '💰',
+    title: 'Finanças',
+    description:
+      'Faça seu controle de receitas e despesas aqui. Organize por categorias e veja para onde está indo o seu dinheiro.',
+    color: '#10b981'
+  },
+  {
     emoji: '💪',
     title: 'Academia & Treinos',
     description:
-      'Registre seus treinos com exercícios e séries. Acompanhe medidas corporais ao longo do tempo e visualize sua evolução física.',
+      'Faça seu registro de treinos e atividades físicas aqui. Acompanhe medidas corporais ao longo do tempo e visualize sua evolução física.',
     color: '#ef4444'
   },
   {
@@ -37,18 +65,46 @@ const SLIDES = [
     color: '#f59e0b'
   },
   {
-    emoji: '🌙',
-    title: 'Mais Seções',
+    emoji: '📓',
+    title: 'Diário',
     description:
-      'Registro de sono, diário pessoal, controle financeiro, leituras e mídias — tudo integrado para evoluir em todos os aspectos da sua vida.',
-    color: '#06b6d4'
+      'Escreva reflexões e anotações sobre o seu dia. Um espaço só seu para colocar os pensamentos no papel.',
+    color: '#8b5cf6'
+  },
+  {
+    emoji: '📚',
+    title: 'Mídia',
+    description:
+      'Guarde os livros, filmes, séries e mangás que você está acompanhando ou já terminou.',
+    color: '#ec4899'
+  },
+  {
+    emoji: '📅',
+    title: 'Calendário',
+    description:
+      'Veja em um só lugar tudo que aconteceu em cada dia: hábitos concluídos, treinos e outros eventos.',
+    color: '#0ea5e9'
+  },
+  {
+    emoji: '📊',
+    title: 'Analytics',
+    description:
+      'Gráficos e tendências da sua evolução ao longo do tempo, juntando dados de todas as áreas do app.',
+    color: '#a855f7'
   },
   {
     emoji: '⚡',
-    title: 'Sistema de XP & Nível',
+    title: 'Conquistas & Perfil',
     description:
-      'Cada ação ganha XP e sobe seu nível de herói. Desbloqueie conquistas únicas e acompanhe toda sua jornada na seção de Conquistas!',
+      'Seu perfil de herói: ganhe XP em cada ação, suba de nível e desbloqueie conquistas únicas. Acompanhe toda a sua jornada aqui.',
     color: '#f59e0b'
+  },
+  {
+    emoji: '⚙️',
+    title: 'Configurações',
+    description:
+      'Edite seu perfil, escolha quais seções aparecem no menu e ajuste as cores do app. Você pode rever este tutorial aqui sempre que quiser.',
+    color: '#6b7280'
   }
 ]
 

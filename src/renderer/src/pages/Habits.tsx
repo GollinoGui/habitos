@@ -403,7 +403,7 @@ export default function Habits(): React.JSX.Element {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-text-primary">Hábitos</h1>
-          <p className="text-text-secondary text-sm">{active.length} ativos · {completedToday.size} concluídos hoje</p>
+          <p className="text-text-secondary text-sm">Crie hábitos diários e marque o que já fez aqui · {active.length} ativos · {completedToday.size} concluídos hoje</p>
         </div>
         {activeTab === 'habits' && (
           <div className="flex gap-2 shrink-0">

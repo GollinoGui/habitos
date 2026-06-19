@@ -228,6 +228,18 @@ function AppContent(): React.JSX.Element {
     checkExistingUser()
   }, [user])
 
+  useEffect(() => {
+    function onReplayTutorial(): void {
+      if (isMobileApp) {
+        setShowMobileTutorial(true)
+      } else {
+        setShowTutorial(true)
+      }
+    }
+    window.addEventListener('habitos-replay-tutorial', onReplayTutorial)
+    return () => window.removeEventListener('habitos-replay-tutorial', onReplayTutorial)
+  }, [])
+
   function handleOnboardingComplete(): void {
     setShowOnboarding(false)
     if (isMobileApp) {
