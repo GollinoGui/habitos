@@ -274,7 +274,7 @@ create table if not exists sleep_logs (
   wake_time  text not null,
   quality    integer not null default 3,
   notes      text default '',
-  cycles     integer default null,
+  cycles     numeric(3,1) default null,
   created_at timestamptz default now(),
   unique (user_id, date)
 );

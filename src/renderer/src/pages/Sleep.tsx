@@ -26,7 +26,7 @@ function calcDuration(bedtime: string, wake_time: string): string {
 function calcCycles(bedtime: string, wake_time: string): number {
   const mins = calcMinsFromTimes(bedtime, wake_time)
   if (mins < 45) return 0
-  return Math.min(Math.round(mins / 90), 7)
+  return Math.round(Math.min(mins / 90, 7) * 10) / 10
 }
 
 function qualityColor(q: number): string {
@@ -227,7 +227,7 @@ export default function Sleep(): React.JSX.Element {
                 {highlightedLog.cycles != null && highlightedLog.cycles > 0 && (
                   <>
                     <span className="text-xs text-text-muted">·</span>
-                    <span className="text-xs text-accent-purple font-medium">{highlightedLog.cycles} ciclos</span>
+                    <span className="text-xs text-accent-purple font-medium">{highlightedLog.cycles.toFixed(1)} ciclos</span>
                   </>
                 )}
                 <span className="text-xs text-text-muted">·</span>
@@ -245,7 +245,7 @@ export default function Sleep(): React.JSX.Element {
               )}
               <Tooltip
                 formatter={(v: number, name: string) => [
-                  name === 'ciclos' ? `${v} ciclos` : `${v}h`,
+                  name === 'ciclos' ? `${v.toFixed(1)} ciclos` : `${v}h`,
                   name === 'ciclos' ? 'Ciclos' : 'Horas'
                 ]}
                 contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8 }}
@@ -350,7 +350,7 @@ export default function Sleep(): React.JSX.Element {
               <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary rounded-lg">
                 <span className="text-sm">🔄</span>
                 <span className="text-sm text-text-secondary">Ciclos estimados:</span>
-                <span className="font-bold text-accent-purple">{c}</span>
+                <span className="font-bold text-accent-purple">{c.toFixed(1)}</span>
                 <span className="text-xs text-text-muted">(cada ciclo ≈ 90 min)</span>
               </div>
             ) : null
@@ -423,7 +423,7 @@ export default function Sleep(): React.JSX.Element {
                 <span className="text-xs text-text-muted">☀️ {log.wake_time}</span>
                 <span className="text-xs text-accent-blue font-medium">{calcDuration(log.bedtime, log.wake_time)}</span>
                 {log.cycles != null && log.cycles > 0 && (
-                  <span className="text-xs text-accent-purple font-medium">🔄 {log.cycles} ciclo{log.cycles !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-accent-purple font-medium">🔄 {log.cycles.toFixed(1)} ciclos</span>
                 )}
               </div>
             </button>

@@ -185,7 +185,7 @@ function createTables(): void {
       wake_time TEXT,
       quality INTEGER DEFAULT 3,
       notes TEXT,
-      cycles INTEGER DEFAULT NULL,
+      cycles REAL DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -338,7 +338,7 @@ function runMigrations(): void {
   }
   const sleepCols = dbAll('PRAGMA table_info(sleep_logs)')
   if (!sleepCols.find((c: Record<string, unknown>) => c.name === 'cycles')) {
-    db.run('ALTER TABLE sleep_logs ADD COLUMN cycles INTEGER DEFAULT NULL')
+    db.run('ALTER TABLE sleep_logs ADD COLUMN cycles REAL DEFAULT NULL')
   }
 }
 
