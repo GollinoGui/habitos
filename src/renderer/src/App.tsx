@@ -23,6 +23,7 @@ import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 import MobileTutorialModal from './components/Tutorial/MobileTutorialModal'
 import MobileNav, { useNavItems, navMod } from './components/Layout/MobileNav'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useFocusStore } from './store/focusStore'
 
 function applyStoredTheme() {
   const theme = localStorage.getItem('habitos_theme') || 'dark'
@@ -229,6 +230,14 @@ function AppContent(): React.JSX.Element {
     checkExistingUser()
   }, [user])
 
+  // Drives the Pomodoro countdown from a single place that stays mounted
+  // for the whole session, so the timer keeps running even when the user
+  // navigates away from the Dashboard and back.
+  useEffect(() => {
+    const id = setInterval(() => useFocusStore.getState().tick(), 1000)
+    return () => clearInterval(id)
+  }, [])
+
   useEffect(() => {
     function onReplayTutorial(): void {
       if (isMobileApp) {
@@ -417,7 +426,7 @@ function AppPreview(): React.JSX.Element {
               { label: 'Sequência', val: '7 dias', color: 'text-accent-purple' },
               { label: 'XP Total', val: '1.240', color: 'text-yellow-400' },
               { label: 'Hábitos hoje', val: '3/5', color: 'text-accent-green' },
-              { label: 'Nível', val: 'Lendário', color: 'text-blue-400' },
+              { label: 'Nível', val: 'Exemplar', color: 'text-blue-400' },
             ].map(s => (
               <div key={s.label} className="bg-bg-secondary border border-bg-border rounded-xl p-4">
                 <p className="text-xs text-text-muted mb-1">{s.label}</p>

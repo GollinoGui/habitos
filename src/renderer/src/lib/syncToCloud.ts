@@ -88,45 +88,6 @@ export interface SyncResult {
   counts?: Record<string, number>
 }
 
-export async function syncFinanceAndCalendarToCloud(userId: string): Promise<SyncResult> {
-  try {
-    const json = await window.api!.app.exportData()
-    const d = JSON.parse(json) as Record<string, Row[]>
-
-    const NO_CREATED_AT = ['created_at']
-
-    // Delete only finance and calendar tables (preserves habits, gym, etc.)
-    const tables = [
-      'finance_transactions', 'finance_bills', 'finance_categories', 'finance_accounts',
-      'calendar_events', 'calendar_notes',
-    ]
-    for (const table of tables) {
-      const { error } = await supabase.from(table).delete().eq('user_id', userId)
-      if (error) throw new Error(`delete ${table}: ${error.message}`)
-    }
-
-    const cats  = await bulk('finance_categories', d.finance_categories ?? [], userId, {}, NO_CREATED_AT)
-    const accs  = await bulk('finance_accounts',   d.finance_accounts   ?? [], userId, {}, NO_CREATED_AT)
-    const bills = await bulk('finance_bills',       d.finance_bills      ?? [], userId, { category_id: cats }, NO_CREATED_AT)
-    await bulk('finance_transactions', d.finance_transactions ?? [], userId, { category_id: cats, bill_id: bills, account_id: accs })
-    await bulk('calendar_events', d.calendar_events ?? [], userId, {}, NO_CREATED_AT)
-    await bulk('calendar_notes',  d.calendar_notes  ?? [], userId)
-
-    const counts: Record<string, number> = {
-      finance_categories: d.finance_categories?.length ?? 0,
-      finance_accounts:   d.finance_accounts?.length   ?? 0,
-      finance_bills:      d.finance_bills?.length       ?? 0,
-      finance_transactions: d.finance_transactions?.length ?? 0,
-      calendar_events:    d.calendar_events?.length     ?? 0,
-      calendar_notes:     d.calendar_notes?.length      ?? 0,
-    }
-
-    return { success: true, counts }
-  } catch (err) {
-    return { success: false, error: (err as Error).message }
-  }
-}
-
 export async function syncDesktopToCloud(userId: string): Promise<SyncResult> {
   try {
     const json = await window.api!.app.exportData()
@@ -170,7 +131,7 @@ export async function syncDesktopToCloud(userId: string): Promise<SyncResult> {
     const profile = await window.api!.profile.get() as { name?: string; total_xp?: number; level?: number } | null
     if (profile) {
       await supabase.from('user_profile').upsert(
-        { user_id: userId, name: profile.name ?? 'Herói', total_xp: profile.total_xp ?? 0, level: profile.level ?? 1 },
+        { user_id: userId, name: profile.name ?? 'Usuário', total_xp: profile.total_xp ?? 0, level: profile.level ?? 1 },
         { onConflict: 'user_id' }
       )
     }

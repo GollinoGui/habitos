@@ -1,17 +1,18 @@
 // Mobile API polyfill: implements the same window.api interface as the Electron
 // preload, but backed by Supabase. Installed on Android/Capacitor after login.
 import { supabase } from './supabase'
+import { loadMobileNotifSettings, saveMobileNotifSettings, testMobileNotification, ensureMobileNotificationsScheduled } from './mobileNotifications'
 
 // ── Level system (mirrored from src/main/ipc/profile.ts) ─────────────────────
 
 const LEVELS = [
   { level: 1, rank: 'Iniciante', xp: 0 },
   { level: 2, rank: 'Aprendiz', xp: 100 },
-  { level: 3, rank: 'Guerreiro', xp: 300 },
-  { level: 4, rank: 'Herói', xp: 700 },
-  { level: 5, rank: 'Lendário', xp: 1500 },
-  { level: 6, rank: 'Imortal', xp: 3000 },
-  { level: 7, rank: 'Ascendente', xp: 6000 },
+  { level: 3, rank: 'Persistente', xp: 300 },
+  { level: 4, rank: 'Consistente', xp: 700 },
+  { level: 5, rank: 'Exemplar', xp: 1500 },
+  { level: 6, rank: 'Imparável', xp: 3000 },
+  { level: 7, rank: 'Lenda', xp: 6000 },
 ]
 
 function getLevelInfo(xp: number) {
@@ -55,7 +56,7 @@ let _userMeta: { full_name?: string; name?: string; email?: string } = {}
 function getDisplayName(): string {
   const meta = _userMeta
   const name = meta.full_name || meta.name
-  if (name && name !== 'Herói') return name
+  if (name && name !== 'Usuário') return name
   if (meta.email) {
     const local = meta.email.split('@')[0]
     return local.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
@@ -82,6 +83,10 @@ export function installMobileApi(
   // after switching computers. Runs silently; errors are ignored.
   if (_electronApi) {
     void syncLocalHabitCompletions(userId)
+  } else {
+    // Real Android device: re-apply the saved daily reminder schedule in case the
+    // OS dropped pending alarms (e.g. after an app update). No-ops on web/desktop.
+    void ensureMobileNotificationsScheduled()
   }
 }
 
@@ -158,7 +163,7 @@ function buildApi(): any {
         ])
         let profile = profileRes.data
         // Auto-fix name when it's the placeholder default or profile doesn't exist yet
-        if (!profile || profile.name === 'Herói' || profile.name === 'Usuário') {
+        if (!profile || profile.name === 'Usuário') {
           const displayName = getDisplayName()
           await supabase.from('user_profile')
             .upsert({ user_id: uid(), name: displayName, total_xp: profile?.total_xp ?? 0, level: profile?.level ?? 1 }, { onConflict: 'user_id' })
@@ -1274,14 +1279,17 @@ function buildApi(): any {
       },
     },
 
-    // ── Desktop-only features: delegate to Electron IPC when available ────
+    // ── Notifications: Electron native on desktop, local notifications on Android ──
     notifications: {
       getSettings: async () =>
-        _electronApi?.notifications.getSettings() ?? { enabled: false, hour: 20, minute: 0 },
-      saveSettings: async (s: { enabled: boolean; hour: number; minute: number }) =>
-        _electronApi?.notifications.saveSettings(s) ?? true,
+        _electronApi?.notifications.getSettings() ?? loadMobileNotifSettings(),
+      saveSettings: async (s: { enabled: boolean; hour: number; minute: number }) => {
+        if (_electronApi) return _electronApi.notifications.saveSettings(s)
+        const result = await saveMobileNotifSettings(s)
+        return result.ok
+      },
       test: async () =>
-        _electronApi?.notifications.test() ?? { sent: false },
+        _electronApi?.notifications.test() ?? testMobileNotification(),
     },
 
     app: {

@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Bell, BellOff, Send, AlertTriangle, Download, Upload, Trash2,
-  Palette, Eye, EyeOff, User, GripVertical, Sparkles, Check, MonitorPlay, Cloud
+  Palette, Eye, EyeOff, User, GripVertical, Sparkles, Check, MonitorPlay
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { syncDesktopToCloud, syncFinanceAndCalendarToCloud } from '../lib/syncToCloud'
 
 interface NotifSettings { enabled: boolean; hour: number; minute: number }
 
@@ -100,17 +99,6 @@ export default function Settings(): React.JSX.Element {
   const [resetTarget, setResetTarget] = useState('')
   const [resetConfirm, setResetConfirm] = useState(false)
   const [resetDone, setResetDone] = useState(false)
-
-  const [syncing, setSyncing] = useState(false)
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'done' | 'error'>('idle')
-  const [syncConfirm, setSyncConfirm] = useState(false)
-  const [syncError, setSyncError] = useState('')
-  const [syncCounts, setSyncCounts] = useState<Record<string, number> | null>(null)
-
-  const [partialSyncing, setPartialSyncing] = useState(false)
-  const [partialSyncStatus, setPartialSyncStatus] = useState<'idle' | 'done' | 'error'>('idle')
-  const [partialSyncError, setPartialSyncError] = useState('')
-  const [partialSyncCounts, setPartialSyncCounts] = useState<Record<string, number> | null>(null)
 
   const isDesktop = !!window.electronAuth
   const isMobileApp = !isDesktop && !window.__demoMode__
@@ -268,9 +256,14 @@ export default function Settings(): React.JSX.Element {
 
   // ── Notifications ─────────────────────────────────────────────────────────
   async function handleNotifSave() {
-    await window.api.notifications.saveSettings(notif)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    const ok = await window.api.notifications.saveSettings(notif)
+    if (ok) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } else {
+      setTestStatus('blocked')
+      setTimeout(() => setTestStatus('idle'), 5000)
+    }
   }
 
   async function handleTest() {
@@ -325,45 +318,6 @@ export default function Settings(): React.JSX.Element {
     } finally {
       setExcelExporting(false)
       setTimeout(() => setExcelStatus('idle'), 4000)
-    }
-  }
-
-  async function handleSyncToCloud() {
-    if (!user || !syncConfirm) return
-    setSyncing(true)
-    setSyncStatus('idle')
-    setSyncError('')
-    setSyncCounts(null)
-    const result = await syncDesktopToCloud(user.id)
-    setSyncing(false)
-    if (result.success) {
-      setSyncStatus('done')
-      setSyncCounts(result.counts ?? null)
-      localStorage.setItem('habitos_sqlite_migrated', '1')
-      setTimeout(() => { setSyncStatus('idle'); setSyncConfirm(false) }, 6000)
-    } else {
-      setSyncStatus('error')
-      setSyncError(result.error ?? 'Erro desconhecido')
-      setTimeout(() => setSyncStatus('idle'), 8000)
-    }
-  }
-
-  async function handlePartialSync() {
-    if (!user) return
-    setPartialSyncing(true)
-    setPartialSyncStatus('idle')
-    setPartialSyncError('')
-    setPartialSyncCounts(null)
-    const result = await syncFinanceAndCalendarToCloud(user.id)
-    setPartialSyncing(false)
-    if (result.success) {
-      setPartialSyncStatus('done')
-      setPartialSyncCounts(result.counts ?? null)
-      setTimeout(() => setPartialSyncStatus('idle'), 8000)
-    } else {
-      setPartialSyncStatus('error')
-      setPartialSyncError(result.error ?? 'Erro desconhecido')
-      setTimeout(() => setPartialSyncStatus('idle'), 8000)
     }
   }
 
@@ -630,7 +584,9 @@ export default function Settings(): React.JSX.Element {
           <div className="flex items-start gap-2 p-3 bg-yellow-950/30 border border-yellow-700/40 rounded-lg">
             <AlertTriangle size={15} className="text-yellow-400 shrink-0 mt-0.5" />
             <p className="text-xs text-yellow-300">
-              Notificações bloqueadas. Verifique em <span className="font-medium">Configurações do Windows → Sistema → Notificações</span>.
+              {isMobileApp
+                ? <>Notificações bloqueadas. Verifique a permissão de notificações do app <span className="font-medium">Hábitos</span> nas configurações do Android.</>
+                : <>Notificações bloqueadas. Verifique em <span className="font-medium">Configurações do Windows → Sistema → Notificações</span>.</>}
             </p>
           </div>
         )}
@@ -651,88 +607,6 @@ export default function Settings(): React.JSX.Element {
           {exportDone ? 'Download iniciado!' : exporting ? 'Exportando...' : 'Baixar backup JSON'}
         </button>
       </div>
-
-      {/* ── Restaurar Finanças e Calendário do SQLite local ── */}
-      {isDesktop && (
-        <div className="bg-bg-secondary border border-accent-blue/30 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <Cloud size={20} className="text-accent-blue" />
-            <h2 className="text-lg font-semibold text-text-primary">Restaurar Finanças e Calendário</h2>
-          </div>
-          <p className="text-sm text-text-secondary">
-            Sincroniza apenas os dados de <strong>Finanças</strong> e <strong>Calendário</strong> do banco local (SQLite) para a nuvem.{' '}
-            <span className="text-accent-green font-medium">Os hábitos, treinos e outros dados na nuvem não são afetados.</span>
-          </p>
-          <button
-            onClick={handlePartialSync}
-            disabled={partialSyncing || !user}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-blue/15 hover:bg-accent-blue/25 text-accent-blue border border-accent-blue/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
-          >
-            <Cloud size={14} />
-            {partialSyncing ? 'Restaurando...' : partialSyncStatus === 'done' ? '✓ Restaurado!' : partialSyncStatus === 'error' ? 'Erro ao restaurar' : 'Restaurar agora'}
-          </button>
-          {partialSyncStatus === 'done' && partialSyncCounts && (
-            <div className="p-3 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
-              <p className="text-xs text-accent-blue font-medium mb-1">Dados restaurados:</p>
-              <p className="text-xs text-text-secondary">
-                {Object.entries(partialSyncCounts)
-                  .filter(([, v]) => v > 0)
-                  .map(([k, v]) => `${k}: ${v}`)
-                  .join(' · ')}
-              </p>
-            </div>
-          )}
-          {partialSyncStatus === 'error' && (
-            <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-700/40 rounded-lg">
-              <AlertTriangle size={15} className="text-accent-red shrink-0 mt-0.5" />
-              <p className="text-xs text-accent-red">{partialSyncError}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Sincronização SQLite → Nuvem (somente desktop) ── */}
-      {isDesktop && (
-        <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <Cloud size={20} className="text-accent-blue" />
-            <h2 className="text-lg font-semibold text-text-primary">Sincronizar dados locais para a Nuvem</h2>
-          </div>
-          <p className="text-sm text-text-secondary">
-            Envia todos os seus dados locais (SQLite) para o Supabase, substituindo os dados na nuvem.{' '}
-            <span className="text-accent-red font-medium">Os dados atuais na nuvem serão substituídos pelos dados locais.</span>
-          </p>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input type="checkbox" checked={syncConfirm} onChange={e => setSyncConfirm(e.target.checked)} className="accent-accent-blue" />
-            <span className="text-sm text-text-secondary">Confirmo que quero sobrescrever os dados na nuvem com os dados locais</span>
-          </label>
-          <button
-            onClick={handleSyncToCloud}
-            disabled={syncing || !syncConfirm || !user}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-blue/15 hover:bg-accent-blue/25 text-accent-blue border border-accent-blue/30 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
-          >
-            <Cloud size={14} />
-            {syncing ? 'Sincronizando...' : syncStatus === 'done' ? '✓ Sincronizado!' : syncStatus === 'error' ? 'Erro ao sincronizar' : 'Sincronizar agora'}
-          </button>
-          {syncStatus === 'done' && syncCounts && (
-            <div className="p-3 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
-              <p className="text-xs text-accent-blue font-medium mb-1">Dados migrados:</p>
-              <p className="text-xs text-text-secondary">
-                {Object.entries(syncCounts)
-                  .filter(([, v]) => v > 0)
-                  .map(([k, v]) => `${k}: ${v}`)
-                  .join(' · ')}
-              </p>
-            </div>
-          )}
-          {syncStatus === 'error' && (
-            <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-700/40 rounded-lg">
-              <AlertTriangle size={15} className="text-accent-red shrink-0 mt-0.5" />
-              <p className="text-xs text-accent-red">{syncError}</p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Importar ────────────────────────────────────────────────────────── */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 sm:p-6 space-y-4">

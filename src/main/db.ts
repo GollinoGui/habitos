@@ -46,7 +46,7 @@ function createTables(): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_profile (
       id INTEGER PRIMARY KEY DEFAULT 1,
-      name TEXT DEFAULT 'Herói',
+      name TEXT DEFAULT 'Usuário',
       total_xp INTEGER DEFAULT 0,
       level INTEGER DEFAULT 1
     );

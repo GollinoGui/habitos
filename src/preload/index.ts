@@ -184,8 +184,8 @@ function buildDemoApi() {
   const demoProfile = {
     id: 1, name: 'Maria Silva', total_xp: 3240, level: 5,
     levelInfo: {
-      current: { level: 5, rank: 'Lendário', xp: 1500 },
-      next: { level: 6, rank: 'Imortal', xp: 3000 }
+      current: { level: 5, rank: 'Exemplar', xp: 1500 },
+      next: { level: 6, rank: 'Imparável', xp: 3000 }
     },
     history: [
       { id: 1, amount: 30, reason: 'Hábito: Exercitar', created_at: today },

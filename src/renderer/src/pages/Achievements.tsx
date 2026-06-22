@@ -31,11 +31,11 @@ const ALL_BADGES = [
   { key: 'finance_first', name: 'Financeiro', description: 'Registrou sua primeira transação', icon: '💰', category: 'Finanças' },
   { key: 'finance_positive', name: 'Saldo Positivo', description: 'Terminou um mês com saldo positivo', icon: '📈', category: 'Finanças' },
   { key: 'level_up_2', name: 'Nível 2: Aprendiz', description: 'Alcançou o rank Aprendiz', icon: '⬆️', category: 'XP' },
-  { key: 'level_up_3', name: 'Nível 3: Guerreiro', description: 'Alcançou o rank Guerreiro', icon: '⚔️', category: 'XP' },
-  { key: 'level_up_4', name: 'Nível 4: Herói', description: 'Alcançou o rank Herói', icon: '🦸', category: 'XP' },
-  { key: 'level_up_5', name: 'Nível 5: Lendário', description: 'Alcançou o rank Lendário', icon: '🌟', category: 'XP' },
-  { key: 'level_up_6', name: 'Nível 6: Imortal', description: 'Alcançou o rank Imortal', icon: '⚡', category: 'XP' },
-  { key: 'level_up_7', name: 'Nível 7: Ascendente', description: 'Alcançou o rank Ascendente', icon: '👑', category: 'XP' }
+  { key: 'level_up_3', name: 'Nível 3: Persistente', description: 'Alcançou o rank Persistente', icon: '🧗', category: 'XP' },
+  { key: 'level_up_4', name: 'Nível 4: Consistente', description: 'Alcançou o rank Consistente', icon: '🧭', category: 'XP' },
+  { key: 'level_up_5', name: 'Nível 5: Exemplar', description: 'Alcançou o rank Exemplar', icon: '🏅', category: 'XP' },
+  { key: 'level_up_6', name: 'Nível 6: Imparável', description: 'Alcançou o rank Imparável', icon: '⚡', category: 'XP' },
+  { key: 'level_up_7', name: 'Nível 7: Lenda', description: 'Alcançou o rank Lenda', icon: '👑', category: 'XP' }
 ]
 
 const CATEGORIES = ['Todos', 'Hábitos', 'Academia', 'Sobriedade', 'Metas', 'Diário', 'Sono', 'Leitura', 'Finanças', 'XP']
@@ -92,7 +92,7 @@ export default function Achievements(): React.JSX.Element {
     <div className="space-y-6 animate-fadeIn max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Conquistas & Perfil</h1>
-        <p className="text-text-secondary text-sm mt-1">Seu perfil de herói, nível, XP e conquistas desbloqueadas</p>
+        <p className="text-text-secondary text-sm mt-1">Seu perfil, nível, XP e conquistas desbloqueadas</p>
       </div>
 
       {/* Profile card */}

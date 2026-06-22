@@ -57,7 +57,7 @@ const STEPS: TutorialStep[] = [
     title: 'Conquistas',
     emoji: '🏆',
     description:
-      'Seu perfil de herói, histórico de XP e todas as conquistas desbloqueadas. Quantas você vai colecionar?'
+      'Seu perfil, histórico de XP e todas as conquistas desbloqueadas. Quantas você vai colecionar?'
   },
   {
     elementId: 'nav-journal',

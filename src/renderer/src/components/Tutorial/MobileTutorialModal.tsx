@@ -5,7 +5,7 @@ const SLIDES = [
     emoji: '🏆',
     title: 'Bem-vindo ao Hábitos!',
     description:
-      'Seu companheiro de evolução pessoal. Construa hábitos, supere vícios, alcance metas e evolua como um herói de RPG — ganhando XP a cada conquista.',
+      'Seu companheiro de evolução pessoal. Construa hábitos, supere vícios, alcance metas e suba de nível — ganhando XP a cada conquista.',
     color: '#7c3aed'
   },
   {
@@ -96,7 +96,7 @@ const SLIDES = [
     emoji: '⚡',
     title: 'Conquistas & Perfil',
     description:
-      'Seu perfil de herói: ganhe XP em cada ação, suba de nível e desbloqueie conquistas únicas. Acompanhe toda a sua jornada aqui.',
+      'Seu perfil: ganhe XP em cada ação, suba de nível e desbloqueie conquistas únicas. Acompanhe toda a sua jornada aqui.',
     color: '#f59e0b'
   },
   {

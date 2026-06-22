@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useProfileStore } from '../store/profileStore'
+import { useFocusStore } from '../store/focusStore'
 import CalendarSection from '../components/CalendarSection'
 
 interface Habit {
@@ -53,16 +54,15 @@ export default function Dashboard(): React.JSX.Element {
   const [goalTasks, setGoalTasks] = useState<Map<number, GoalTask[]>>(new Map())
   const [weeklyData, setWeeklyData] = useState<{ date: string; count: number; pct: number; isFuture: boolean }[]>([])
 
-  const [focusMode, setFocusMode] = useState(false)
-  const [focusPhase, setFocusPhase] = useState<'work' | 'break'>('work')
-  const [workMinutes, setWorkMinutes] = useState(25)
-  const [breakMinutes, setBreakMinutes] = useState(5)
-  const [focusSeconds, setFocusSeconds] = useState(25 * 60)
-  const [focusRunning, setFocusRunning] = useState(false)
-  const [focusSessionsToday, setFocusSessionsToday] = useState(0)
-  const [focusMinutesToday, setFocusMinutesToday] = useState(0)
-  const [focusStreak, setFocusStreak] = useState(0)
-  const [focusXp, setFocusXp] = useState<number | null>(null)
+  const {
+    active: focusMode, enter: enterFocusMode, exit: exitFocusMode,
+    phase: focusPhase, workMinutes, breakMinutes, running: focusRunning,
+    remainingSeconds: focusSeconds, sessionsToday: focusSessionsToday,
+    minutesToday: focusMinutesToday, streak: focusStreak, xpToast: focusXp,
+    start: startFocusTimer, pause: pauseFocusTimer, reset: resetFocusTimer,
+    setWorkMinutes: setWorkDuration, setBreakMinutes: setBreakDuration
+  } = useFocusStore()
+  const [showFocusHelp, setShowFocusHelp] = useState(() => localStorage.getItem('habitos_focus_help_collapsed') !== '1')
   const [barsVisible, setBarsVisible] = useState(false)
   const [, setTick] = useState(0)
   const [calendarKey, setCalendarKey] = useState(0)
@@ -100,63 +100,16 @@ export default function Dashboard(): React.JSX.Element {
     return () => { clearInterval(interval); window.removeEventListener('habitos_sections_changed', onSectionsChanged) }
   }, [])
 
-  useEffect(() => {
-    if (!focusMode) return
-    Promise.all([window.api.focus.todayStats(today), window.api.focus.streak()]).then(([stats, streak]) => {
-      setFocusSessionsToday((stats as { sessions: number }).sessions)
-      setFocusMinutesToday((stats as { minutes: number }).minutes)
-      setFocusStreak(streak as number)
-    })
-  }, [focusMode])
-
-  useEffect(() => {
-    if (!focusRunning) return
-    const id = setInterval(() => setFocusSeconds(s => Math.max(0, s - 1)), 1000)
-    return () => clearInterval(id)
-  }, [focusRunning])
-
-  useEffect(() => {
-    if (!focusRunning || focusSeconds !== 0) return
-    completeFocusPhase()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSeconds, focusRunning])
-
-  async function completeFocusPhase() {
-    setFocusRunning(false)
-    if (focusPhase === 'work') {
-      const result = await window.api.focus.logSession({ date: today, duration_minutes: workMinutes })
-      setFocusSessionsToday(s => s + 1)
-      setFocusMinutesToday(m => m + workMinutes)
-      setFocusXp(result.xp)
-      setTimeout(() => setFocusXp(null), 1500)
-      fetchProfile()
-      window.api.focus.streak().then(s => setFocusStreak(s as number))
-      setFocusPhase('break')
-      setFocusSeconds(breakMinutes * 60)
-    } else {
-      setFocusPhase('work')
-      setFocusSeconds(workMinutes * 60)
-    }
-  }
-
   function toggleFocusTimer() {
-    setFocusRunning(r => !r)
+    if (focusRunning) pauseFocusTimer(); else startFocusTimer()
   }
 
-  function resetFocusTimer() {
-    setFocusRunning(false)
-    setFocusPhase('work')
-    setFocusSeconds(workMinutes * 60)
-  }
-
-  function setWorkDuration(mins: number) {
-    setWorkMinutes(mins)
-    if (!focusRunning && focusPhase === 'work') setFocusSeconds(mins * 60)
-  }
-
-  function setBreakDuration(mins: number) {
-    setBreakMinutes(mins)
-    if (!focusRunning && focusPhase === 'break') setFocusSeconds(mins * 60)
+  function toggleFocusHelp() {
+    setShowFocusHelp(v => {
+      const next = !v
+      localStorage.setItem('habitos_focus_help_collapsed', next ? '0' : '1')
+      return next
+    })
   }
 
   function formatTimer(s: number): string {
@@ -337,13 +290,13 @@ export default function Dashboard(): React.JSX.Element {
           </div>
         </div>
         <button
-          onClick={() => setFocusMode(v => !v)}
+          onClick={() => (focusMode ? exitFocusMode() : enterFocusMode())}
           className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
             focusMode ? 'bg-accent-purple text-white border-accent-purple' : 'border-bg-border text-text-secondary hover:text-text-primary hover:bg-bg-border'
           }`}
         >
           <Focus size={13} />
-          {focusMode ? 'Sair' : 'Foco'}
+          {focusMode ? 'Sair' : focusRunning ? `Foco ${formatTimer(focusSeconds)}` : 'Foco'}
         </button>
       </div>
 
@@ -454,6 +407,21 @@ export default function Dashboard(): React.JSX.Element {
               <p className="text-lg font-bold text-orange-400 flex items-center justify-center gap-0.5"><Flame size={14} fill="currentColor" />{focusStreak}</p>
               <p className="text-[10px] text-text-muted">Sequência</p>
             </div>
+          </div>
+
+          <div className="w-full max-w-md">
+            <button onClick={toggleFocusHelp} className="flex items-center gap-1.5 mx-auto text-xs text-text-muted hover:text-text-secondary transition-colors">
+              <span>💡</span> Como funciona o Modo Foco {showFocusHelp ? '▲' : '▼'}
+            </button>
+            {showFocusHelp && (
+              <div className="mt-2 bg-bg-secondary border border-bg-border rounded-xl p-4 text-xs text-text-secondary leading-relaxed space-y-1.5 animate-fadeIn">
+                <p><strong className="text-text-primary">1.</strong> Escolha a duração do foco e da pausa abaixo do timer, depois aperte <strong className="text-text-primary">Iniciar</strong>.</p>
+                <p><strong className="text-text-primary">2.</strong> Quando o tempo de foco chega a zero, você ganha XP na hora e o timer muda para o modo <strong className="text-accent-green">☕ Pausa</strong> — ele fica parado esperando você apertar <strong className="text-text-primary">Iniciar</strong> de novo quando quiser começar a pausa.</p>
+                <p><strong className="text-text-primary">3.</strong> Quando a pausa termina, ele volta pro modo <strong className="text-accent-purple">🎯 Foco</strong>, também parado — é você quem decide quando começar a próxima sessão.</p>
+                <p><strong className="text-text-primary">4.</strong> O cronômetro continua contando mesmo se você for para outra página do app — ele só para de verdade se você apertar <strong className="text-text-primary">Pausar</strong>. O botão "Foco" no topo mostra o tempo restante mesmo fora desta tela.</p>
+                <p><strong className="text-text-primary">5.</strong> O botão <RotateCcw size={11} className="inline -mt-0.5" /> reinicia tudo do zero, voltando para o modo foco.</p>
+              </div>
+            )}
           </div>
         </div>
       )}

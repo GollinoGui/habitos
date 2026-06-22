@@ -4,11 +4,11 @@ import { dbAll, dbGet, dbRun, save } from '../db'
 const LEVELS = [
   { level: 1, rank: 'Iniciante', xp: 0 },
   { level: 2, rank: 'Aprendiz', xp: 100 },
-  { level: 3, rank: 'Guerreiro', xp: 300 },
-  { level: 4, rank: 'Herói', xp: 700 },
-  { level: 5, rank: 'Lendário', xp: 1500 },
-  { level: 6, rank: 'Imortal', xp: 3000 },
-  { level: 7, rank: 'Ascendente', xp: 6000 }
+  { level: 3, rank: 'Persistente', xp: 300 },
+  { level: 4, rank: 'Consistente', xp: 700 },
+  { level: 5, rank: 'Exemplar', xp: 1500 },
+  { level: 6, rank: 'Imparável', xp: 3000 },
+  { level: 7, rank: 'Lenda', xp: 6000 }
 ]
 
 export function getLevelInfo(xp: number) {

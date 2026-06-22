@@ -18,7 +18,7 @@ export default function OnboardingModal({ onComplete }: Props): React.JSX.Elemen
   const navigate = useNavigate()
 
   async function handleSaveName(): Promise<void> {
-    const trimmed = name.trim() || 'Herói'
+    const trimmed = name.trim() || 'Usuário'
     setSaving(true)
     await window.api.profile.updateName(trimmed)
     await fetchProfile()
@@ -72,7 +72,7 @@ export default function OnboardingModal({ onComplete }: Props): React.JSX.Elemen
               <div className="text-center">
                 <div className="text-5xl mb-3">👤</div>
                 <h2 className="text-xl font-bold text-text-primary">Como vamos te chamar?</h2>
-                <p className="text-text-muted text-sm mt-1">Esse será o seu nome de herói</p>
+                <p className="text-text-muted text-sm mt-1">Esse será o seu nome de exibição no app</p>
               </div>
               <input
                 type="text"
