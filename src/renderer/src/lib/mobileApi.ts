@@ -203,11 +203,30 @@ function buildApi(): any {
       dueToday: async () => {
         const { data } = await supabase.from('habits').select('*')
           .eq('user_id', uid()).eq('is_active', 1).order('created_at')
-        const todayDow = new Date().getDay()
+        const now = new Date()
+        const todayDow = now.getDay()
+        const daysFromMonday = todayDow === 0 ? 6 : todayDow - 1
+        const monday = new Date(now)
+        monday.setDate(monday.getDate() - daysFromMonday)
+        const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+
+        const weekly = (data ?? []).filter(h => h.frequency === 'weekly')
+        let doneThisWeekIds = new Set<number>()
+        if (weekly.length) {
+          const { data: comps } = await supabase.from('habit_completions')
+            .select('habit_id').eq('user_id', uid())
+            .in('habit_id', weekly.map(h => h.id as number))
+            .gte('completed_at', mondayStr)
+          doneThisWeekIds = new Set((comps ?? []).map(c => c.habit_id as number))
+        }
+
         return (data ?? []).filter(h => {
-          if (h.frequency !== 'custom') return true
-          if (!h.days_of_week) return true
-          return String(h.days_of_week).split(',').map(Number).includes(todayDow)
+          if (h.frequency === 'custom') {
+            if (!h.days_of_week) return true
+            return String(h.days_of_week).split(',').map(Number).includes(todayDow)
+          }
+          if (h.frequency === 'weekly') return !doneThisWeekIds.has(h.id as number)
+          return true
         })
       },
 
@@ -1198,6 +1217,59 @@ function buildApi(): any {
         const { data } = await supabase.from('media_logs').select('*')
           .eq('media_id', mediaId).eq('user_id', uid())
           .order('date', { ascending: false }).limit(30)
+        return data ?? []
+      },
+    },
+
+    // ── Focus (Pomodoro) ─────────────────────────────────────────────────────
+    focus: {
+      logSession: async (data: { date: string; duration_minutes: number; label?: string }) => {
+        const xp = Math.max(1, Math.round(data.duration_minutes))
+        await supabase.from('focus_sessions').insert({
+          user_id: uid(), date: data.date, duration_minutes: data.duration_minutes, label: data.label ?? null,
+        })
+        await grantXpInternal(xp, `Foco: ${data.duration_minutes}min`)
+
+        const { count } = await supabase.from('focus_sessions')
+          .select('id', { count: 'exact', head: true }).eq('user_id', uid())
+        if ((count ?? 0) >= 1) await unlockAchievement('focus_first', 'Primeira Sessão de Foco', 'Completou sua primeira sessão de foco', '🎯')
+        if ((count ?? 0) >= 10) await unlockAchievement('focus_10', '10 Sessões de Foco', 'Completou 10 sessões de foco', '🧠')
+        if ((count ?? 0) >= 50) await unlockAchievement('focus_50', 'Mestre do Foco', 'Completou 50 sessões de foco', '🧘')
+
+        const { data: dateRows } = await supabase.from('focus_sessions')
+          .select('date').eq('user_id', uid()).order('date', { ascending: false })
+        const uniqueDates = Array.from(new Set((dateRows ?? []).map(d => d.date as string)))
+        const streak = computeStreak(uniqueDates.map(d => ({ completed_at: d })))
+        if (streak >= 7) await unlockAchievement('focus_streak_7', 'Semana Focada', 'Fez pelo menos uma sessão de foco por 7 dias seguidos', '🔥')
+
+        return { xp }
+      },
+
+      todayStats: async (date: string) => {
+        const { data } = await supabase.from('focus_sessions')
+          .select('duration_minutes').eq('user_id', uid()).eq('date', date)
+        const rows = data ?? []
+        return { sessions: rows.length, minutes: rows.reduce((s, r) => s + (r.duration_minutes ?? 0), 0) }
+      },
+
+      weekStats: async (start: string, end: string) => {
+        const { data } = await supabase.from('focus_sessions')
+          .select('duration_minutes').eq('user_id', uid()).gte('date', start).lte('date', end)
+        const rows = data ?? []
+        return { sessions: rows.length, minutes: rows.reduce((s, r) => s + (r.duration_minutes ?? 0), 0) }
+      },
+
+      streak: async () => {
+        const { data } = await supabase.from('focus_sessions')
+          .select('date').eq('user_id', uid()).order('date', { ascending: false })
+        const uniqueDates = Array.from(new Set((data ?? []).map(d => d.date as string)))
+        return computeStreak(uniqueDates.map(d => ({ completed_at: d })))
+      },
+
+      history: async (limit = 20) => {
+        const { data } = await supabase.from('focus_sessions')
+          .select('*').eq('user_id', uid())
+          .order('date', { ascending: false }).order('id', { ascending: false }).limit(limit)
         return data ?? []
       },
     },

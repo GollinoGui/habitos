@@ -78,7 +78,15 @@ export default function Reading(): React.JSX.Element {
         window.api.media.list(),
         window.api.media.todayMinutes(today)
       ])
-      setItems(its as MediaItem[])
+      const KNOWN_STATUSES = new Set(['reading', 'done', 'paused', 'wishlist'])
+      const healed = await Promise.all((its as MediaItem[]).map(async item => {
+        if (KNOWN_STATUSES.has(item.status)) return item
+        // Heals legacy/stale status values (e.g. old Supabase default 'want_to_read')
+        // that block progress tracking since they don't match any known status.
+        await window.api.media.update(item.id, { status: 'reading' })
+        return { ...item, status: 'reading' }
+      }))
+      setItems(healed)
       setTodayMins(mins as number)
     } finally {
       setLoading(false)

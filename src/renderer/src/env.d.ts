@@ -161,6 +161,13 @@ declare global {
         todayMinutes: (date: string) => Promise<number>
         logs: (mediaId: number) => Promise<unknown[]>
       }
+      focus: {
+        logSession: (data: { date: string; duration_minutes: number; label?: string }) => Promise<{ xp: number }>
+        todayStats: (date: string) => Promise<{ sessions: number; minutes: number }>
+        weekStats: (start: string, end: string) => Promise<{ sessions: number; minutes: number }>
+        streak: () => Promise<number>
+        history: (limit?: number) => Promise<unknown[]>
+      }
       notifications: {
         getSettings: () => Promise<{ enabled: boolean; hour: number; minute: number }>
         saveSettings: (s: { enabled: boolean; hour: number; minute: number }) => Promise<boolean>

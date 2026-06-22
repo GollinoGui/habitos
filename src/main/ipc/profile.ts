@@ -189,6 +189,27 @@ export function checkAllAchievements(): string[] {
     grantXpInternal(150, '5 leituras concluídas')
   }
 
+  // Foco
+  const focusCount = (dbGet('SELECT COUNT(*) as c FROM focus_sessions')?.c as number) ?? 0
+  if (focusCount >= 1 && unlockAchievement('focus_first', 'Primeira Sessão de Foco', 'Completou sua primeira sessão de foco', '🎯')) {
+    unlocked.push('focus_first')
+    grantXpInternal(25, 'Primeira sessão de foco')
+  }
+  if (focusCount >= 10 && unlockAchievement('focus_10', '10 Sessões de Foco', 'Completou 10 sessões de foco', '🧠')) {
+    unlocked.push('focus_10')
+    grantXpInternal(100, '10 sessões de foco')
+  }
+  if (focusCount >= 50 && unlockAchievement('focus_50', 'Mestre do Foco', 'Completou 50 sessões de foco', '🧘')) {
+    unlocked.push('focus_50')
+    grantXpInternal(300, '50 sessões de foco')
+  }
+  const focusDates = dbAll('SELECT DISTINCT date FROM focus_sessions ORDER BY date DESC').map(r => r.date as string)
+  const focusStreak = getDateStreak(focusDates)
+  if (focusStreak >= 7 && unlockAchievement('focus_streak_7', 'Semana Focada', 'Fez pelo menos uma sessão de foco por 7 dias seguidos', '🔥')) {
+    unlocked.push('focus_streak_7')
+    grantXpInternal(75, '7 dias seguidos de foco')
+  }
+
   // Finanças
   const financeCount = (dbGet('SELECT COUNT(*) as c FROM finance_transactions')?.c as number) ?? 0
   if (financeCount >= 1 && unlockAchievement('finance_first', 'Financeiro', 'Registrou sua primeira transação', '💰')) {

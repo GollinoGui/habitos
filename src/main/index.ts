@@ -44,6 +44,7 @@ import { registerSleepHandlers } from './ipc/sleep'
 import { registerFinanceHandlers } from './ipc/finance'
 import { registerMediaHandlers } from './ipc/media'
 import { registerAppSettingsHandlers } from './ipc/appSettings'
+import { registerFocusHandlers } from './ipc/focus'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -237,6 +238,7 @@ app.whenReady().then(async () => {
   registerFinanceHandlers()
   registerMediaHandlers()
   registerAppSettingsHandlers()
+  registerFocusHandlers()
 
   ipcMain.handle('demo:open', () => {
     const demoWindow = new BrowserWindow({

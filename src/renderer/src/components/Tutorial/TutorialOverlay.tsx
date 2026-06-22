@@ -58,6 +58,54 @@ const STEPS: TutorialStep[] = [
     emoji: '🏆',
     description:
       'Seu perfil de herói, histórico de XP e todas as conquistas desbloqueadas. Quantas você vai colecionar?'
+  },
+  {
+    elementId: 'nav-journal',
+    route: '/journal',
+    title: 'Diário',
+    emoji: '📔',
+    description:
+      'Registre como foi seu dia e seu humor. Escrever com frequência também desbloqueia conquistas!'
+  },
+  {
+    elementId: 'nav-sleep',
+    route: '/sleep',
+    title: 'Sono',
+    emoji: '🌙',
+    description:
+      'Acompanhe horário de dormir, acordar e qualidade do sono para entender seus padrões de descanso.'
+  },
+  {
+    elementId: 'nav-finance',
+    route: '/finance',
+    title: 'Finanças',
+    emoji: '💰',
+    description:
+      'Controle receitas, despesas e contas recorrentes. Veja seu saldo atual e projetado.'
+  },
+  {
+    elementId: 'nav-reading',
+    route: '/reading',
+    title: 'Mídia',
+    emoji: '📚',
+    description:
+      'Acompanhe livros, séries, filmes e mangás. Registre sessões de leitura ou episódios assistidos.'
+  },
+  {
+    elementId: 'nav-calendar',
+    route: '/calendar',
+    title: 'Calendário',
+    emoji: '📅',
+    description:
+      'Veja eventos, hábitos concluídos e anotações do mês inteiro em um só lugar.'
+  },
+  {
+    elementId: 'nav-analytics',
+    route: '/analytics',
+    title: 'Analytics',
+    emoji: '📊',
+    description:
+      'Estatísticas detalhadas do seu progresso: tendências, taxas de conclusão e muito mais.'
   }
 ]
 

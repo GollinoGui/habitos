@@ -9,11 +9,25 @@ export function registerHabitsHandlers(): void {
 
   ipcMain.handle('habits:due-today', () => {
     const all = dbAll('SELECT * FROM habits WHERE is_active = 1 ORDER BY created_at ASC')
-    const todayDow = new Date().getDay()
+    const now = new Date()
+    const todayDow = now.getDay()
+    const daysFromMonday = todayDow === 0 ? 6 : todayDow - 1
+    const monday = new Date(now)
+    monday.setDate(monday.getDate() - daysFromMonday)
+    const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
     return all.filter(h => {
-      if (h.frequency !== 'custom') return true
-      if (!h.days_of_week) return true
-      return (h.days_of_week as string).split(',').map(Number).includes(todayDow)
+      if (h.frequency === 'custom') {
+        if (!h.days_of_week) return true
+        return (h.days_of_week as string).split(',').map(Number).includes(todayDow)
+      }
+      if (h.frequency === 'weekly') {
+        const doneThisWeek = dbGet(
+          'SELECT id FROM habit_completions WHERE habit_id = ? AND completed_at >= ? LIMIT 1',
+          [h.id, mondayStr]
+        )
+        return !doneThisWeek
+      }
+      return true
     })
   })
 

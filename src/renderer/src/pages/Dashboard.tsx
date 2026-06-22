@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   CheckCircle2, Circle, Dumbbell, Eye, EyeOff, Flame, Focus,
-  Moon, ShieldOff, Star, Target, Trophy, Zap, BookOpen, ArrowRight
+  Moon, ShieldOff, Star, Target, Trophy, Zap, BookOpen, ArrowRight, RotateCcw
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useProfileStore } from '../store/profileStore'
@@ -54,6 +54,15 @@ export default function Dashboard(): React.JSX.Element {
   const [weeklyData, setWeeklyData] = useState<{ date: string; count: number; pct: number; isFuture: boolean }[]>([])
 
   const [focusMode, setFocusMode] = useState(false)
+  const [focusPhase, setFocusPhase] = useState<'work' | 'break'>('work')
+  const [workMinutes, setWorkMinutes] = useState(25)
+  const [breakMinutes, setBreakMinutes] = useState(5)
+  const [focusSeconds, setFocusSeconds] = useState(25 * 60)
+  const [focusRunning, setFocusRunning] = useState(false)
+  const [focusSessionsToday, setFocusSessionsToday] = useState(0)
+  const [focusMinutesToday, setFocusMinutesToday] = useState(0)
+  const [focusStreak, setFocusStreak] = useState(0)
+  const [focusXp, setFocusXp] = useState<number | null>(null)
   const [barsVisible, setBarsVisible] = useState(false)
   const [, setTick] = useState(0)
   const [calendarKey, setCalendarKey] = useState(0)
@@ -90,6 +99,71 @@ export default function Dashboard(): React.JSX.Element {
     window.addEventListener('habitos_sections_changed', onSectionsChanged)
     return () => { clearInterval(interval); window.removeEventListener('habitos_sections_changed', onSectionsChanged) }
   }, [])
+
+  useEffect(() => {
+    if (!focusMode) return
+    Promise.all([window.api.focus.todayStats(today), window.api.focus.streak()]).then(([stats, streak]) => {
+      setFocusSessionsToday((stats as { sessions: number }).sessions)
+      setFocusMinutesToday((stats as { minutes: number }).minutes)
+      setFocusStreak(streak as number)
+    })
+  }, [focusMode])
+
+  useEffect(() => {
+    if (!focusRunning) return
+    const id = setInterval(() => setFocusSeconds(s => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(id)
+  }, [focusRunning])
+
+  useEffect(() => {
+    if (!focusRunning || focusSeconds !== 0) return
+    completeFocusPhase()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSeconds, focusRunning])
+
+  async function completeFocusPhase() {
+    setFocusRunning(false)
+    if (focusPhase === 'work') {
+      const result = await window.api.focus.logSession({ date: today, duration_minutes: workMinutes })
+      setFocusSessionsToday(s => s + 1)
+      setFocusMinutesToday(m => m + workMinutes)
+      setFocusXp(result.xp)
+      setTimeout(() => setFocusXp(null), 1500)
+      fetchProfile()
+      window.api.focus.streak().then(s => setFocusStreak(s as number))
+      setFocusPhase('break')
+      setFocusSeconds(breakMinutes * 60)
+    } else {
+      setFocusPhase('work')
+      setFocusSeconds(workMinutes * 60)
+    }
+  }
+
+  function toggleFocusTimer() {
+    setFocusRunning(r => !r)
+  }
+
+  function resetFocusTimer() {
+    setFocusRunning(false)
+    setFocusPhase('work')
+    setFocusSeconds(workMinutes * 60)
+  }
+
+  function setWorkDuration(mins: number) {
+    setWorkMinutes(mins)
+    if (!focusRunning && focusPhase === 'work') setFocusSeconds(mins * 60)
+  }
+
+  function setBreakDuration(mins: number) {
+    setBreakMinutes(mins)
+    if (!focusRunning && focusPhase === 'break') setFocusSeconds(mins * 60)
+  }
+
+  function formatTimer(s: number): string {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+  }
 
   async function loadAll() {
     await fetchProfile()
@@ -309,7 +383,83 @@ export default function Dashboard(): React.JSX.Element {
         </div>
       )}
 
+      {/* Focus mode — gamified Pomodoro timer */}
+      {focusMode && (
+        <div className="flex flex-col items-center justify-center py-8 gap-5 animate-fadeIn">
+          {focusXp !== null && (
+            <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none font-bold text-accent-gold text-lg flex items-center gap-1 xp-float">
+              <Zap size={16} fill="currentColor" />+{focusXp} XP
+            </div>
+          )}
+
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${focusPhase === 'work' ? 'bg-accent-purple/20 text-accent-purple' : 'bg-emerald-950/40 text-accent-green'}`}>
+            {focusPhase === 'work' ? '🎯 Foco' : '☕ Pausa'}
+          </span>
+
+          <div className="relative w-56 h-56 flex items-center justify-center">
+            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" className="text-bg-border" />
+              <circle
+                cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6"
+                strokeDasharray={2 * Math.PI * 45}
+                strokeDashoffset={2 * Math.PI * 45 * (1 - focusSeconds / ((focusPhase === 'work' ? workMinutes : breakMinutes) * 60))}
+                strokeLinecap="round"
+                className={`transition-all duration-1000 ${focusPhase === 'work' ? 'text-accent-purple' : 'text-accent-green'}`}
+              />
+            </svg>
+            <span className="text-4xl font-bold text-text-primary tabular-nums">{formatTimer(focusSeconds)}</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button onClick={resetFocusTimer} className="p-3 rounded-full border border-bg-border text-text-secondary hover:bg-bg-border transition-colors">
+              <RotateCcw size={18} />
+            </button>
+            <button
+              onClick={toggleFocusTimer}
+              className={`px-8 py-3 rounded-full font-bold text-white transition-colors ${focusPhase === 'work' ? 'bg-accent-purple hover:bg-purple-600' : 'bg-accent-green hover:bg-emerald-600'}`}
+            >
+              {focusRunning ? 'Pausar' : 'Iniciar'}
+            </button>
+          </div>
+
+          {!focusRunning && (
+            <div className="flex items-center gap-2 text-xs flex-wrap justify-center">
+              <span className="text-text-muted">Foco:</span>
+              {[15, 25, 45].map(m => (
+                <button key={m} onClick={() => setWorkDuration(m)}
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${workMinutes === m ? 'bg-accent-purple text-white' : 'bg-bg-secondary border border-bg-border text-text-secondary'}`}>
+                  {m}min
+                </button>
+              ))}
+              <span className="text-text-muted ml-2">Pausa:</span>
+              {[5, 10, 15].map(m => (
+                <button key={m} onClick={() => setBreakDuration(m)}
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${breakMinutes === m ? 'bg-accent-green text-white' : 'bg-bg-secondary border border-bg-border text-text-secondary'}`}>
+                  {m}min
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-3 w-full max-w-sm mt-2">
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-accent-purple">{focusSessionsToday}</p>
+              <p className="text-[10px] text-text-muted">Sessões hoje</p>
+            </div>
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-accent-green">{focusMinutesToday}min</p>
+              <p className="text-[10px] text-text-muted">Foco hoje</p>
+            </div>
+            <div className="bg-bg-secondary border border-bg-border rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-orange-400 flex items-center justify-center gap-0.5"><Flame size={14} fill="currentColor" />{focusStreak}</p>
+              <p className="text-[10px] text-text-muted">Sequência</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress bar */}
+      {!focusMode && (
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '430ms' }}>
         <div className="flex justify-between mb-2">
           <span className="text-sm font-medium text-text-primary">Progresso do dia</span>
@@ -329,6 +479,7 @@ export default function Dashboard(): React.JSX.Element {
           <p className="text-xs text-accent-green font-medium mt-1">🎉 Todos os hábitos concluídos!</p>
         )}
       </div>
+      )}
 
       {/* Mobile widget strip — horizontal scroll, hidden on desktop */}
       {!focusMode && (() => {
@@ -410,9 +561,10 @@ export default function Dashboard(): React.JSX.Element {
       })()}
 
       {/* Main grid */}
-      <div className={`grid gap-4 items-start ${focusMode ? '' : 'lg:grid-cols-3'}`}>
+      {!focusMode && (
+      <div className="grid gap-4 items-start lg:grid-cols-3">
         {/* Habits + weekly summary */}
-        <div className={`space-y-3 ${focusMode ? '' : 'lg:col-span-2'}`}>
+        <div className="space-y-3 lg:col-span-2">
           <div className="bg-bg-secondary border border-bg-border rounded-xl p-4">
             <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 animate-reveal-left">Hábitos de Hoje</h2>
             {habits.length === 0 && (
@@ -706,6 +858,7 @@ export default function Dashboard(): React.JSX.Element {
           </div>
         )}
       </div>
+      )}
 
       {/* Goals today */}
       {!focusMode && goalsToday.length > 0 && (

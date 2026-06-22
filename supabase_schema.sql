@@ -351,7 +351,7 @@ create table if not exists media_items (
   current_season  integer default 1,
   current_episode integer default 0,
   total_episodes  integer,
-  status          text not null default 'want_to_read',
+  status          text not null default 'reading',
   started_at      date,
   finished_at     date,
   rating          integer,
@@ -372,6 +372,19 @@ create table if not exists media_logs (
 );
 alter table media_logs enable row level security;
 create policy "own media_logs" on media_logs for all using (auth.uid() = user_id);
+
+-- ── Modo Foco (Pomodoro) ──────────────────────────────────────
+
+create table if not exists focus_sessions (
+  id                bigserial primary key,
+  user_id           uuid references auth.users(id) on delete cascade not null,
+  date              date not null,
+  duration_minutes  integer not null,
+  label             text,
+  created_at        timestamptz default now()
+);
+alter table focus_sessions enable row level security;
+create policy "own focus_sessions" on focus_sessions for all using (auth.uid() = user_id);
 
 -- ── Configurações de notificação ─────────────────────────────
 

@@ -135,6 +135,14 @@ const realApi = {
     todayMinutes: (date: string) => ipcRenderer.invoke('media:today-minutes', date),
     logs: (mediaId: number) => ipcRenderer.invoke('media:logs', mediaId)
   },
+  focus: {
+    logSession: (data: { date: string; duration_minutes: number; label?: string }) =>
+      ipcRenderer.invoke('focus:log-session', data),
+    todayStats: (date: string) => ipcRenderer.invoke('focus:today-stats', date),
+    weekStats: (start: string, end: string) => ipcRenderer.invoke('focus:week-stats', start, end),
+    streak: () => ipcRenderer.invoke('focus:streak'),
+    history: (limit?: number) => ipcRenderer.invoke('focus:history', limit)
+  },
   gymPrograms: {
     list: () => ipcRenderer.invoke('gym:programs:list'),
     create: (data: object) => ipcRenderer.invoke('gym:programs:create', data),
@@ -496,6 +504,13 @@ function buildDemoApi() {
       logSession: async () => {},
       todayMinutes: async () => 45,
       logs: async () => [],
+    },
+    focus: {
+      logSession: async () => ({ xp: 25 }),
+      todayStats: async () => ({ sessions: 2, minutes: 50 }),
+      weekStats: async () => ({ sessions: 6, minutes: 150 }),
+      streak: async () => 3,
+      history: async () => [],
     },
     gymPrograms: {
       list: async () => [],
