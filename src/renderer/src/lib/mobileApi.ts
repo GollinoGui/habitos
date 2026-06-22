@@ -804,11 +804,12 @@ function buildApi(): any {
       },
 
       createEvent: async (data: { title: string; date: string; type: string; color: string; device_event_id?: string | null }) => {
-        const { data: row } = await supabase.from('calendar_events').insert({
+        const { data: row, error } = await supabase.from('calendar_events').insert({
           user_id: uid(), title: data.title, date: data.date,
           type: data.type ?? 'event', color: data.color ?? '#7c3aed',
           device_event_id: data.device_event_id ?? null,
         }).select().single()
+        if (error) throw error
         return row
       },
 

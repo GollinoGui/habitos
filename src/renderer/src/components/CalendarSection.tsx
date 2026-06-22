@@ -47,6 +47,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
   const [newType, setNewType] = useState<'event' | 'task'>('event')
   const [newColor, setNewColor] = useState(EVENT_COLORS[0])
   const [showAddForm, setShowAddForm] = useState(false)
+  const [addError, setAddError] = useState('')
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const calSwipeRef = useRef<{ x: number; y: number } | null>(null)
   const detailRef = useRef<HTMLDivElement | null>(null)
@@ -145,15 +146,21 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
 
   async function addEvent() {
     if (!newTitle.trim()) return
-    await window.api.calendar.createEvent({
-      title: newTitle.trim(),
-      date: selectedDate,
-      type: newType,
-      color: newColor
-    })
-    setNewTitle('')
-    setShowAddForm(false)
-    reloadEvents()
+    setAddError('')
+    try {
+      await window.api.calendar.createEvent({
+        title: newTitle.trim(),
+        date: selectedDate,
+        type: newType,
+        color: newColor
+      })
+      setNewTitle('')
+      setShowAddForm(false)
+      reloadEvents()
+    } catch (err) {
+      console.error('Falha ao adicionar evento:', err)
+      setAddError(err instanceof Error ? err.message : 'Falha ao adicionar evento.')
+    }
   }
 
   async function toggleDone(id: number) {
@@ -343,7 +350,7 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Eventos & Tarefas</span>
                 <button
-                  onClick={() => setShowAddForm(f => !f)}
+                  onClick={() => { setShowAddForm(f => !f); setAddError('') }}
                   className="p-1 rounded hover:bg-bg-border text-text-muted hover:text-text-primary transition-colors"
                 >
                   {showAddForm ? <X size={14} /> : <Plus size={14} />}
@@ -394,6 +401,9 @@ export default function CalendarSection({ refreshKey, onHabitToggled }: { refres
                   >
                     Adicionar
                   </button>
+                  {addError && (
+                    <p className="text-xs text-accent-red">{addError}</p>
+                  )}
                 </div>
               )}
 
