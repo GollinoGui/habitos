@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { CheckCircle2, Clock, Plus, Star, Trash2 } from 'lucide-react'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface MediaItem {
   id: number; title: string; type: string; author: string; total_pages: number;
@@ -180,7 +181,23 @@ export default function Reading(): React.JSX.Element {
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-start gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Mídia</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary">Mídia</h1>
+            <SectionHelpButton sectionId="reading" title="Como usar a Mídia" emoji="📚">
+              <p>
+                Cadastre livros, séries, filmes ou mangás que está consumindo e registre{' '}
+                <strong className="text-text-primary">sessões</strong> (páginas lidas, episódios assistidos) para
+                acompanhar seu progresso.
+              </p>
+              <HelpTips
+                items={[
+                  'Defina o total de páginas/episódios para ver a barra de progresso.',
+                  'Avalie com estrelas quando finalizar para guardar seu histórico de avaliações.',
+                  'Registrar sessões com frequência também desbloqueia conquistas.'
+                ]}
+              />
+            </SectionHelpButton>
+          </div>
           <p className="text-text-secondary text-sm mt-1">Livros, filmes, séries, mangás e mais</p>
         </div>
         <button

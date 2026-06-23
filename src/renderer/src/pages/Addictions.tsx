@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { format, differenceInSeconds } from 'date-fns'
 import { Plus, ShieldCheck, AlertTriangle, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface Addiction {
   id: number; name: string; started_free_at: string; is_active: number
@@ -251,7 +252,22 @@ export default function Addictions(): React.JSX.Element {
     <div className="space-y-4 animate-fadeIn max-w-2xl">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-text-primary animate-slide-down leading-tight">Vícios &amp; Sobriedade</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary animate-slide-down leading-tight">Vícios &amp; Sobriedade</h1>
+            <SectionHelpButton sectionId="addictions" title="Como usar Vícios & Sobriedade" emoji="🛡️">
+              <p>
+                Cadastre algo que você está <strong className="text-text-primary">tentando largar</strong> (cigarro,
+                álcool, redes sociais, etc.) e a seção conta automaticamente o tempo limpo desde o último início ou recaída.
+              </p>
+              <HelpTips
+                items={[
+                  'O cronômetro começa na data que você definir como "livre desde".',
+                  'Se tiver uma recaída, registre-a — o contador reinicia, mas o histórico fica salvo.',
+                  'Quanto maior o tempo livre, mais marcos e conquistas você desbloqueia.'
+                ]}
+              />
+            </SectionHelpButton>
+          </div>
           <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>Monitore sua sobriedade e celebre marcos importantes aqui · {addictions.length} monitorado(s)</p>
         </div>
         <button onClick={() => setShowAdd(!showAdd)}

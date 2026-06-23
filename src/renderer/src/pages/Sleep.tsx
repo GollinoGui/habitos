@@ -3,6 +3,7 @@ import { format, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Moon, Save, Star, Trash2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface SleepLog {
   id: number; date: string; bedtime: string; wake_time: string; quality: number; notes: string; cycles?: number | null
@@ -193,7 +194,23 @@ export default function Sleep(): React.JSX.Element {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Sono</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Sono</h1>
+          <SectionHelpButton sectionId="sleep" title="Como usar o Sono" emoji="🌙">
+            <p>
+              Registre o horário em que <strong className="text-text-primary">dormiu</strong> e{' '}
+              <strong className="text-text-primary">acordou</strong> a cada dia para acompanhar duração, ciclos e
+              qualidade do seu descanso.
+            </p>
+            <HelpTips
+              items={[
+                'A nota de qualidade (estrelas) é subjetiva — registre como você se sentiu ao acordar.',
+                'Ciclos de sono ajudam a identificar se você dormiu em múltiplos de ~90 minutos.',
+                'Use o gráfico para notar padrões: dormir tarde costuma afetar a qualidade.'
+              ]}
+            />
+          </SectionHelpButton>
+        </div>
         <p className="text-text-secondary text-sm mt-1 animate-slide-in-left" style={{ animationDelay: '60ms' }}>Acompanhe a qualidade do seu sono</p>
       </div>
 

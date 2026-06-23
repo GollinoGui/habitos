@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { Trophy, Star, Zap, Pencil, Check, X } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface Achievement {
   id: number; key: string; name: string; description: string; icon: string; unlocked_at: string
@@ -91,7 +92,22 @@ export default function Achievements(): React.JSX.Element {
   return (
     <div className="space-y-6 animate-fadeIn max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Conquistas & Perfil</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-text-primary">Conquistas & Perfil</h1>
+          <SectionHelpButton sectionId="achievements" title="Como usar Conquistas & Perfil" emoji="🏆">
+            <p>
+              Veja seu <strong className="text-text-primary">nível</strong>, <strong className="text-text-primary">XP</strong> total
+              e todas as conquistas que você já desbloqueou ao usar o app no dia a dia.
+            </p>
+            <HelpTips
+              items={[
+                'Conquistas são desbloqueadas automaticamente conforme você usa hábitos, metas, sono, etc.',
+                'Cada conquista bloqueada tem uma dica de como desbloqueá-la.',
+                'Você pode editar seu nome e avatar aqui.'
+              ]}
+            />
+          </SectionHelpButton>
+        </div>
         <p className="text-text-secondary text-sm mt-1">Seu perfil, nível, XP e conquistas desbloqueadas</p>
       </div>
 

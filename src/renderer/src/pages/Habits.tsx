@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale'
 import { Plus, Flame, CheckCircle2, Circle, Pencil, Trash2, X, Check, BarChart2 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useProfileStore } from '../store/profileStore'
+import SectionHelpButton, { GoodBadExample, HelpTips } from '../components/Help/SectionHelpButton'
 
 interface Habit {
   id: number; name: string; description: string; frequency: string; target_time: string;
@@ -402,7 +403,30 @@ export default function Habits(): React.JSX.Element {
     <div className="space-y-4 animate-fadeIn max-w-3xl">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-text-primary">Hábitos</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary">Hábitos</h1>
+            <SectionHelpButton sectionId="habits" title="Como usar os Hábitos" emoji="✅">
+              <p>
+                Um hábito é uma ação <strong className="text-text-primary">pequena e recorrente</strong> que você repete
+                em dias específicos — não um objetivo grande com fim definido.
+              </p>
+              <GoodBadExample
+                bad='"Chegar ao nível B1 de inglês" — isso tem um fim claro, então é uma meta, não um hábito.'
+                good='"Estudar inglês 20 minutos" todo dia útil — uma ação que se repete e constrói sequência (streak).'
+              />
+              <p className="text-text-muted text-xs">
+                Dica: objetivos com prazo e critério de "concluído" ficam melhor na seção <strong>Metas</strong>.
+                Use Hábitos para repetições diárias ou semanais.
+              </p>
+              <HelpTips
+                items={[
+                  'Escolha os dias da semana em que o hábito deve aparecer.',
+                  'Marcar como feito todo dia mantém sua sequência (streak) viva.',
+                  'Hábitos pequenos e específicos são mais fáceis de manter que grandes.'
+                ]}
+              />
+            </SectionHelpButton>
+          </div>
           <p className="text-text-secondary text-sm">Crie hábitos diários e marque o que já fez aqui · {active.length} ativos · {completedToday.size} concluídos hoje</p>
         </div>
         {activeTab === 'habits' && (

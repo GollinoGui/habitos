@@ -38,7 +38,7 @@ const realApi = {
   addictions: {
     list: () => ipcRenderer.invoke('addictions:list'),
     create: (data: object) => ipcRenderer.invoke('addictions:create', data),
-    relapse: (id: number, note?: string) => ipcRenderer.invoke('addictions:relapse', id, note),
+    relapse: (id: number, note?: string, relapseAt?: string) => ipcRenderer.invoke('addictions:relapse', id, note, relapseAt),
     delete: (id: number) => ipcRenderer.invoke('addictions:delete', id),
     toggleHidden: (id: number) => ipcRenderer.invoke('addictions:toggle-hidden', id),
     checkMilestones: () => ipcRenderer.invoke('addictions:check-milestones')

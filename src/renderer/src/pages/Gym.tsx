@@ -3,6 +3,7 @@ import { format, parseISO, differenceInDays } from 'date-fns'
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Scale, Dumbbell, Link2, Pencil, Calendar } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useProfileStore } from '../store/profileStore'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface Exercise { id: number; name: string; sets?: number; reps?: number; weight_kg?: number; is_superset?: number }
 interface Workout { id: number; date: string; name: string; notes?: string; duration_min?: number; cardio_type?: string; cardio_minutes?: number; exercises: Exercise[] }
@@ -977,7 +978,22 @@ export default function Gym(): React.JSX.Element {
     <div className="space-y-4 animate-fadeIn max-w-3xl">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Academia</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Academia</h1>
+            <SectionHelpButton sectionId="gym" title="Como usar a Academia" emoji="💪">
+              <p>
+                Registre cada <strong className="text-text-primary">treino</strong> com seus exercícios, séries e
+                repetições. Use a aba de bioimpedância para acompanhar peso, gordura e massa muscular ao longo do tempo.
+              </p>
+              <HelpTips
+                items={[
+                  'Adicione exercícios com séries x repetições x carga para acompanhar evolução de força.',
+                  'Treinos de cardio podem ser registrados com tipo e duração.',
+                  'Registre medidas corporais periodicamente para ver o gráfico de evolução.'
+                ]}
+              />
+            </SectionHelpButton>
+          </div>
           <p className="text-text-secondary text-sm animate-slide-in-left" style={{ animationDelay: '60ms' }}>Faça seu registro de treinos e atividades físicas aqui · {workouts.length} treino{workouts.length !== 1 ? 's' : ''} registrado{workouts.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex gap-2 shrink-0 animate-slide-up" style={{ animationDelay: '80ms' }}>

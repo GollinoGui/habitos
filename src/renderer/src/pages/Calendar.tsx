@@ -4,6 +4,7 @@ import { RefreshCw, Smartphone } from 'lucide-react'
 import CalendarSection from '../components/CalendarSection'
 import { useAuth } from '../contexts/AuthContext'
 import { isNativeCalendarAvailable, requestCalendarAccess, syncDeviceCalendar } from '../lib/nativeCalendarSync'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 export default function Calendar(): React.JSX.Element {
   const { user } = useAuth()
@@ -45,7 +46,22 @@ export default function Calendar(): React.JSX.Element {
     <div className="animate-fadeIn">
       <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Calendário</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary">Calendário</h1>
+            <SectionHelpButton sectionId="calendar" title="Como usar o Calendário" emoji="📅">
+              <p>
+                Veja em um só lugar tudo que aconteceu (ou está planejado) em cada dia: hábitos concluídos, treinos,
+                anotações e eventos que você criar.
+              </p>
+              <HelpTips
+                items={[
+                  'Clique em um dia para ver os detalhes e adicionar eventos ou anotações.',
+                  'Eventos podem ser sincronizados com o calendário nativo do celular (Android).',
+                  'É um bom lugar para revisar sua semana e identificar padrões.'
+                ]}
+              />
+            </SectionHelpButton>
+          </div>
           <p className="text-text-secondary text-sm mt-1">Veja hábitos, treinos e eventos de cada dia em um só lugar</p>
         </div>
         {nativeAvailable && (

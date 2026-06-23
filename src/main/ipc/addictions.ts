@@ -23,8 +23,8 @@ export function registerAddictionsHandlers(): void {
     return result.lastInsertRowid
   })
 
-  ipcMain.handle('addictions:relapse', (_e, id: number, note?: string) => {
-    const now = new Date().toISOString()
+  ipcMain.handle('addictions:relapse', (_e, id: number, note?: string, relapseAt?: string) => {
+    const now = relapseAt || new Date().toISOString()
     dbRun('INSERT INTO addiction_relapses (addiction_id, relapsed_at, note) VALUES (?, ?, ?)', [id, now, note || null])
     dbRun('UPDATE addictions SET started_free_at = ? WHERE id = ?', [now, id])
     save()

@@ -211,6 +211,12 @@ export default function Dashboard(): React.JSX.Element {
       setXpFloats(prev => [...prev, { id: floatId, x: rect.left + rect.width / 2, y: rect.top, amount: habit?.xp_reward || 10 }])
       setTimeout(() => setXpFloats(prev => prev.filter(f => f.id !== floatId)), 1000)
     }
+    setWeeklyData(prev => prev.map(day => {
+      if (day.date !== today) return day
+      const count = day.count + (done ? -1 : 1)
+      const pct = allHabitsCount > 0 ? Math.round((count / allHabitsCount) * 100) : 0
+      return { ...day, count, pct }
+    }))
     if (done) await window.api.habits.uncomplete(id, today)
     else await window.api.habits.complete(id, today)
     // Optimistic state is already correct — update calendar and profile in background

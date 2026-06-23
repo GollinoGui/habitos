@@ -6,6 +6,7 @@ import {
   ResponsiveContainer, CartesianGrid
 } from 'recharts'
 import { BarChart2, Moon, Dumbbell, CheckSquare } from 'lucide-react'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface Habit { id: number; name: string; icon: string; color: string; is_active: number }
 interface SleepLog { date: string; bedtime: string; wake_time: string; quality: number; cycles?: number | null }
@@ -334,7 +335,22 @@ export default function Analytics(): React.JSX.Element {
   return (
     <div className="space-y-5 animate-fadeIn max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Analytics</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Analytics</h1>
+          <SectionHelpButton sectionId="analytics" title="Como usar o Analytics" emoji="📊">
+            <p>
+              Aqui você vê <strong className="text-text-primary">gráficos e estatísticas</strong> geradas
+              automaticamente a partir do que você já registrou em Hábitos, Sono, Academia e outras seções.
+            </p>
+            <HelpTips
+              items={[
+                'Não há nada para preencher aqui — quanto mais você usa o app, mais completos ficam os gráficos.',
+                'Use as taxas de conclusão para identificar hábitos que estão difíceis de manter.',
+                'Compare períodos diferentes para ver se você está progredindo.'
+              ]}
+            />
+          </SectionHelpButton>
+        </div>
         <p className="text-text-secondary text-sm">Tendências e evolução ao longo do tempo</p>
       </div>
 

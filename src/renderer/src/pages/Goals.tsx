@@ -5,6 +5,7 @@ import {
   CheckCircle2, Pencil, ChevronDown, ChevronRight, FolderPlus
 } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import SectionHelpButton, { GoodBadExample, HelpTips } from '../components/Help/SectionHelpButton'
 
 interface GoalTask { id: number; title: string; is_completed: number }
 interface Goal {
@@ -596,7 +597,30 @@ export default function Goals(): React.JSX.Element {
     <div className="space-y-4 animate-fadeIn max-w-2xl">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-text-primary">Metas</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary">Metas</h1>
+            <SectionHelpButton sectionId="goals" title="Como usar as Metas" emoji="🎯">
+              <p>
+                Uma meta funciona melhor quando é <strong className="text-text-primary">específica</strong> e tem um{' '}
+                <strong className="text-text-primary">prazo</strong> — não uma atividade genérica do dia a dia.
+              </p>
+              <GoodBadExample
+                bad='"Estudar inglês" — isso é um hábito, não uma meta. Sem prazo nem critério de "pronto".'
+                good='"Chegar ao nível B1 de inglês até agosto" — tem um alvo claro e uma data.'
+              />
+              <p className="text-text-muted text-xs">
+                Dica: atividades recorrentes do dia a dia (estudar, treinar, ler) ficam melhor na seção{' '}
+                <strong>Hábitos</strong>. Use Metas para objetivos maiores que você quer concluir uma vez.
+              </p>
+              <HelpTips
+                items={[
+                  'Quebre a meta em sub-tarefas (ex: "Completar curso A1", "Completar curso A2"...).',
+                  'Defina um prazo para criar senso de urgência.',
+                  'Organize metas parecidas em pastas (ex: "Carreira", "Saúde").'
+                ]}
+              />
+            </SectionHelpButton>
+          </div>
           <p className="text-text-secondary text-sm">Defina objetivos e divida em etapas aqui · {active.length} ativa(s) · {completed.length} concluída(s)</p>
         </div>
         <div className="flex gap-2 shrink-0">

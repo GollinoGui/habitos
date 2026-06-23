@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BookOpen, ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface JournalEntry {
   id: number; date: string; content: string; mood: number; created_at: string
@@ -74,7 +75,22 @@ export default function Journal(): React.JSX.Element {
   return (
     <div className="space-y-6">
       <div className="animate-slide-down">
-        <h1 className="text-2xl font-bold text-text-primary">Diário</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-text-primary">Diário</h1>
+          <SectionHelpButton sectionId="journal" title="Como usar o Diário" emoji="📔">
+            <p>
+              Escreva uma <strong className="text-text-primary">reflexão livre</strong> sobre o seu dia e marque seu
+              humor. Não precisa ser formal — registre o que sentiu, o que aconteceu ou o que aprendeu.
+            </p>
+            <HelpTips
+              items={[
+                'Escrever com frequência desbloqueia conquistas de constância.',
+                'Use o humor para identificar padrões ao longo do tempo (veja em Analytics).',
+                'Cada dia tem sua própria entrada — navegue pelas setas para ver dias anteriores.'
+              ]}
+            />
+          </SectionHelpButton>
+        </div>
         <p className="text-text-secondary text-sm mt-1 animate-slide-in-left" style={{ animationDelay: '60ms' }}>Reflexões e anotações do dia</p>
       </div>
 

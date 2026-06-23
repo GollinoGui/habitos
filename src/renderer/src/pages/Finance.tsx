@@ -8,6 +8,7 @@ import {
   TrendingDown, TrendingUp
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface Category { id: number; name: string; type: string; icon: string; color: string }
 interface Account { id: number; name: string; bank: string; icon: string; color: string }
@@ -455,7 +456,24 @@ export default function Finance(): React.JSX.Element {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Finanças</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-text-primary animate-slide-down">Finanças</h1>
+          <SectionHelpButton sectionId="finance" title="Como usar as Finanças" emoji="💰">
+            <p>
+              Registre <strong className="text-text-primary">receitas</strong> e{' '}
+              <strong className="text-text-primary">despesas</strong> avulsas, e cadastre contas{' '}
+              <strong className="text-text-primary">recorrentes</strong> (aluguel, assinaturas) para acompanhar seu
+              saldo projetado.
+            </p>
+            <HelpTips
+              items={[
+                'Use categorias para entender para onde o dinheiro está indo.',
+                'Contas recorrentes são lançadas automaticamente no mês — marque como pagas quando quitar.',
+                'O saldo projetado considera contas futuras já cadastradas, não só o que já aconteceu.'
+              ]}
+            />
+          </SectionHelpButton>
+        </div>
         <p className="text-text-secondary text-sm mt-1 animate-slide-in-left" style={{ animationDelay: '60ms' }}>
           Controle de receitas e despesas
         </p>
