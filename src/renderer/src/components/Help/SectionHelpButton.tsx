@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface SectionHelpButtonProps {
@@ -47,7 +48,7 @@ export default function SectionHelpButton({
         ?
       </button>
 
-      {show && (
+      {show && createPortal(
         <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn p-4"
           onClick={() => setShow(false)}
@@ -73,7 +74,8 @@ export default function SectionHelpButton({
               Entendi
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

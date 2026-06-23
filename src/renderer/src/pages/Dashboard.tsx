@@ -11,7 +11,7 @@ import { useFocusStore } from '../store/focusStore'
 import CalendarSection from '../components/CalendarSection'
 
 interface Habit {
-  id: number; name: string; icon: string; color: string; xp_reward: number; is_active: number
+  id: number; name: string; icon: string; color: string; xp_reward: number; is_active: number; created_at?: string
 }
 interface Addiction {
   id: number; name: string; started_free_at: string; is_hidden_name: number
@@ -145,18 +145,19 @@ export default function Dashboard(): React.JSX.Element {
     setHabits(activeHabits)
     setAllHabitsCount(allActive.length)
 
-    // Weekly summary — use all active habits as denominator so graph shows even on days with no habits due
+    // Weekly summary — use the habits that existed as of each day as the denominator,
+    // so creating a new habit today doesn't retroactively deflate past days' percentages.
     const byDate = new Map<string, number>()
     for (const c of weekComps as any[]) {
       const d = c.completed_at as string
       byDate.set(d, (byDate.get(d) ?? 0) + 1)
     }
-    const total = allActive.length
     setWeeklyData(Array.from({ length: 7 }, (_, i) => {
       const d = format(new Date(mondayMs + i * 86400000), 'yyyy-MM-dd')
       const count = byDate.get(d) ?? 0
       const isFuture = d > today
-      return { date: d, count, pct: total > 0 && !isFuture ? Math.round((count / total) * 100) : 0, isFuture }
+      const totalForDay = allActive.filter(x => !x.created_at || x.created_at.slice(0, 10) <= d).length
+      return { date: d, count, pct: totalForDay > 0 && !isFuture ? Math.round((count / totalForDay) * 100) : 0, isFuture }
     }))
     setCompletedToday(new Set((comps as any[]).map(c => c.habit_id)))
     setAddictions(add as Addiction[])

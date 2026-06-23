@@ -951,7 +951,8 @@ function buildApi(): any {
           await supabase.from('finance_transactions').delete().eq('category_id', id).eq('user_id', uid())
           await supabase.from('finance_bills').update({ category_id: null })
             .eq('category_id', id).eq('user_id', uid())
-          await supabase.from('finance_categories').delete().eq('id', id).eq('user_id', uid())
+          const { error } = await supabase.from('finance_categories').delete().eq('id', id).eq('user_id', uid())
+          if (error) throw new Error('Erro ao excluir categoria: ' + error.message)
           return true
         },
       },
@@ -983,7 +984,8 @@ function buildApi(): any {
         delete: async (id: number) => {
           await supabase.from('finance_transactions').delete()
             .eq('bill_id', id).eq('status', 'pending').eq('user_id', uid())
-          await supabase.from('finance_bills').delete().eq('id', id).eq('user_id', uid())
+          const { error } = await supabase.from('finance_bills').delete().eq('id', id).eq('user_id', uid())
+          if (error) throw new Error('Erro ao excluir conta fixa: ' + error.message)
           return true
         },
 
@@ -1198,10 +1200,14 @@ function buildApi(): any {
         return true
       },
 
-      logSession: async (data: { media_id: number; date: string; minutes_read: number; pages_read: number }) => {
+      logSession: async (data: {
+        media_id: number; date: string; minutes_read: number; pages_read: number
+        notes?: string; rating?: number
+      }) => {
         await supabase.from('media_logs').insert({
           user_id: uid(), media_id: data.media_id, date: data.date,
           minutes_read: data.minutes_read, pages_read: data.pages_read,
+          notes: data.notes ?? null, rating: data.rating ?? null,
         })
         if (data.pages_read > 0) {
           const { data: item } = await supabase.from('media_items')

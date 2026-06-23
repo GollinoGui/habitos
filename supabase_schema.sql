@@ -368,7 +368,9 @@ create table if not exists media_logs (
   media_id     bigint references media_items(id) on delete cascade not null,
   date         date not null,
   minutes_read integer default 0,
-  pages_read   integer default 0
+  pages_read   integer default 0,
+  notes        text default null,
+  rating       integer default null
 );
 alter table media_logs enable row level security;
 create policy "own media_logs" on media_logs for all using (auth.uid() = user_id);

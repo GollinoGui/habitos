@@ -62,6 +62,8 @@ export default function Reading(): React.JSX.Element {
   const [sessionMins, setSessionMins] = useState('')
   const [sessionPages, setSessionPages] = useState('')
   const [sessionSeason, setSessionSeason] = useState('')
+  const [sessionNotes, setSessionNotes] = useState('')
+  const [sessionRating, setSessionRating] = useState(0)
   const [todayMins, setTodayMins] = useState(0)
 
   const [title, setTitle] = useState('')
@@ -127,20 +129,22 @@ export default function Reading(): React.JSX.Element {
 
   async function logSession(id: number, itemType: string) {
     const mins = parseInt(sessionMins) || 0
+    const notes = sessionNotes.trim() || undefined
+    const rating = sessionRating || undefined
     if (itemType === 'series') {
       const season = parseInt(sessionSeason) || 1
       const episode = parseInt(sessionPages) || 0
-      if (episode === 0 && mins === 0) return
+      if (episode === 0 && mins === 0 && !notes && !rating) return
       await window.api.media.update(id, { current_season: season, current_page: episode })
-      if (mins > 0) {
-        await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: 0 })
+      if (mins > 0 || notes || rating) {
+        await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: 0, notes, rating })
       }
     } else {
       const pages = parseInt(sessionPages) || 0
-      if (mins === 0 && pages === 0) return
-      await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: pages })
+      if (mins === 0 && pages === 0 && !notes && !rating) return
+      await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: pages, notes, rating })
     }
-    setSessionMins(''); setSessionPages(''); setSessionSeason(''); setShowSession(null)
+    setSessionMins(''); setSessionPages(''); setSessionSeason(''); setSessionNotes(''); setSessionRating(0); setShowSession(null)
     loadAll()
   }
 
@@ -352,16 +356,16 @@ export default function Reading(): React.JSX.Element {
                   <span className="font-semibold text-text-secondary text-sm">
                     T{item.current_season ?? 1} E{item.current_page ?? 0}
                   </span>
-                  {item.total_pages > 0 && (
-                    <span>· {item.total_pages} ep no total</span>
-                  )}
                 </div>
               )}
-              {item.type !== 'series' && hasProgress && (
+              {hasProgress && (
                 <div>
                   <div className="flex justify-between text-xs text-text-muted mb-1">
                     <span>{item.current_page}/{item.total_pages} {tc.unit}</span>
-                    <span>{pct}%</span>
+                    <span>
+                      {pct}%
+                      {item.total_pages > item.current_page && ` · faltam ${item.total_pages - item.current_page} ${tc.unit}`}
+                    </span>
                   </div>
                   <div className="h-2 bg-bg-border rounded-full overflow-hidden">
                     <div className="h-full bg-accent-purple rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -380,7 +384,10 @@ export default function Reading(): React.JSX.Element {
               <div className="flex gap-2">
                 {item.status === 'reading' && (
                   <button
-                    onClick={() => setShowSession(showSession === item.id ? null : item.id)}
+                    onClick={() => {
+                      setShowSession(showSession === item.id ? null : item.id)
+                      setSessionMins(''); setSessionPages(''); setSessionSeason(''); setSessionNotes(''); setSessionRating(0)
+                    }}
                     className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-bg-border hover:bg-bg-border/70 text-text-secondary text-xs font-medium rounded-lg transition-colors"
                   >
                     <Clock size={12} /> Registrar sessão
@@ -452,26 +459,48 @@ export default function Reading(): React.JSX.Element {
                       OK
                     </button>
                   </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-text-muted">Nota do episódio (opcional)</span>
+                    <StarRating value={sessionRating || null} onChange={setSessionRating} />
+                  </div>
+                  <textarea
+                    value={sessionNotes} onChange={e => setSessionNotes(e.target.value)}
+                    placeholder="O que achou deste episódio? (opcional)"
+                    rows={2}
+                    className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple resize-none"
+                  />
                 </div>
               )}
 
               {showSession === item.id && item.type !== 'series' && (
-                <div className="flex gap-2 items-center pt-1 border-t border-bg-border">
-                  <input
-                    type="number" value={sessionMins} onChange={e => setSessionMins(e.target.value)}
-                    placeholder="Minutos"
-                    className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple"
-                  />
-                  {hasProgress && (
+                <div className="pt-1 border-t border-bg-border space-y-2">
+                  <div className="flex gap-2 items-center">
                     <input
-                      type="number" value={sessionPages} onChange={e => setSessionPages(e.target.value)}
-                      placeholder={tc.unitPlural}
+                      type="number" value={sessionMins} onChange={e => setSessionMins(e.target.value)}
+                      placeholder="Minutos"
                       className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple"
                     />
-                  )}
-                  <button onClick={() => logSession(item.id, item.type)} className="px-3 py-1.5 bg-accent-purple text-white text-xs rounded-lg hover:bg-purple-600 transition-colors">
-                    OK
-                  </button>
+                    {hasProgress && (
+                      <input
+                        type="number" value={sessionPages} onChange={e => setSessionPages(e.target.value)}
+                        placeholder={tc.unitPlural}
+                        className="flex-1 bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple"
+                      />
+                    )}
+                    <button onClick={() => logSession(item.id, item.type)} className="px-3 py-1.5 bg-accent-purple text-white text-xs rounded-lg hover:bg-purple-600 transition-colors">
+                      OK
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-text-muted">Nota desta sessão (opcional)</span>
+                    <StarRating value={sessionRating || null} onChange={setSessionRating} />
+                  </div>
+                  <textarea
+                    value={sessionNotes} onChange={e => setSessionNotes(e.target.value)}
+                    placeholder="Dissertar sobre esta sessão (opcional)"
+                    rows={2}
+                    className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple resize-none"
+                  />
                 </div>
               )}
             </div>

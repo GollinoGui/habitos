@@ -1165,7 +1165,14 @@ export default function Finance(): React.JSX.Element {
                 className="px-4 py-2 bg-bg-border text-text-secondary text-sm rounded-lg hover:bg-bg-border/70 transition-colors">
                 Cancelar
               </button>
-              <button onClick={async () => { await confirmDelete.onConfirm(); setConfirmDelete(null) }}
+              <button onClick={async () => {
+                try {
+                  await confirmDelete.onConfirm()
+                  setConfirmDelete(null)
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : 'Erro ao excluir.')
+                }
+              }}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
                 Excluir
               </button>

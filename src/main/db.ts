@@ -252,6 +252,8 @@ function createTables(): void {
       date DATE NOT NULL,
       minutes_read INTEGER DEFAULT 0,
       pages_read INTEGER DEFAULT 0,
+      notes TEXT DEFAULT NULL,
+      rating INTEGER DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -347,6 +349,13 @@ function runMigrations(): void {
   const sleepCols = dbAll('PRAGMA table_info(sleep_logs)')
   if (!sleepCols.find((c: Record<string, unknown>) => c.name === 'cycles')) {
     db.run('ALTER TABLE sleep_logs ADD COLUMN cycles REAL DEFAULT NULL')
+  }
+  const mediaLogCols = dbAll('PRAGMA table_info(media_logs)')
+  if (!mediaLogCols.find((c: Record<string, unknown>) => c.name === 'notes')) {
+    db.run('ALTER TABLE media_logs ADD COLUMN notes TEXT DEFAULT NULL')
+  }
+  if (!mediaLogCols.find((c: Record<string, unknown>) => c.name === 'rating')) {
+    db.run('ALTER TABLE media_logs ADD COLUMN rating INTEGER DEFAULT NULL')
   }
 }
 

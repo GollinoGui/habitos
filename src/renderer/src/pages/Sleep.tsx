@@ -102,7 +102,8 @@ export default function Sleep(): React.JSX.Element {
       const entry = await window.api.sleep.get(date) as SleepLog | null
       if (entry) setExistingId(entry.id)
     } catch (err) {
-      alert('Erro ao salvar sono: ' + (err instanceof Error ? err.message : String(err)))
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(msg.startsWith('Erro ao salvar sono') ? msg : 'Erro ao salvar sono: ' + msg)
     } finally {
       setSavingEntry(false)
     }
