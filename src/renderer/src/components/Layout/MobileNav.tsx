@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, Moon, DollarSign,
   Dumbbell, ShieldOff, Target, Trophy, BookOpen, BookMarked,
-  Calendar, BarChart2, Settings, Medal
+  Calendar, BarChart2, Settings, Medal, Flame
 } from 'lucide-react'
 
 const ALL_NAV_ITEMS = [
@@ -19,8 +19,9 @@ const ALL_NAV_ITEMS = [
   { to: '/calendar',   key: 'calendar',    icon: Calendar,        label: 'Calendário', color: '#0ea5e9' },
   { to: '/analytics',  key: 'analytics',   icon: BarChart2,       label: 'Analytics',  color: '#a855f7' },
   { to: '/achievements',key: 'achievements',icon: Trophy,         label: 'Conquistas', color: '#f59e0b' },
-  { to: '/sports',     key: 'sports',      icon: Medal,           label: 'Esportes',   color: '#f97316' },
-  { to: '/settings',   key: 'settings',    icon: Settings,        label: 'Config.',    color: '#6b7280' },
+  { to: '/sports',      key: 'sports',      icon: Medal,  label: 'Esportes',  color: '#f97316' },
+  { to: '/challenges',  key: 'challenges',  icon: Flame,  label: 'Desafios',  color: '#f97316' },
+  { to: '/settings',    key: 'settings',    icon: Settings, label: 'Config.',  color: '#6b7280' },
 ]
 
 function getHiddenSections(): string[] {

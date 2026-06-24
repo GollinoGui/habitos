@@ -19,6 +19,11 @@ import Calendar from './pages/Calendar'
 import Analytics from './pages/Analytics'
 import Sports from './pages/Sports'
 import RocketLeague from './pages/RocketLeague'
+import Games from './pages/Games'
+import Sudoku from './pages/Sudoku'
+import Challenges from './pages/Challenges'
+import WordleGame from './pages/WordleGame'
+import DailyNews from './pages/DailyNews'
 import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
@@ -182,6 +187,12 @@ function MobileSwipeLayout(): React.JSX.Element {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/sports/rocket-league" element={<RocketLeague />} />
+          <Route path="/games" element={<Games />} />
+          <Route path="/games/sudoku" element={<Sudoku />} />
+          <Route path="/challenges" element={<Challenges />} />
+          <Route path="/challenges/sudoku" element={<Sudoku />} />
+          <Route path="/challenges/wordle" element={<WordleGame />} />
+          <Route path="/challenges/news" element={<DailyNews />} />
         </Routes>
         </div>
       </main>
@@ -335,6 +346,12 @@ function AppContent(): React.JSX.Element {
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/sports" element={<Sports />} />
                   <Route path="/sports/rocket-league" element={<RocketLeague />} />
+                  <Route path="/games" element={<Games />} />
+                  <Route path="/games/sudoku" element={<Sudoku />} />
+                  <Route path="/challenges" element={<Challenges />} />
+                  <Route path="/challenges/sudoku" element={<Sudoku />} />
+                  <Route path="/challenges/wordle" element={<WordleGame />} />
+                  <Route path="/challenges/news" element={<DailyNews />} />
                 </Routes>
               </main>
             </div>

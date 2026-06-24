@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Gamepad2, CircleDot, ChevronRight, Medal, Plus, TrendingUp, TrendingDown } from 'lucide-react'
+import { Gamepad2, CircleDot, ChevronRight, Medal, Plus, TrendingUp, TrendingDown, Grid3X3, CheckCircle } from 'lucide-react'
+import { format } from 'date-fns'
 
 interface RLLinkedProfile { platform: string; username: string }
 interface RLSession { mmr_gain: number; date: string; end_mmr: number }
@@ -25,9 +26,7 @@ function RLCardStats(): React.JSX.Element {
   const todayGain = sessions.filter(s => s.date === today).reduce((a, s) => a + s.mmr_gain, 0)
   const peak = sessions.length > 0 ? Math.max(...sessions.map(s => s.end_mmr)) : null
 
-  if (!linked) {
-    return <p className="text-xs mt-2" style={{ color: '#f97316' }}>Vincular perfil →</p>
-  }
+  if (!linked) return <p className="text-xs mt-2" style={{ color: '#f97316' }}>Vincular perfil →</p>
 
   return (
     <div className="mt-2 flex items-center gap-3 flex-wrap">
@@ -47,7 +46,26 @@ function RLCardStats(): React.JSX.Element {
   )
 }
 
-const SPORTS_CONFIG = [
+function SudokuCardStats(): React.JSX.Element {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(`habitos_sudoku_${today}`) || '{}') } catch { return {} } })()
+  if (saved.completed) return <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#8b5cf6' }}><CheckCircle size={11} /> Concluído hoje · +50 XP</p>
+  if (saved.timer) return <p className="text-xs mt-2 text-text-muted">Em progresso</p>
+  return <p className="text-xs mt-2 text-text-muted">Puzzle diário disponível</p>
+}
+
+interface CardConfig {
+  key: string
+  route: string
+  label: string
+  description: string
+  Icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>
+  color: string
+  available: boolean
+  ExtraStats: React.ComponentType | null
+}
+
+const SPORTS_CONFIG: CardConfig[] = [
   {
     key: 'rocket-league',
     route: '/sports/rocket-league',
@@ -70,10 +88,62 @@ const SPORTS_CONFIG = [
   },
 ]
 
+const GAMES_CONFIG: CardConfig[] = [
+  {
+    key: 'sudoku',
+    route: '/challenges/sudoku',
+    label: 'Sudoku',
+    description: 'Puzzle lógico 9×9 — um por dia',
+    Icon: Grid3X3,
+    color: '#8b5cf6',
+    available: true,
+    ExtraStats: SudokuCardStats,
+  },
+]
+
+function SportCard({ route, label, description, Icon, color, available, ExtraStats }: Omit<CardConfig, 'key'>) {
+  if (!available) {
+    return (
+      <div className="bg-bg-secondary border border-bg-border border-dashed rounded-xl p-5 opacity-50 cursor-not-allowed">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
+            <Icon size={24} style={{ color }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-text-primary">{label}</h3>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-bg-border text-text-muted">em breve</span>
+            </div>
+            <p className="text-xs text-text-muted mt-0.5">{description}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      to={route}
+      className="group bg-bg-secondary border border-bg-border rounded-xl p-5 hover:border-opacity-80 transition-all hover:shadow-lg hover:shadow-black/10 block"
+    >
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105" style={{ backgroundColor: `${color}20` }}>
+          <Icon size={24} style={{ color }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-text-primary">{label}</h3>
+          <p className="text-xs text-text-muted mt-0.5">{description}</p>
+          {ExtraStats && <ExtraStats />}
+        </div>
+        <ChevronRight size={16} className="text-text-muted group-hover:text-text-primary group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+      </div>
+    </Link>
+  )
+}
+
 export default function Sports(): React.JSX.Element {
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Header */}
+    <div className="space-y-8 max-w-3xl mx-auto">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent-purple/10">
           <Medal size={22} className="text-accent-purple" />
@@ -84,69 +154,30 @@ export default function Sports(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Sport cards */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        {SPORTS_CONFIG.map(({ key, route, label, description, Icon, color, available, ExtraStats }) => (
-          available ? (
-            <Link
-              key={key}
-              to={route}
-              className="group bg-bg-secondary border border-bg-border rounded-xl p-5 hover:border-opacity-80 transition-all hover:shadow-lg hover:shadow-black/10 block"
-              style={{ '--hover-color': color } as React.CSSProperties}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                  style={{ backgroundColor: `${color}20` }}
-                >
-                  <Icon size={24} style={{ color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-text-primary">{label}</h3>
-                  <p className="text-xs text-text-muted mt-0.5">{description}</p>
-                  {ExtraStats && <ExtraStats />}
-                </div>
-                <ChevronRight
-                  size={16}
-                  className="text-text-muted group-hover:text-text-primary group-hover:translate-x-0.5 transition-all mt-1 shrink-0"
-                />
-              </div>
-            </Link>
-          ) : (
-            <div
-              key={key}
-              className="bg-bg-secondary border border-bg-border border-dashed rounded-xl p-5 opacity-50 cursor-not-allowed"
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${color}15` }}
-                >
-                  <Icon size={24} style={{ color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-text-primary">{label}</h3>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-bg-border text-text-muted">em breve</span>
-                  </div>
-                  <p className="text-xs text-text-muted mt-0.5">{description}</p>
-                </div>
-              </div>
+      {/* Esportes */}
+      <section>
+        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Esportes</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {SPORTS_CONFIG.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
+          <div className="border border-dashed border-bg-border rounded-xl p-5 flex items-center gap-3 opacity-40">
+            <div className="w-12 h-12 rounded-xl bg-bg-border flex items-center justify-center shrink-0">
+              <Plus size={20} className="text-text-muted" />
             </div>
-          )
-        ))}
-
-        {/* Placeholder "add more" */}
-        <div className="border border-dashed border-bg-border rounded-xl p-5 flex items-center gap-3 opacity-40">
-          <div className="w-12 h-12 rounded-xl bg-bg-border flex items-center justify-center shrink-0">
-            <Plus size={20} className="text-text-muted" />
-          </div>
-          <div>
-            <p className="font-medium text-text-muted text-sm">Mais em breve</p>
-            <p className="text-xs text-text-muted">Steam, outros esportes...</p>
+            <div>
+              <p className="font-medium text-text-muted text-sm">Mais em breve</p>
+              <p className="text-xs text-text-muted">Steam, outros esportes...</p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Jogos */}
+      <section>
+        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Jogos</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {GAMES_CONFIG.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
+        </div>
+      </section>
     </div>
   )
 }

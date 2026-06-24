@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, Dumbbell, ShieldOff, Target,
   Trophy, Settings, BookOpen, Moon, DollarSign, BookMarked, Calendar,
-  ChevronLeft, ChevronRight, BarChart2, Medal
+  ChevronLeft, ChevronRight, BarChart2, Medal, Flame
 } from 'lucide-react'
 
 const ALL_NAV_ITEMS = [
@@ -19,7 +19,8 @@ const ALL_NAV_ITEMS = [
   { to: '/reading',   id: 'nav-reading',     icon: BookMarked,      label: 'Mídia',      key: 'reading',     color: '#ec4899' },
   { to: '/calendar',  id: 'nav-calendar',    icon: Calendar,        label: 'Calendário', key: 'calendar',    color: '#0ea5e9' },
   { to: '/analytics', id: 'nav-analytics',   icon: BarChart2,       label: 'Analytics',  key: 'analytics',   color: '#a855f7' },
-  { to: '/sports',    id: 'nav-sports',      icon: Medal,           label: 'Esportes',   key: 'sports',      color: '#f97316' },
+  { to: '/sports',      id: 'nav-sports',      icon: Medal,  label: 'Esportes & Jogos', key: 'sports',      color: '#f97316' },
+  { to: '/challenges',  id: 'nav-challenges',  icon: Flame,  label: 'Desafios',          key: 'challenges',  color: '#f97316' },
 ]
 
 function getHiddenSections(): string[] {
