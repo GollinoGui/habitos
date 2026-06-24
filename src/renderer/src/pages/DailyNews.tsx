@@ -23,6 +23,8 @@ interface SavedNews {
 const STORAGE_KEY_NEWS = (d: string) => `habitos_news_${d}`
 const STORAGE_KEY_APIKEY = 'habitos_newsdata_api_key'
 const ARTICLES_NEEDED = 5
+// Built-in key (injected at build time from .env, never stored in git)
+const BUILT_IN_KEY = import.meta.env.VITE_NEWSDATA_API_KEY as string | undefined
 
 function loadSaved(today: string): SavedNews | null {
   try {
@@ -46,7 +48,7 @@ export default function DailyNews(): React.JSX.Element {
   const dateLabel = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
   const { grantXP } = useProfileStore()
 
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEY_APIKEY) || '')
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEY_APIKEY) || BUILT_IN_KEY || '')
   const [keyInput, setKeyInput] = useState('')
   const [saved, setSaved] = useState<SavedNews | null>(() => loadSaved(today))
   const [loading, setLoading] = useState(false)
@@ -294,12 +296,14 @@ export default function DailyNews(): React.JSX.Element {
         })}
       </div>
 
-      <button
-        onClick={() => { localStorage.removeItem(STORAGE_KEY_APIKEY); setApiKey('') }}
-        className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-      >
-        Trocar chave de API
-      </button>
+      {!BUILT_IN_KEY && (
+        <button
+          onClick={() => { localStorage.removeItem(STORAGE_KEY_APIKEY); setApiKey('') }}
+          className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+        >
+          Trocar chave de API
+        </button>
+      )}
     </div>
   )
 }
