@@ -258,20 +258,24 @@ function Analytics({ habits, streaks, rangeDays }: { habits: Habit[]; streaks: R
       {/* Day of week chart */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl p-5 animate-slide-up" style={{ animationDelay: '80ms' }}>
         <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4 animate-reveal-left">Conclusões por dia da semana</h3>
-        <div className="flex items-end gap-2 h-24">
+        <div className="flex items-end gap-2" style={{ height: '80px' }}>
           {DOW_LABELS.map((label, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                <div
-                  className="w-full rounded-t-md bg-accent-purple animate-slide-up"
-                  style={{
-                    height: `${Math.max(4, (dowCounts[i] / maxDow) * 80)}px`,
-                    opacity: dowCounts[i] === 0 ? 0.2 : 1,
-                    animationDelay: `${120 + i * 70}ms`
-                  }}
-                />
-              </div>
-              <span className="text-xs text-text-muted">{label}</span>
+            <div key={i} className="flex-1 h-full flex items-end justify-center">
+              <div
+                className="w-full rounded-t-md bg-accent-purple animate-slide-up"
+                style={{
+                  height: `${Math.max(4, (dowCounts[i] / maxDow) * 80)}px`,
+                  opacity: dowCounts[i] === 0 ? 0.2 : 1,
+                  animationDelay: `${120 + i * 70}ms`
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-1">
+          {DOW_LABELS.map((label, i) => (
+            <div key={i} className="flex-1 text-center">
+              <span className="text-xs text-text-muted block">{label}</span>
               <span className="text-xs text-text-secondary font-medium animate-count-up" style={{ animationDelay: `${200 + i * 70}ms` }}>{dowCounts[i]}</span>
             </div>
           ))}

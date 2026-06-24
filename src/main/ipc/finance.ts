@@ -108,7 +108,7 @@ export function registerFinanceHandlers(): void {
        FROM finance_transactions t
        LEFT JOIN finance_categories c ON t.category_id = c.id
        LEFT JOIN finance_accounts a ON t.account_id = a.id
-       WHERE t.date LIKE ?
+       WHERE t.date LIKE ? AND t.status != 'cancelled'
        ORDER BY t.date DESC, t.created_at DESC`,
       [`${prefix}%`]
     )
@@ -127,7 +127,13 @@ export function registerFinanceHandlers(): void {
   })
 
   ipcMain.handle('finance:transactions:delete', (_e, id: number) => {
-    dbRun('DELETE FROM finance_transactions WHERE id = ?', [id])
+    const tx = dbGet('SELECT bill_id FROM finance_transactions WHERE id = ?', [id]) as { bill_id: number | null } | null
+    if (tx?.bill_id) {
+      // Soft-delete: mark as cancelled so generateMonth doesn't recreate it
+      dbRun("UPDATE finance_transactions SET status = 'cancelled' WHERE id = ?", [id])
+    } else {
+      dbRun('DELETE FROM finance_transactions WHERE id = ?', [id])
+    }
     save()
     return true
   })

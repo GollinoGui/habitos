@@ -85,7 +85,6 @@ export default function Dashboard(): React.JSX.Element {
 
   useEffect(() => {
     if (weeklyData.length === 0) return
-    setBarsVisible(false)
     const timer = setTimeout(() => setBarsVisible(true), 50)
     return () => clearTimeout(timer)
   }, [weeklyData])
