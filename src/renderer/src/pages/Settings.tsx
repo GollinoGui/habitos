@@ -19,30 +19,32 @@ const ACCENT_PRESETS = [
 ]
 
 const ALL_SECTIONS = [
-  { key: 'habits',       label: 'Hábitos',     emoji: '✅' },
-  { key: 'gym',          label: 'Academia',    emoji: '🏋️' },
-  { key: 'addictions',   label: 'Vícios',      emoji: '🛡️' },
-  { key: 'goals',        label: 'Metas',       emoji: '🎯' },
-  { key: 'achievements', label: 'Conquistas',  emoji: '🏆' },
-  { key: 'journal',      label: 'Diário',      emoji: '📓' },
-  { key: 'sleep',        label: 'Sono',        emoji: '🌙' },
-  { key: 'finance',      label: 'Finanças',    emoji: '💰' },
-  { key: 'reading',      label: 'Mídia',       emoji: '📚' },
-  { key: 'calendar',     label: 'Calendário',  emoji: '📅' }
+  { key: 'habits',       label: 'Hábitos',        emoji: '✅' },
+  { key: 'gym',          label: 'Academia',        emoji: '🏋️' },
+  { key: 'addictions',   label: 'Vícios',          emoji: '🛡️' },
+  { key: 'goals',        label: 'Metas',           emoji: '🎯' },
+  { key: 'achievements', label: 'Conquistas',      emoji: '🏆' },
+  { key: 'journal',      label: 'Diário',          emoji: '📓' },
+  { key: 'sleep',        label: 'Sono',            emoji: '🌙' },
+  { key: 'finance',      label: 'Finanças',        emoji: '💰' },
+  { key: 'reading',      label: 'Mídia',           emoji: '📚' },
+  { key: 'calendar',     label: 'Calendário',      emoji: '📅' },
+  { key: 'sports',       label: 'Esportes & Jogos',emoji: '🏅' },
 ]
 
 const ALL_SECTIONS_ORDER = [
-  { key: 'dashboard',    label: 'Dashboard',   emoji: '🏠' },
-  { key: 'habits',       label: 'Hábitos',     emoji: '✅' },
-  { key: 'gym',          label: 'Academia',    emoji: '🏋️' },
-  { key: 'addictions',   label: 'Vícios',      emoji: '🛡️' },
-  { key: 'goals',        label: 'Metas',       emoji: '🎯' },
-  { key: 'achievements', label: 'Conquistas',  emoji: '🏆' },
-  { key: 'journal',      label: 'Diário',      emoji: '📓' },
-  { key: 'sleep',        label: 'Sono',        emoji: '🌙' },
-  { key: 'finance',      label: 'Finanças',    emoji: '💰' },
-  { key: 'reading',      label: 'Mídia',       emoji: '📚' },
-  { key: 'calendar',     label: 'Calendário',  emoji: '📅' }
+  { key: 'dashboard',    label: 'Dashboard',       emoji: '🏠' },
+  { key: 'habits',       label: 'Hábitos',         emoji: '✅' },
+  { key: 'gym',          label: 'Academia',        emoji: '🏋️' },
+  { key: 'addictions',   label: 'Vícios',          emoji: '🛡️' },
+  { key: 'goals',        label: 'Metas',           emoji: '🎯' },
+  { key: 'achievements', label: 'Conquistas',      emoji: '🏆' },
+  { key: 'journal',      label: 'Diário',          emoji: '📓' },
+  { key: 'sleep',        label: 'Sono',            emoji: '🌙' },
+  { key: 'finance',      label: 'Finanças',        emoji: '💰' },
+  { key: 'reading',      label: 'Mídia',           emoji: '📚' },
+  { key: 'calendar',     label: 'Calendário',      emoji: '📅' },
+  { key: 'sports',       label: 'Esportes & Jogos',emoji: '🏅' },
 ]
 
 const RESET_SECTIONS = [

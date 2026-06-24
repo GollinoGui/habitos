@@ -3,23 +3,24 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, Moon, DollarSign,
   Dumbbell, ShieldOff, Target, Trophy, BookOpen, BookMarked,
-  Calendar, BarChart2, Settings
+  Calendar, BarChart2, Settings, Medal
 } from 'lucide-react'
 
 const ALL_NAV_ITEMS = [
-  { to: '/',             key: 'dashboard',    icon: LayoutDashboard, label: 'Início',     color: '#7c3aed' },
-  { to: '/habits',       key: 'habits',       icon: CheckSquare,     label: 'Hábitos',    color: '#10b981' },
-  { to: '/sleep',        key: 'sleep',        icon: Moon,            label: 'Sono',       color: '#06b6d4' },
-  { to: '/finance',      key: 'finance',      icon: DollarSign,      label: 'Finanças',   color: '#10b981' },
-  { to: '/gym',          key: 'gym',          icon: Dumbbell,        label: 'Academia',   color: '#ef4444' },
-  { to: '/addictions',   key: 'addictions',   icon: ShieldOff,       label: 'Vícios',     color: '#3b82f6' },
-  { to: '/goals',        key: 'goals',        icon: Target,          label: 'Metas',      color: '#f59e0b' },
-  { to: '/journal',      key: 'journal',      icon: BookOpen,        label: 'Diário',     color: '#8b5cf6' },
-  { to: '/reading',      key: 'reading',      icon: BookMarked,      label: 'Mídia',      color: '#ec4899' },
-  { to: '/calendar',     key: 'calendar',     icon: Calendar,        label: 'Calendário', color: '#0ea5e9' },
-  { to: '/analytics',    key: 'analytics',    icon: BarChart2,       label: 'Analytics',  color: '#a855f7' },
-  { to: '/achievements', key: 'achievements', icon: Trophy,          label: 'Conquistas', color: '#f59e0b' },
-  { to: '/settings',     key: 'settings',     icon: Settings,        label: 'Config.',    color: '#6b7280' },
+  { to: '/',           key: 'dashboard',   icon: LayoutDashboard, label: 'Início',     color: '#7c3aed' },
+  { to: '/habits',     key: 'habits',      icon: CheckSquare,     label: 'Hábitos',    color: '#10b981' },
+  { to: '/sleep',      key: 'sleep',       icon: Moon,            label: 'Sono',       color: '#06b6d4' },
+  { to: '/finance',    key: 'finance',     icon: DollarSign,      label: 'Finanças',   color: '#10b981' },
+  { to: '/gym',        key: 'gym',         icon: Dumbbell,        label: 'Academia',   color: '#ef4444' },
+  { to: '/addictions', key: 'addictions',  icon: ShieldOff,       label: 'Vícios',     color: '#3b82f6' },
+  { to: '/goals',      key: 'goals',       icon: Target,          label: 'Metas',      color: '#f59e0b' },
+  { to: '/journal',    key: 'journal',     icon: BookOpen,        label: 'Diário',     color: '#8b5cf6' },
+  { to: '/reading',    key: 'reading',     icon: BookMarked,      label: 'Mídia',      color: '#ec4899' },
+  { to: '/calendar',   key: 'calendar',    icon: Calendar,        label: 'Calendário', color: '#0ea5e9' },
+  { to: '/analytics',  key: 'analytics',   icon: BarChart2,       label: 'Analytics',  color: '#a855f7' },
+  { to: '/achievements',key: 'achievements',icon: Trophy,         label: 'Conquistas', color: '#f59e0b' },
+  { to: '/sports',     key: 'sports',      icon: Medal,           label: 'Esportes',   color: '#f97316' },
+  { to: '/settings',   key: 'settings',    icon: Settings,        label: 'Config.',    color: '#6b7280' },
 ]
 
 function getHiddenSections(): string[] {

@@ -299,6 +299,18 @@ function createTables(): void {
       label TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS rocket_league_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      start_mmr INTEGER NOT NULL,
+      end_mmr INTEGER NOT NULL,
+      mmr_gain INTEGER NOT NULL,
+      matches INTEGER DEFAULT 0,
+      wins INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
   runMigrations()

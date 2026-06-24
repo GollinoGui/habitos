@@ -17,6 +17,8 @@ import Finance from './pages/Finance'
 import Reading from './pages/Reading'
 import Calendar from './pages/Calendar'
 import Analytics from './pages/Analytics'
+import Sports from './pages/Sports'
+import RocketLeague from './pages/RocketLeague'
 import Login from './pages/Login'
 import OnboardingModal from './components/Onboarding/OnboardingModal'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
@@ -178,6 +180,8 @@ function MobileSwipeLayout(): React.JSX.Element {
           <Route path="/reading" element={<Reading />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/sports" element={<Sports />} />
+          <Route path="/sports/rocket-league" element={<RocketLeague />} />
         </Routes>
         </div>
       </main>
@@ -329,6 +333,8 @@ function AppContent(): React.JSX.Element {
                   <Route path="/reading" element={<Reading />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/sports" element={<Sports />} />
+                  <Route path="/sports/rocket-league" element={<RocketLeague />} />
                 </Routes>
               </main>
             </div>

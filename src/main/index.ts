@@ -45,6 +45,7 @@ import { registerFinanceHandlers } from './ipc/finance'
 import { registerMediaHandlers } from './ipc/media'
 import { registerAppSettingsHandlers } from './ipc/appSettings'
 import { registerFocusHandlers } from './ipc/focus'
+import { registerRocketLeagueHandlers } from './ipc/rocketleague'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -239,6 +240,7 @@ app.whenReady().then(async () => {
   registerMediaHandlers()
   registerAppSettingsHandlers()
   registerFocusHandlers()
+  registerRocketLeagueHandlers()
 
   ipcMain.handle('demo:open', () => {
     const demoWindow = new BrowserWindow({

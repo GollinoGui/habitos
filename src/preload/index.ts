@@ -157,6 +157,13 @@ const realApi = {
     update: (id: number, data: object) => ipcRenderer.invoke('gym:phases:update', id, data),
     delete: (id: number) => ipcRenderer.invoke('gym:phases:delete', id)
   },
+  rocketLeague: {
+    search: (query: string) => ipcRenderer.invoke('rl:search', query),
+    getProfile: (platform: string, username: string) => ipcRenderer.invoke('rl:get-profile', platform, username),
+    addSession: (data: object) => ipcRenderer.invoke('rl:add-session', data),
+    listSessions: (limit?: number) => ipcRenderer.invoke('rl:list-sessions', limit),
+    deleteSession: (id: number) => ipcRenderer.invoke('rl:delete-session', id),
+  },
   app: {
     exportData: () => ipcRenderer.invoke('app:export-data'),
     importData: (json: string) => ipcRenderer.invoke('app:import-data', json),
@@ -525,6 +532,13 @@ function buildDemoApi() {
       create: async () => ({ id: 99 }),
       update: async () => {},
       delete: async () => {},
+    },
+    rocketLeague: {
+      search: async () => ({ ok: true, data: [] }),
+      getProfile: async () => ({ ok: false, error: 'Demo mode' }),
+      addSession: async () => 99,
+      listSessions: async () => [],
+      deleteSession: async () => true,
     },
     app: {
       exportData: async () => JSON.stringify({ demo: true }),
