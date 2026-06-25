@@ -43,6 +43,22 @@ const WORDS = [
   'COCHO','CODEX','COGUL','COICE','COISA','COITO','COLAR','COLMO','COLOS','COMEM',
   'CONDE','CONGA','CONGE','CONTO','COPOS','COROA','COSER','COSMO','COURO','COUVE',
   'CRISE','CRIVO','CROPS','CRUZA','CUECA','CULPA','CURAR','CURSA','CURTA','CURTO',
+  // expanded word list
+  'RURAL','FINAL','GERAL','LEGAL','LOCAL','MORAL','NATAL','NAVAL','RIVAL','TOTAL',
+  'VITAL','VOCAL','CIVIL','IGUAL','METAL','SINAL','CANAL','CORAL','IDEAL','PENAL',
+  'VIRIL','ABRIL','VAPOR','VELHO','COMER','MATAR','MUDAR','PODER','SABER','SECAR',
+  'TEMER','TIRAR','VOTAR','LUNAR','SOLAR','BANAL','JURAR','LIGAR','NEGAR','PAGAR',
+  'TOCAR','FERIR','SUJAR','ZELAR','BOTAR','CORAR','FUMAR','LAVAR','MEDIR','OPTAR',
+  'VELAR','MONTE','RAMAL','VIGOR','MURAL','HIATO','INATO','VAGAR','ZUMBI','PULAR',
+  'OBTER','TECER','SELAR','REGER','METER','DITAR','ASILO','JULHO','JUNHO','HEROI',
+  'QUILO','OSSOS','ZERAR','VEDAR','RALAR','GERIR','DOTAR','PARIR','VARAR','GELAR',
+  'PRAIA','MACHO','TOURO','BROTO','LESMA','MIOLO','NOVEL','TREVO','USINA','NOBRE',
+  'LOUCO','CRIAR','NOTAR','FREAR','COZER','ALTAR','RAMOS','CABRA','CAPAZ','GABAR',
+  'SALAO','PLENA','FLUXO','VEZES','PATIO','GUETO','CAULE','TOPAR','RODAR','REGAR',
+  'JAZER','OBESO','PAJEM','VAGAO','CRAVO','CERVO','FEROZ','TURVO','FATOR','BURLA',
+  'CASCO','DIQUE','GOLFO','ICONE','JOIAS','LACOS','LAVOR','OSTRA','PALCO','SAGAZ',
+  'VALSA','ADEGA','CETRO','ETNIA','FOGAO','CURVA','LARVA','MANIA','PLUMA','SABRE',
+  'TOTEM','VELOZ','BLOCO','MALHA','TORSO','JORRO','LOUSA','GREVE','TURMA','PILAR',
 ]
 
 // ── Engine ───────────────────────────────────────────────────────────────────
@@ -149,20 +165,27 @@ export default function WordleGame(): React.JSX.Element {
   const [shake, setShake] = useState(false)
   const [reveal, setReveal] = useState<number | null>(null)
   const [xpGranted, setXpGranted] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   // persist
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(state))
   }, [state, storageKey])
 
+  useEffect(() => {
+    if (!errorMsg) return
+    const t = setTimeout(() => setErrorMsg(''), 1800)
+    return () => clearTimeout(t)
+  }, [errorMsg])
+
   // XP on completion (once)
   useEffect(() => {
     if (xpGranted) return
     if (state.status === 'won') {
-      grantXP(75, 'Palavra do Dia concluída')
+      grantXP(20, 'Palavra do Dia concluída')
       setXpGranted(true)
     } else if (state.status === 'lost') {
-      grantXP(25, 'Palavra do Dia tentada')
+      grantXP(5, 'Palavra do Dia tentada')
       setXpGranted(true)
     }
   }, [state.status])
@@ -181,8 +204,14 @@ export default function WordleGame(): React.JSX.Element {
   const isOver = state.status !== 'playing'
 
   const submitGuess = useCallback(() => {
-    if (current.length !== 5 || isOver) return
-    if (!WORDS.includes(current)) { setShake(true); setTimeout(() => setShake(false), 600); return }
+    if (isOver) return
+    if (current.length !== 5) { setErrorMsg('Digite 5 letras'); return }
+    if (!WORDS.includes(current)) {
+      setShake(true)
+      setErrorMsg('Palavra não encontrada na lista')
+      setTimeout(() => setShake(false), 600)
+      return
+    }
 
     const results = evaluateGuess(current, answer)
     const newGuesses = [...state.guesses, current]
@@ -213,6 +242,8 @@ export default function WordleGame(): React.JSX.Element {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 'Backspace') { handleKey('⌫'); return }
+      if (e.key === 'Enter') { handleKey('ENTER'); return }
       handleKey(e.key.toUpperCase())
     }
     window.addEventListener('keydown', onKey)
@@ -261,7 +292,7 @@ export default function WordleGame(): React.JSX.Element {
             <p className="text-sm font-semibold text-green-400">
               Parabéns! Em {state.attempts} tentativa{state.attempts !== 1 ? 's' : ''}!
             </p>
-            <p className="text-xs text-text-muted mt-0.5">+75 XP</p>
+            <p className="text-xs text-text-muted mt-0.5">+20 XP</p>
           </div>
           <button onClick={shareResult} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 rounded-lg text-xs text-green-400 hover:bg-green-500/30 transition-colors">
             <Share2 size={12} /> Compartilhar
@@ -272,11 +303,18 @@ export default function WordleGame(): React.JSX.Element {
         <div className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl">
           <div>
             <p className="text-sm font-semibold text-red-400">A palavra era: <span className="tracking-widest">{answer}</span></p>
-            <p className="text-xs text-text-muted mt-0.5">+25 XP por tentar</p>
+            <p className="text-xs text-text-muted mt-0.5">+5 XP por tentar</p>
           </div>
           <button onClick={shareResult} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 rounded-lg text-xs text-red-400 hover:bg-red-500/30 transition-colors">
             <Share2 size={12} /> Compartilhar
           </button>
+        </div>
+      )}
+
+      {/* Error message */}
+      {errorMsg && (
+        <div className="w-full px-4 py-2 bg-red-500/15 border border-red-500/30 rounded-xl text-sm text-red-400 text-center font-medium">
+          {errorMsg}
         </div>
       )}
 

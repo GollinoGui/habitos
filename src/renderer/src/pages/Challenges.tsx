@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Grid3X3, Newspaper, Type, CheckCircle, Flame, ChevronRight, Star } from 'lucide-react'
+import { Grid3X3, Newspaper, Type, Check, CheckCircle, Flame, ChevronRight, Star } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -32,7 +32,7 @@ export default function Challenges(): React.JSX.Element {
       description: 'Adivinhe a palavra de 5 letras em 6 tentativas',
       icon: <Type size={22} />,
       color: '#10b981',
-      xp: 75,
+      xp: 30,
       getCompleted: (d) => {
         const s = loadJson(`habitos_wordle_${d}`)
         return s.status === 'won' || s.status === 'lost'
@@ -52,7 +52,7 @@ export default function Challenges(): React.JSX.Element {
       description: 'Puzzle lógico 9×9 — exercite o raciocínio',
       icon: <Grid3X3 size={22} />,
       color: '#8b5cf6',
-      xp: 50,
+      xp: 20,
       getCompleted: (d) => !!loadJson(`habitos_sudoku_${d}`).completed,
       getProgress: (d) => {
         const s = loadJson(`habitos_sudoku_${d}`)
@@ -68,7 +68,7 @@ export default function Challenges(): React.JSX.Element {
       description: 'Leia 5 notícias e mantenha-se informado',
       icon: <Newspaper size={22} />,
       color: '#3b82f6',
-      xp: 50,
+      xp: 15,
       getCompleted: (d) => {
         const s = loadJson(`habitos_news_${d}`)
         return (s.readCount as number) >= 5
@@ -138,30 +138,50 @@ export default function Challenges(): React.JSX.Element {
             <Link
               key={c.key}
               to={c.route}
-              className="flex items-center gap-4 p-4 bg-bg-secondary border border-bg-border rounded-xl hover:border-opacity-60 transition-all hover:shadow-md group"
-              style={isDone ? { borderColor: `${c.color}40` } : undefined}
+              className="flex items-center gap-4 p-4 border rounded-xl transition-all hover:shadow-md group"
+              style={isDone
+                ? { backgroundColor: `${c.color}12`, borderColor: `${c.color}60` }
+                : { backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--bg-border)' }
+              }
             >
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                style={{ backgroundColor: `${c.color}20`, color: c.color }}
-              >
-                {c.icon}
+              <div className="relative shrink-0">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
+                  style={{ backgroundColor: `${c.color}${isDone ? '30' : '20'}`, color: c.color }}
+                >
+                  {c.icon}
+                </div>
+                {isDone && (
+                  <div
+                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2"
+                    style={{ backgroundColor: c.color, borderColor: 'var(--bg-secondary)' }}
+                  >
+                    <Check size={10} className="text-white" strokeWidth={3} />
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-text-primary">{c.label}</h3>
-                  {isDone && <CheckCircle size={14} style={{ color: c.color }} />}
-                </div>
+                <h3 className="font-semibold text-text-primary">{c.label}</h3>
                 <p className="text-xs text-text-muted mt-0.5">{c.description}</p>
                 {progress && (
                   <p className="text-xs mt-1 font-medium" style={{ color: c.color }}>{progress}</p>
                 )}
               </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <div className="flex items-center gap-1 text-xs text-yellow-400">
-                  <Star size={11} />
-                  <span>{c.xp} XP</span>
-                </div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                {isDone ? (
+                  <div
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                    style={{ backgroundColor: `${c.color}20`, color: c.color }}
+                  >
+                    <CheckCircle size={12} />
+                    Concluído
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-xs text-yellow-400">
+                    <Star size={11} />
+                    <span>{c.xp} XP</span>
+                  </div>
+                )}
                 <ChevronRight size={15} className="text-text-muted group-hover:text-text-primary transition-colors" />
               </div>
             </Link>

@@ -17,30 +17,58 @@ interface SavedNews {
   articles: Article[]
   readIndices: number[]
   fetchedDate: string
-  xpGranted?: boolean
+  categories: string[]
+  dailyReadCount: number  // cumulative total for the day, survives category changes
 }
 
 const STORAGE_KEY_NEWS = (d: string) => `habitos_news_${d}`
 const STORAGE_KEY_APIKEY = 'habitos_newsdata_api_key'
+const STORAGE_KEY_CATS = 'habitos_news_categories'
 const ARTICLES_NEEDED = 5
-// Built-in key (injected at build time from .env, never stored in git)
 const BUILT_IN_KEY = import.meta.env.VITE_NEWSDATA_API_KEY as string | undefined
 
-function loadSaved(today: string): SavedNews | null {
+const CATEGORIES = [
+  { id: 'top',           label: 'Principais' },
+  { id: 'technology',    label: 'Tecnologia' },
+  { id: 'science',       label: 'Ciência' },
+  { id: 'sports',        label: 'Esportes' },
+  { id: 'health',        label: 'Saúde' },
+  { id: 'entertainment', label: 'Entretenimento' },
+  { id: 'business',      label: 'Negócios' },
+  { id: 'politics',      label: 'Política' },
+  { id: 'world',         label: 'Mundo' },
+  { id: 'environment',   label: 'Meio Ambiente' },
+]
+
+function loadSavedCategories(): string[] {
   try {
-    const s = JSON.parse(localStorage.getItem(STORAGE_KEY_NEWS(today)) || 'null') as SavedNews | null
-    if (s?.fetchedDate === today && s.articles?.length) return s
+    const raw = localStorage.getItem(STORAGE_KEY_CATS)
+    if (raw) {
+      const parsed = JSON.parse(raw) as string[]
+      if (Array.isArray(parsed) && parsed.length) return parsed
+    }
+  } catch { /* empty */ }
+  return ['top']
+}
+
+function loadSaved(today: string, categories: string[]): SavedNews | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY_NEWS(today)) || 'null') as (SavedNews & { readCount?: number }) | null
+    if (!raw?.fetchedDate || raw.fetchedDate !== today || !raw.articles?.length) return null
+    const dailyReadCount = raw.dailyReadCount ?? raw.readCount ?? 0
+    const categoriesMatch = JSON.stringify(raw.categories?.slice().sort()) === JSON.stringify(categories.slice().sort())
+    if (categoriesMatch) return { ...raw, dailyReadCount }
+    // Categories changed: return null to trigger re-fetch, but preserve dailyReadCount via localStorage
+    return null
   } catch { /* empty */ }
   return null
 }
 
-function saveSaved(today: string, data: SavedNews) {
-  localStorage.setItem(STORAGE_KEY_NEWS(today), JSON.stringify(data))
-  // also update read count for Challenges hub
-  const count = data.readIndices.length
-  // stored count under the same key is readCount
-  const existing = JSON.parse(localStorage.getItem(STORAGE_KEY_NEWS(today)) || '{}')
-  localStorage.setItem(STORAGE_KEY_NEWS(today), JSON.stringify({ ...existing, readCount: count }))
+function loadDailyReadCount(today: string): number {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY_NEWS(today)) || 'null') as { dailyReadCount?: number; readCount?: number } | null
+    return raw?.dailyReadCount ?? raw?.readCount ?? 0
+  } catch { return 0 }
 }
 
 export default function DailyNews(): React.JSX.Element {
@@ -50,33 +78,38 @@ export default function DailyNews(): React.JSX.Element {
 
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEY_APIKEY) || BUILT_IN_KEY || '')
   const [keyInput, setKeyInput] = useState('')
-  const [saved, setSaved] = useState<SavedNews | null>(() => loadSaved(today))
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(loadSavedCategories)
+  const [saved, setSaved] = useState<SavedNews | null>(() => loadSaved(today, loadSavedCategories()))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // persist read-count-compatible save
   function updateSaved(next: SavedNews) {
     setSaved(next)
     localStorage.setItem(STORAGE_KEY_NEWS(today), JSON.stringify({
       ...next,
-      readCount: next.readIndices.length,
+      readCount: next.dailyReadCount,  // Challenges.tsx reads readCount
     }))
   }
 
-  const fetchNews = useCallback(async (key: string) => {
+  const fetchNews = useCallback(async (key: string, cats: string[]) => {
     setLoading(true)
     setError('')
     try {
-      const url = `https://newsdata.io/api/1/latest?country=br&language=pt&apikey=${key}&size=${ARTICLES_NEEDED}`
+      const catParam = cats.length ? `&category=${cats.join(',')}` : ''
+      const url = `https://newsdata.io/api/1/latest?country=br&language=pt&apikey=${key}&size=${ARTICLES_NEEDED}${catParam}`
       const res = await fetch(url)
       const json = await res.json() as { status: string; results?: Article[]; message?: string }
       if (json.status !== 'success' || !json.results?.length) {
         throw new Error(json.message || 'Erro ao buscar notícias')
       }
+      // Read dailyReadCount directly from localStorage to avoid stale closure
+      const preserved = loadDailyReadCount(today)
       const next: SavedNews = {
         articles: json.results.slice(0, ARTICLES_NEEDED),
-        readIndices: saved?.readIndices ?? [],
+        readIndices: [],
         fetchedDate: today,
+        categories: cats,
+        dailyReadCount: preserved,
       }
       updateSaved(next)
     } catch (e) {
@@ -84,12 +117,12 @@ export default function DailyNews(): React.JSX.Element {
     } finally {
       setLoading(false)
     }
-  }, [today, saved?.readIndices])
+  }, [today])
 
-  // Auto-fetch if we have a key but no articles yet
+  // Auto-fetch if we have a key but no articles for current categories
   useEffect(() => {
-    if (apiKey && !saved) fetchNews(apiKey)
-  }, [apiKey])
+    if (apiKey && !saved) fetchNews(apiKey, selectedCategories)
+  }, [apiKey, saved])
 
   function saveApiKey() {
     const k = keyInput.trim()
@@ -97,27 +130,66 @@ export default function DailyNews(): React.JSX.Element {
     localStorage.setItem(STORAGE_KEY_APIKEY, k)
     setApiKey(k)
     setKeyInput('')
-    fetchNews(k)
+    fetchNews(k, selectedCategories)
   }
+
+  function toggleCategory(id: string) {
+    setSelectedCategories(prev => {
+      const next = prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+      const resolved = next.length ? next : ['top']
+      localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(resolved))
+      setSaved(loadSaved(today, resolved))
+      return resolved
+    })
+  }
+
+  // Fetch when categories change and we have a key
+  useEffect(() => {
+    if (apiKey && !saved) fetchNews(apiKey, selectedCategories)
+  }, [selectedCategories])
 
   function markRead(idx: number) {
     if (!saved) return
     if (saved.readIndices.includes(idx)) return
-    const next: SavedNews = { ...saved, readIndices: [...saved.readIndices, idx] }
+    const newDailyCount = saved.dailyReadCount + 1
+    const next: SavedNews = {
+      ...saved,
+      readIndices: [...saved.readIndices, idx],
+      dailyReadCount: newDailyCount,
+    }
     updateSaved(next)
-
-    // XP: 10 per article
-    grantXP(10, 'Notícia lida')
-
-    // Bonus XP when all done (first time only)
-    if (next.readIndices.length >= ARTICLES_NEEDED && !saved.xpGranted) {
-      grantXP(0, '') // grant was already given per-article; mark done
-      updateSaved({ ...next, xpGranted: true })
+    if (newDailyCount <= ARTICLES_NEEDED) {
+      grantXP(2, 'Notícia lida')
     }
   }
 
-  const readCount = saved?.readIndices.length ?? 0
-  const allRead = readCount >= ARTICLES_NEEDED
+  const dailyReadCount = saved?.dailyReadCount ?? 0
+  const readCount = Math.max(dailyReadCount, saved?.readIndices.length ?? 0)
+  const allRead = dailyReadCount >= ARTICLES_NEEDED
+
+  // ── Category picker (always visible) ───────────────────────────────────────
+  function CategoryPicker() {
+    return (
+      <div className="w-full space-y-2">
+        <p className="text-xs text-text-muted font-medium">Temas de interesse</p>
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => toggleCategory(cat.id)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                selectedCategories.includes(cat.id)
+                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-400'
+                  : 'bg-bg-secondary border-bg-border text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // ── No API key ──────────────────────────────────────────────────────────────
   if (!apiKey) {
@@ -167,6 +239,7 @@ export default function DailyNews(): React.JSX.Element {
     return (
       <div className="max-w-lg mx-auto space-y-6">
         <Header dateLabel={dateLabel} />
+        <CategoryPicker />
         <div className="flex items-center justify-center py-16 gap-3 text-text-muted">
           <Loader2 size={20} className="animate-spin" />
           <span className="text-sm">Buscando notícias...</span>
@@ -180,11 +253,12 @@ export default function DailyNews(): React.JSX.Element {
     return (
       <div className="max-w-lg mx-auto space-y-6">
         <Header dateLabel={dateLabel} />
+        <CategoryPicker />
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-3">
           <p className="text-sm text-red-400">{error}</p>
           <div className="flex gap-2">
             <button
-              onClick={() => fetchNews(apiKey)}
+              onClick={() => fetchNews(apiKey, selectedCategories)}
               className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-400 hover:bg-red-500/30 transition-colors"
             >
               <RefreshCw size={12} /> Tentar novamente
@@ -206,8 +280,9 @@ export default function DailyNews(): React.JSX.Element {
     return (
       <div className="max-w-lg mx-auto space-y-6">
         <Header dateLabel={dateLabel} />
+        <CategoryPicker />
         <button
-          onClick={() => fetchNews(apiKey)}
+          onClick={() => fetchNews(apiKey, selectedCategories)}
           className="w-full flex items-center justify-center gap-2 py-10 border border-dashed border-bg-border rounded-xl text-text-muted hover:text-text-secondary hover:border-text-muted transition-colors"
         >
           <RefreshCw size={16} />
@@ -223,9 +298,9 @@ export default function DailyNews(): React.JSX.Element {
       <div className="flex items-start gap-3">
         <Header dateLabel={dateLabel} inline />
         <div className="ml-auto flex items-center gap-3 shrink-0">
-          <span className="text-xs text-text-muted">{readCount}/{ARTICLES_NEEDED} lidas</span>
+          <span className="text-xs text-text-muted">{Math.min(readCount, ARTICLES_NEEDED)}/{ARTICLES_NEEDED} lidas</span>
           <button
-            onClick={() => fetchNews(apiKey)}
+            onClick={() => { setSaved(null) }}
             title="Atualizar"
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-border transition-colors"
           >
@@ -234,9 +309,11 @@ export default function DailyNews(): React.JSX.Element {
         </div>
       </div>
 
+      <CategoryPicker />
+
       {allRead && (
         <div className="px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-          <p className="text-sm font-semibold text-blue-400">✓ Todas as notícias lidas! +50 XP</p>
+          <p className="text-sm font-semibold text-blue-400">✓ Todas as notícias lidas! +{ARTICLES_NEEDED * 2} XP</p>
         </div>
       )}
 
@@ -277,7 +354,7 @@ export default function DailyNews(): React.JSX.Element {
                       onClick={() => markRead(i)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/15 border border-blue-500/25 rounded-lg text-xs text-blue-400 hover:bg-blue-500/25 transition-colors font-medium"
                     >
-                      <CheckCircle size={11} /> Marcar como lida · +10 XP
+                      <CheckCircle size={11} /> Marcar como lida{dailyReadCount < ARTICLES_NEEDED ? ' · +2 XP' : ''}
                     </button>
                   )}
                   <a

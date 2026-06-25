@@ -1059,6 +1059,7 @@ function buildApi(): any {
           const { data } = await supabase.from('finance_transactions')
             .select('*, finance_categories(name, icon, color), finance_accounts(name, icon, color)')
             .eq('user_id', uid())
+            .neq('status', 'cancelled')
             .gte('date', `${prefix}-01`).lte('date', `${prefix}-${lastDay}`)
             .order('date', { ascending: false }).order('created_at', { ascending: false })
           return (data ?? []).map(({ finance_categories: cat, finance_accounts: acc, ...t }) => ({
@@ -1085,7 +1086,14 @@ function buildApi(): any {
         },
 
         delete: async (id: number) => {
-          await supabase.from('finance_transactions').delete().eq('id', id).eq('user_id', uid())
+          const { data: tx } = await supabase.from('finance_transactions')
+            .select('bill_id').eq('id', id).eq('user_id', uid()).single()
+          if (tx?.bill_id) {
+            await supabase.from('finance_transactions').update({ status: 'cancelled' })
+              .eq('id', id).eq('user_id', uid())
+          } else {
+            await supabase.from('finance_transactions').delete().eq('id', id).eq('user_id', uid())
+          }
           return true
         },
 
