@@ -164,6 +164,24 @@ const realApi = {
     listSessions: (limit?: number) => ipcRenderer.invoke('rl:list-sessions', limit),
     deleteSession: (id: number) => ipcRenderer.invoke('rl:delete-session', id),
   },
+  volleyball: {
+    list: (limit?: number) => ipcRenderer.invoke('volleyball:list', limit),
+    add: (data: object) => ipcRenderer.invoke('volleyball:add', data),
+    delete: (id: number) => ipcRenderer.invoke('volleyball:delete', id),
+    stats: () => ipcRenderer.invoke('volleyball:stats'),
+  },
+  beachTennis: {
+    list: (limit?: number) => ipcRenderer.invoke('beachtennis:list', limit),
+    add: (data: object) => ipcRenderer.invoke('beachtennis:add', data),
+    delete: (id: number) => ipcRenderer.invoke('beachtennis:delete', id),
+    stats: () => ipcRenderer.invoke('beachtennis:stats'),
+  },
+  basketball: {
+    list: (limit?: number) => ipcRenderer.invoke('basketball:list', limit),
+    add: (data: object) => ipcRenderer.invoke('basketball:add', data),
+    delete: (id: number) => ipcRenderer.invoke('basketball:delete', id),
+    stats: () => ipcRenderer.invoke('basketball:stats'),
+  },
   app: {
     exportData: () => ipcRenderer.invoke('app:export-data'),
     importData: (json: string) => ipcRenderer.invoke('app:import-data', json),
@@ -539,6 +557,24 @@ function buildDemoApi() {
       addSession: async () => 99,
       listSessions: async () => [],
       deleteSession: async () => true,
+    },
+    volleyball: {
+      list: async () => [],
+      add: async () => 99,
+      delete: async () => true,
+      stats: async () => ({ total: 0, games: 0, trainings: 0, wins: 0, losses: 0 }),
+    },
+    beachTennis: {
+      list: async () => [],
+      add: async () => 99,
+      delete: async () => true,
+      stats: async () => ({ total: 0, games: 0, trainings: 0, wins: 0, losses: 0 }),
+    },
+    basketball: {
+      list: async () => [],
+      add: async () => 99,
+      delete: async () => true,
+      stats: async () => ({ total: 0, games: 0, trainings: 0, wins: 0, losses: 0, avgPoints: 0, avgRebounds: 0, avgAssists: 0 }),
     },
     app: {
       exportData: async () => JSON.stringify({ demo: true }),

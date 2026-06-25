@@ -311,6 +311,58 @@ function createTables(): void {
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS volleyball_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      type TEXT NOT NULL DEFAULT 'treino',
+      duration_min INTEGER,
+      position TEXT,
+      sets_won INTEGER DEFAULT 0,
+      sets_lost INTEGER DEFAULT 0,
+      aces INTEGER DEFAULT 0,
+      digs INTEGER DEFAULT 0,
+      blocks INTEGER DEFAULT 0,
+      spikes INTEGER DEFAULT 0,
+      result TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS beach_tennis_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      type TEXT NOT NULL DEFAULT 'treino',
+      duration_min INTEGER,
+      partner TEXT,
+      opponent_1 TEXT,
+      opponent_2 TEXT,
+      sets_won INTEGER DEFAULT 0,
+      sets_lost INTEGER DEFAULT 0,
+      result TEXT,
+      tournament_name TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS basketball_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      type TEXT NOT NULL DEFAULT 'treino',
+      duration_min INTEGER,
+      points INTEGER DEFAULT 0,
+      rebounds INTEGER DEFAULT 0,
+      assists INTEGER DEFAULT 0,
+      steals INTEGER DEFAULT 0,
+      blocks INTEGER DEFAULT 0,
+      fg_made INTEGER DEFAULT 0,
+      fg_attempted INTEGER DEFAULT 0,
+      three_made INTEGER DEFAULT 0,
+      three_attempted INTEGER DEFAULT 0,
+      result TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
   runMigrations()
@@ -368,6 +420,16 @@ function runMigrations(): void {
   }
   if (!mediaLogCols.find((c: Record<string, unknown>) => c.name === 'rating')) {
     db.run('ALTER TABLE media_logs ADD COLUMN rating INTEGER DEFAULT NULL')
+  }
+  const btCols = dbAll('PRAGMA table_info(beach_tennis_sessions)')
+  if (!btCols.find((c: Record<string, unknown>) => c.name === 'position')) {
+    db.run('ALTER TABLE beach_tennis_sessions ADD COLUMN position TEXT DEFAULT NULL')
+  }
+  if (!btCols.find((c: Record<string, unknown>) => c.name === 'category')) {
+    db.run('ALTER TABLE beach_tennis_sessions ADD COLUMN category TEXT DEFAULT NULL')
+  }
+  if (!btCols.find((c: Record<string, unknown>) => c.name === 'tournament_stage')) {
+    db.run('ALTER TABLE beach_tennis_sessions ADD COLUMN tournament_stage TEXT DEFAULT NULL')
   }
 }
 

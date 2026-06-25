@@ -179,6 +179,31 @@ declare global {
         resetSection: (section: string) => Promise<boolean>
         exportExcel: (year: number, month: number) => Promise<{ success: boolean; path?: string }>
       }
+      rocketLeague?: {
+        search: (query: string) => Promise<unknown>
+        getProfile: (platform: string, username: string) => Promise<unknown>
+        addSession: (data: object) => Promise<number>
+        listSessions: (limit?: number) => Promise<unknown[]>
+        deleteSession: (id: number) => Promise<boolean>
+      }
+      volleyball?: {
+        list: (limit?: number) => Promise<unknown[]>
+        add: (data: object) => Promise<number>
+        delete: (id: number) => Promise<boolean>
+        stats: () => Promise<{ total: number; games: number; trainings: number; wins: number; losses: number }>
+      }
+      beachTennis?: {
+        list: (limit?: number) => Promise<unknown[]>
+        add: (data: object) => Promise<number>
+        delete: (id: number) => Promise<boolean>
+        stats: () => Promise<{ total: number; games: number; trainings: number; wins: number; losses: number }>
+      }
+      basketball?: {
+        list: (limit?: number) => Promise<unknown[]>
+        add: (data: object) => Promise<number>
+        delete: (id: number) => Promise<boolean>
+        stats: () => Promise<{ total: number; games: number; trainings: number; wins: number; losses: number; avgPoints: number; avgRebounds: number; avgAssists: number }>
+      }
       demo: { open: () => Promise<void> }
       db: { setUser: (userId: string | null) => Promise<void> }
     }

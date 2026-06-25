@@ -46,6 +46,9 @@ import { registerMediaHandlers } from './ipc/media'
 import { registerAppSettingsHandlers } from './ipc/appSettings'
 import { registerFocusHandlers } from './ipc/focus'
 import { registerRocketLeagueHandlers } from './ipc/rocketleague'
+import { registerVolleyballHandlers } from './ipc/volleyball'
+import { registerBeachTennisHandlers } from './ipc/beachtennis'
+import { registerBasketballHandlers } from './ipc/basketball'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -241,6 +244,9 @@ app.whenReady().then(async () => {
   registerAppSettingsHandlers()
   registerFocusHandlers()
   registerRocketLeagueHandlers()
+  registerVolleyballHandlers()
+  registerBeachTennisHandlers()
+  registerBasketballHandlers()
 
   ipcMain.handle('demo:open', () => {
     const demoWindow = new BrowserWindow({

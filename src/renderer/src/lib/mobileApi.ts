@@ -1365,6 +1365,27 @@ function buildApi(): any {
         _electronApi?.rocketLeague.deleteSession(id),
     },
 
+    volleyball: {
+      list: async (limit?: number) => _electronApi?.volleyball.list(limit) ?? [],
+      add: async (data: object) => _electronApi?.volleyball.add(data),
+      delete: async (id: number) => _electronApi?.volleyball.delete(id),
+      stats: async () => _electronApi?.volleyball.stats() ?? { total: 0, games: 0, trainings: 0, wins: 0, losses: 0 },
+    },
+
+    beachTennis: {
+      list: async (limit?: number) => _electronApi?.beachTennis.list(limit) ?? [],
+      add: async (data: object) => _electronApi?.beachTennis.add(data),
+      delete: async (id: number) => _electronApi?.beachTennis.delete(id),
+      stats: async () => _electronApi?.beachTennis.stats() ?? { total: 0, games: 0, trainings: 0, wins: 0, losses: 0 },
+    },
+
+    basketball: {
+      list: async (limit?: number) => _electronApi?.basketball.list(limit) ?? [],
+      add: async (data: object) => _electronApi?.basketball.add(data),
+      delete: async (id: number) => _electronApi?.basketball.delete(id),
+      stats: async () => _electronApi?.basketball.stats() ?? { total: 0, games: 0, trainings: 0, wins: 0, losses: 0, avgPoints: 0, avgRebounds: 0, avgAssists: 0 },
+    },
+
     demo: { open: async () => {} },
 
     db: {

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Gamepad2, CircleDot, ChevronRight, Medal, Plus, TrendingUp, TrendingDown, Grid3X3, CheckCircle } from 'lucide-react'
+import { Gamepad2, CircleDot, ChevronRight, Medal, TrendingUp, TrendingDown, Grid3X3, CheckCircle, Sun, Trophy, Settings2, X } from 'lucide-react'
 import { format } from 'date-fns'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface RLLinkedProfile { platform: string; username: string }
 interface RLSession { mmr_gain: number; date: string; end_mmr: number }
@@ -9,6 +11,8 @@ interface RLSession { mmr_gain: number; date: string; end_mmr: number }
 const PLATFORM_LABELS: Record<string, string> = {
   epic: 'Epic Games', steam: 'Steam', psn: 'PlayStation', xbl: 'Xbox', switch: 'Switch',
 }
+
+// ── Extra stats components ────────────────────────────────────────────────────
 
 function RLCardStats(): React.JSX.Element {
   const [sessions, setSessions] = useState<RLSession[]>([])
@@ -54,18 +58,20 @@ function SudokuCardStats(): React.JSX.Element {
   return <p className="text-xs mt-2 text-text-muted">Puzzle diário disponível</p>
 }
 
+// ── Sport/Game configs ────────────────────────────────────────────────────────
+
 interface CardConfig {
   key: string
   route: string
   label: string
   description: string
-  Icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>
+  Icon: React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }>
   color: string
   available: boolean
   ExtraStats: React.ComponentType | null
 }
 
-const SPORTS_CONFIG: CardConfig[] = [
+const ALL_SPORTS: CardConfig[] = [
   {
     key: 'rocket-league',
     route: '/sports/rocket-league',
@@ -83,7 +89,27 @@ const SPORTS_CONFIG: CardConfig[] = [
     description: 'Treinos, jogos e evolução técnica',
     Icon: CircleDot,
     color: '#10b981',
-    available: false,
+    available: true,
+    ExtraStats: null,
+  },
+  {
+    key: 'beach-tennis',
+    route: '/sports/beach-tennis',
+    label: 'Beach Tennis',
+    description: 'Partidas, treinos e torneios na areia',
+    Icon: Sun,
+    color: '#f59e0b',
+    available: true,
+    ExtraStats: null,
+  },
+  {
+    key: 'basketball',
+    route: '/sports/basketball',
+    label: 'Basquete',
+    description: 'Jogos, treinos e estatísticas por partida',
+    Icon: Trophy,
+    color: '#f97316',
+    available: true,
     ExtraStats: null,
   },
 ]
@@ -100,6 +126,24 @@ const GAMES_CONFIG: CardConfig[] = [
     ExtraStats: SudokuCardStats,
   },
 ]
+
+const STORAGE_KEY = 'habitos_sports_active'
+const SETUP_KEY = 'habitos_sports_setup_done'
+
+function loadActiveSports(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw) as string[]
+  } catch { /* noop */ }
+  return []
+}
+
+function saveActiveSports(keys: string[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(keys))
+  localStorage.setItem(SETUP_KEY, '1')
+}
+
+// ── Sport card ─────────────────────────────────────────────────────────────────
 
 function SportCard({ route, label, description, Icon, color, available, ExtraStats }: Omit<CardConfig, 'key'>) {
   if (!available) {
@@ -141,7 +185,100 @@ function SportCard({ route, label, description, Icon, color, available, ExtraSta
   )
 }
 
+// ── Setup modal ───────────────────────────────────────────────────────────────
+
+function SetupModal({ onDone }: { onDone: (keys: string[]) => void }) {
+  const [selected, setSelected] = useState<string[]>(ALL_SPORTS.map(s => s.key))
+
+  function toggle(key: string) {
+    setSelected(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
+  function handleConfirm() {
+    if (selected.length === 0) {
+      onDone(ALL_SPORTS.map(s => s.key))
+      return
+    }
+    onDone(selected)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <div className="bg-bg-primary border border-bg-border rounded-2xl w-full max-w-sm shadow-2xl">
+        <div className="p-6">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-accent-purple/10 mb-4">
+            <Medal size={24} className="text-accent-purple" />
+          </div>
+          <h2 className="text-xl font-bold text-text-primary mb-1">Quais esportes você pratica?</h2>
+          <p className="text-sm text-text-muted mb-5">
+            Selecione os que quer acompanhar. Você pode mudar isso depois nas configurações desta seção.
+          </p>
+
+          <div className="space-y-2">
+            {ALL_SPORTS.map(sport => {
+              const isSelected = selected.includes(sport.key)
+              return (
+                <button
+                  key={sport.key}
+                  onClick={() => toggle(sport.key)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                    isSelected
+                      ? 'border-opacity-60'
+                      : 'border-bg-border bg-bg-secondary opacity-50'
+                  }`}
+                  style={isSelected ? { borderColor: sport.color, backgroundColor: `${sport.color}10` } : {}}
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${sport.color}20` }}>
+                    <sport.Icon size={18} style={{ color: sport.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-text-primary text-sm">{sport.label}</p>
+                    <p className="text-xs text-text-muted truncate">{sport.description}</p>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
+                    isSelected ? 'border-transparent' : 'border-bg-border'
+                  }`} style={isSelected ? { backgroundColor: sport.color } : {}}>
+                    {isSelected && <CheckCircle size={12} className="text-white" />}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            onClick={handleConfirm}
+            className="w-full mt-5 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 bg-accent-purple"
+          >
+            Confirmar seleção
+          </button>
+          <p className="text-center text-xs text-text-muted mt-2">
+            {selected.length === 0 ? 'Todos serão exibidos' : `${selected.length} esporte${selected.length > 1 ? 's' : ''} selecionado${selected.length > 1 ? 's' : ''}`}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function Sports(): React.JSX.Element {
+  const setupDone = localStorage.getItem(SETUP_KEY) === '1'
+  const [showSetup, setShowSetup] = useState(!setupDone)
+  const [activeSports, setActiveSports] = useState<string[]>(loadActiveSports)
+
+  function handleSetupDone(keys: string[]) {
+    saveActiveSports(keys)
+    setActiveSports(keys)
+    setShowSetup(false)
+  }
+
+  const visibleSports = activeSports.length > 0
+    ? ALL_SPORTS.filter(s => activeSports.includes(s.key))
+    : ALL_SPORTS
+
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <div className="flex items-center gap-3">
@@ -152,22 +289,20 @@ export default function Sports(): React.JSX.Element {
           <h1 className="text-2xl font-bold text-text-primary">Esportes & Jogos</h1>
           <p className="text-xs text-text-muted">Acompanhe seu desempenho em cada modalidade</p>
         </div>
+        <button
+          onClick={() => setShowSetup(true)}
+          className="ml-auto p-2 rounded-lg text-text-muted hover:bg-bg-secondary hover:text-text-primary transition-colors"
+          title="Configurar esportes"
+        >
+          <Settings2 size={18} />
+        </button>
       </div>
 
       {/* Esportes */}
       <section>
         <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Esportes</h2>
         <div className="grid sm:grid-cols-2 gap-4">
-          {SPORTS_CONFIG.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
-          <div className="border border-dashed border-bg-border rounded-xl p-5 flex items-center gap-3 opacity-40">
-            <div className="w-12 h-12 rounded-xl bg-bg-border flex items-center justify-center shrink-0">
-              <Plus size={20} className="text-text-muted" />
-            </div>
-            <div>
-              <p className="font-medium text-text-muted text-sm">Mais em breve</p>
-              <p className="text-xs text-text-muted">Steam, outros esportes...</p>
-            </div>
-          </div>
+          {visibleSports.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
         </div>
       </section>
 
@@ -178,6 +313,8 @@ export default function Sports(): React.JSX.Element {
           {GAMES_CONFIG.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
         </div>
       </section>
+
+      {showSetup && <SetupModal onDone={handleSetupDone} />}
     </div>
   )
 }
