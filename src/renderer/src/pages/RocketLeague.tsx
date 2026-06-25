@@ -540,9 +540,12 @@ export default function RocketLeague(): React.JSX.Element {
                     style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', boxShadow: '0 2px 10px rgba(249,115,22,0.35)' }}
                   >
                     {linking ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
-                    Vincular
+                    {linking ? 'Carregando...' : 'Vincular'}
                   </button>
                 </div>
+                {linking && (
+                  <p className="text-xs text-text-muted">Buscando perfil no tracker.gg, aguarde alguns segundos...</p>
+                )}
                 {linkError && <p className="text-sm text-red-400">{linkError}</p>}
               </form>
               <p className="text-xs text-text-muted">
