@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Gamepad2, CircleDot, ChevronRight, Medal, TrendingUp, TrendingDown, Grid3X3, CheckCircle, Sun, Trophy, Settings2, X } from 'lucide-react'
-import { format } from 'date-fns'
+import { Gamepad2, CircleDot, ChevronRight, Medal, TrendingUp, TrendingDown, CheckCircle, Sun, Trophy, Settings2, X, Swords, Crosshair } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,14 +49,6 @@ function RLCardStats(): React.JSX.Element {
   )
 }
 
-function SudokuCardStats(): React.JSX.Element {
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(`habitos_sudoku_${today}`) || '{}') } catch { return {} } })()
-  if (saved.completed) return <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#8b5cf6' }}><CheckCircle size={11} /> Concluído hoje · +50 XP</p>
-  if (saved.timer) return <p className="text-xs mt-2 text-text-muted">Em progresso</p>
-  return <p className="text-xs mt-2 text-text-muted">Puzzle diário disponível</p>
-}
-
 // ── Sport/Game configs ────────────────────────────────────────────────────────
 
 interface CardConfig {
@@ -72,16 +63,6 @@ interface CardConfig {
 }
 
 const ALL_SPORTS: CardConfig[] = [
-  {
-    key: 'rocket-league',
-    route: '/sports/rocket-league',
-    label: 'Rocket League',
-    description: 'MMR, rank, sessões diárias e histórico',
-    Icon: Gamepad2,
-    color: '#f97316',
-    available: true,
-    ExtraStats: RLCardStats,
-  },
   {
     key: 'volleyball',
     route: '/sports/volleyball',
@@ -108,7 +89,7 @@ const ALL_SPORTS: CardConfig[] = [
     label: 'Basquete',
     description: 'Jogos, treinos e estatísticas por partida',
     Icon: Trophy,
-    color: '#f97316',
+    color: '#ef4444',
     available: true,
     ExtraStats: null,
   },
@@ -116,14 +97,34 @@ const ALL_SPORTS: CardConfig[] = [
 
 const GAMES_CONFIG: CardConfig[] = [
   {
-    key: 'sudoku',
-    route: '/challenges/sudoku',
-    label: 'Sudoku',
-    description: 'Puzzle lógico 9×9 — um por dia',
-    Icon: Grid3X3,
-    color: '#8b5cf6',
+    key: 'rocket-league',
+    route: '/sports/rocket-league',
+    label: 'Rocket League',
+    description: 'MMR, rank, sessões diárias e histórico',
+    Icon: Gamepad2,
+    color: '#f97316',
     available: true,
-    ExtraStats: SudokuCardStats,
+    ExtraStats: RLCardStats,
+  },
+  {
+    key: 'cs2',
+    route: '',
+    label: 'CS2',
+    description: 'Rating, partidas e estatísticas por round',
+    Icon: Crosshair,
+    color: '#facc15',
+    available: false,
+    ExtraStats: null,
+  },
+  {
+    key: 'valorant',
+    route: '',
+    label: 'Valorant',
+    description: 'Rank, agentes e desempenho por partida',
+    Icon: Swords,
+    color: '#f43f5e',
+    available: false,
+    ExtraStats: null,
   },
 ]
 
@@ -306,9 +307,9 @@ export default function Sports(): React.JSX.Element {
         </div>
       </section>
 
-      {/* Jogos */}
+      {/* Jogos Steam */}
       <section>
-        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Jogos</h2>
+        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Jogos Steam / PC</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           {GAMES_CONFIG.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
         </div>
