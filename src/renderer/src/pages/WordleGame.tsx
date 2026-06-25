@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { RotateCcw, Share2 } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import { cloudSave, cloudLoad } from '../lib/challengeCloud'
 
 // ── Word list ────────────────────────────────────────────────────────────────
 // 5-letter Portuguese words, uppercase, no accents required for mechanics
@@ -141,6 +142,7 @@ interface SavedState {
   results: GuessResult[][]
   status: 'playing' | 'won' | 'lost'
   attempts?: number
+  xpGranted?: boolean
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -164,13 +166,34 @@ export default function WordleGame(): React.JSX.Element {
   const [current, setCurrent] = useState('')
   const [shake, setShake] = useState(false)
   const [reveal, setReveal] = useState<number | null>(null)
-  const [xpGranted, setXpGranted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // persist
+  // persist to localStorage
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(state))
   }, [state, storageKey])
+
+  // cloud sync: restore from cloud on mount if localStorage was empty (e.g. fresh install)
+  const cloudLoaded = useRef(false)
+  useEffect(() => {
+    if (cloudLoaded.current) return
+    if (state.guesses.length > 0 || state.status !== 'playing') return // already have data
+    cloudLoaded.current = true
+    cloudLoad(today, 'wordle').then(cloud => {
+      if (!cloud) return
+      const s = cloud as SavedState
+      if (s.guesses?.length || s.status !== 'playing') {
+        setState(s)
+        localStorage.setItem(storageKey, JSON.stringify(s))
+      }
+    })
+  }, [])
+
+  // cloud sync: save on every meaningful state change
+  useEffect(() => {
+    if (state.guesses.length === 0 && state.status === 'playing') return
+    cloudSave(today, 'wordle', state)
+  }, [state])
 
   useEffect(() => {
     if (!errorMsg) return
@@ -178,17 +201,17 @@ export default function WordleGame(): React.JSX.Element {
     return () => clearTimeout(t)
   }, [errorMsg])
 
-  // XP on completion (once)
+  // XP on completion (once per day — xpGranted persisted in localStorage via state)
   useEffect(() => {
-    if (xpGranted) return
+    if (state.xpGranted) return
     if (state.status === 'won') {
       grantXP(20, 'Palavra do Dia concluída')
-      setXpGranted(true)
+      setState(s => ({ ...s, xpGranted: true }))
     } else if (state.status === 'lost') {
       grantXP(5, 'Palavra do Dia tentada')
-      setXpGranted(true)
+      setState(s => ({ ...s, xpGranted: true }))
     }
-  }, [state.status])
+  }, [state.status, state.xpGranted])
 
   // Letter key states derived from all guesses
   const letterStates = useMemo(() => {

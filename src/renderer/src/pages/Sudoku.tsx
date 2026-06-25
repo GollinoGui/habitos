@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Timer, RotateCcw, Lightbulb, Trophy, Delete, Pencil, Heart, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useProfileStore } from '../store/profileStore'
+import { cloudSave, cloudLoad } from '../lib/challengeCloud'
 
 // ── Sudoku Engine ────────────────────────────────────────────────────────────
 
@@ -147,7 +148,9 @@ export default function Sudoku(): React.JSX.Element {
     try { return !!JSON.parse(localStorage.getItem(storageKey) || '{}').failed } catch { return false }
   })
   const [errorFlash, setErrorFlash] = useState(false)
-  const [xpGranted, setXpGranted] = useState(false)
+  const [xpGranted, setXpGranted] = useState<boolean>(() => {
+    try { return !!JSON.parse(localStorage.getItem(storageKey) || '{}').xpGranted } catch { return false }
+  })
   const { grantXP } = useProfileStore()
 
   useEffect(() => {
@@ -155,7 +158,7 @@ export default function Sudoku(): React.JSX.Element {
       grantXP(15, 'Sudoku diário concluído')
       setXpGranted(true)
     }
-  }, [completed])
+  }, [completed, xpGranted])
 
   useEffect(() => {
     if (completed || failed) return
@@ -164,8 +167,31 @@ export default function Sudoku(): React.JSX.Element {
   }, [completed, failed])
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify({ board, timer, completed, notes, hintCount, lives, failed }))
-  }, [board, timer, completed, notes, hintCount, lives, failed, storageKey])
+    localStorage.setItem(storageKey, JSON.stringify({ board, timer, completed, notes, hintCount, lives, failed, xpGranted }))
+  }, [board, timer, completed, notes, hintCount, lives, failed, xpGranted, storageKey])
+
+  // cloud sync: restore on mount if localStorage was empty (fresh install)
+  const cloudLoaded = useRef(false)
+  useEffect(() => {
+    if (cloudLoaded.current || completed || failed) return
+    const localRaw = localStorage.getItem(storageKey)
+    if (localRaw && localRaw !== '{}') return // already have local data
+    cloudLoaded.current = true
+    cloudLoad(today, 'sudoku').then(cloud => {
+      if (!cloud) return
+      if (Array.isArray(cloud.board)) setBoard(cloud.board as (number | null)[][])
+      if (cloud.completed) setCompleted(true)
+      if (cloud.failed) setFailed(true)
+      if (typeof cloud.lives === 'number') setLives(cloud.lives)
+      if (typeof cloud.hintCount === 'number') setHintCount(cloud.hintCount)
+      if (cloud.xpGranted) setXpGranted(true)
+    })
+  }, [])
+
+  // cloud sync: save on board/completion changes (not on every timer tick)
+  useEffect(() => {
+    cloudSave(today, 'sudoku', { board, completed, notes, hintCount, lives, failed, xpGranted })
+  }, [board, completed, failed, xpGranted])
 
   const conflicts = useMemo(() => getConflicts(board), [board])
 

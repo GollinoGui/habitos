@@ -79,6 +79,9 @@ export function installMobileApi(
   // Desktop-only IPC calls are forwarded through _electronApi fallbacks inside buildApi().
   ;(window as unknown as Record<string, unknown>).api = buildApi()
 
+  // Restore today's challenge states from cloud into localStorage (handles fresh installs).
+  void hydrateChallengesFromCloud(userId)
+
   // Background: sync recent local habit completions to Supabase so the 7-day chart is accurate
   // after switching computers. Runs silently; errors are ignored.
   if (_electronApi) {
@@ -88,6 +91,21 @@ export function installMobileApi(
     // OS dropped pending alarms (e.g. after an app update). No-ops on web/desktop.
     void ensureMobileNotificationsScheduled()
   }
+}
+
+async function hydrateChallengesFromCloud(userId: string): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10)
+  try {
+    const { data } = await supabase.from('daily_challenges')
+      .select('challenge_key, state').eq('user_id', userId).eq('date', today)
+    if (!data?.length) return
+    for (const row of data) {
+      const lsKey = `habitos_${row.challenge_key}_${today}`
+      if (!localStorage.getItem(lsKey)) {
+        localStorage.setItem(lsKey, JSON.stringify(row.state))
+      }
+    }
+  } catch { /* ignore */ }
 }
 
 async function syncLocalHabitCompletions(userId: string): Promise<void> {
@@ -1316,6 +1334,35 @@ function buildApi(): any {
         _electronApi?.app.resetSection(section) ?? false,
       exportExcel: async (year: number, month: number) =>
         _electronApi?.app.exportExcel(year, month) ?? { success: false },
+    },
+
+    // ── Daily Challenges ──────────────────────────────────────────────────
+    challenges: {
+      get: async (date: string, key: string) => {
+        const { data } = await supabase.from('daily_challenges')
+          .select('state').eq('user_id', uid()).eq('date', date).eq('challenge_key', key).maybeSingle()
+        return data?.state ?? null
+      },
+      save: async (date: string, key: string, state: object) => {
+        await supabase.from('daily_challenges').upsert(
+          { user_id: uid(), date, challenge_key: key, state, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,date,challenge_key' }
+        )
+      },
+    },
+
+    // ── Rocket League (desktop-only via Electron IPC) ─────────────────────
+    rocketLeague: {
+      search: async (query: string) =>
+        _electronApi?.rocketLeague.search(query) ?? { ok: false, error: 'Desktop only' },
+      getProfile: async (platform: string, username: string) =>
+        _electronApi?.rocketLeague.getProfile(platform, username) ?? { ok: false, error: 'Desktop only' },
+      addSession: async (data: object) =>
+        _electronApi?.rocketLeague.addSession(data),
+      listSessions: async (limit?: number) =>
+        _electronApi?.rocketLeague.listSessions(limit) ?? [],
+      deleteSession: async (id: number) =>
+        _electronApi?.rocketLeague.deleteSession(id),
     },
 
     demo: { open: async () => {} },

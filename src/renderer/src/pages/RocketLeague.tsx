@@ -236,7 +236,7 @@ export default function RocketLeague(): React.JSX.Element {
     return false
   })
 
-  const hasApi = !!(window as { api?: { rocketLeague?: unknown } }).api?.rocketLeague
+  const hasApi = !!(window as { electronApi?: { rocketLeague?: unknown } }).electronApi?.rocketLeague
 
   useEffect(() => {
     const saved = localStorage.getItem('habitos_rl_profile')

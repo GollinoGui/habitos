@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Newspaper, ExternalLink, CheckCircle, Key, RefreshCw, Loader2 } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import { cloudSave, cloudLoad } from '../lib/challengeCloud'
 
 interface Article {
   title: string
@@ -89,7 +90,29 @@ export default function DailyNews(): React.JSX.Element {
       ...next,
       readCount: next.dailyReadCount,  // Challenges.tsx reads readCount
     }))
+    cloudSave(today, 'news', { dailyReadCount: next.dailyReadCount, readIndices: next.readIndices })
   }
+
+  // cloud sync: on mount, restore read count from cloud if localStorage is empty (fresh install)
+  const cloudLoaded = useRef(false)
+  useEffect(() => {
+    if (cloudLoaded.current || loadDailyReadCount(today) > 0) return
+    cloudLoaded.current = true
+    cloudLoad(today, 'news').then(cloud => {
+      if (!cloud || !(cloud.dailyReadCount as number)) return
+      const count = cloud.dailyReadCount as number
+      const indices = (cloud.readIndices as number[]) ?? []
+      const lsKey = STORAGE_KEY_NEWS(today)
+      const existing = JSON.parse(localStorage.getItem(lsKey) || 'null') as SavedNews | null
+      localStorage.setItem(lsKey, JSON.stringify({
+        ...(existing ?? { articles: [], fetchedDate: today, categories: selectedCategories }),
+        readIndices: indices,
+        dailyReadCount: count,
+        readCount: count,
+      }))
+      setSaved(prev => prev ? { ...prev, dailyReadCount: count, readIndices: indices } : null)
+    })
+  }, [])
 
   const fetchNews = useCallback(async (key: string, cats: string[]) => {
     setLoading(true)
