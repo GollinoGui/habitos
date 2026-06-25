@@ -1,19 +1,30 @@
-import { ipcMain } from 'electron'
+import { ipcMain, net } from 'electron'
 import { dbAll, dbRun, save } from '../db'
 
 const TRN_API_KEY = '9f69be4b-32aa-4881-a1ee-443eada0d05c'
 const BASE = 'https://api.tracker.gg/api/v2/rocket-league/standard'
 
-async function rlFetch(path: string): Promise<unknown> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: {
-      'TRN-Api-Key': TRN_API_KEY,
-      'Accept': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
+function rlFetch(path: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const request = net.request({ method: 'GET', url: `${BASE}${path}` })
+    request.setHeader('TRN-Api-Key', TRN_API_KEY)
+    request.setHeader('Accept', 'application/json')
+    request.setHeader('Origin', 'https://tracker.gg')
+    request.setHeader('Referer', 'https://tracker.gg/')
+
+    let body = ''
+    request.on('response', (response) => {
+      const status = response.statusCode ?? 0
+      response.on('data', (chunk) => { body += chunk.toString() })
+      response.on('end', () => {
+        if (status >= 400) { reject(new Error(`${status}`)); return }
+        try { resolve(JSON.parse(body)) }
+        catch (e) { reject(e) }
+      })
+    })
+    request.on('error', (err) => reject(err))
+    request.end()
   })
-  if (!res.ok) throw new Error(`${res.status}`)
-  return res.json()
 }
 
 export function registerRocketLeagueHandlers(): void {

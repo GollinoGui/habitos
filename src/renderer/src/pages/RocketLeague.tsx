@@ -336,7 +336,11 @@ export default function RocketLeague(): React.JSX.Element {
       if (res.ok && res.data) {
         setProfileData(res.data)
       } else {
-        setProfileError(res.error?.includes('404') ? 'Jogador não encontrado.' : 'Erro ao carregar perfil.')
+        const e = res.error ?? ''
+        if (e.includes('404')) setProfileError('Jogador não encontrado.')
+        else if (e.includes('406')) setProfileError(`Perfil recusado pelo tracker.gg (406).`)
+        else if (e.includes('401') || e.includes('403')) setProfileError(`Sem permissão para carregar perfil (${e.match(/\d{3}/)?.[0] ?? '40x'}).`)
+        else setProfileError(`Erro ao carregar perfil (${e || 'desconhecido'}).`)
       }
     } catch {
       setProfileError('Erro ao carregar perfil.')
@@ -357,11 +361,11 @@ export default function RocketLeague(): React.JSX.Element {
         if (!res.data?.length) setSearchError('Nenhum jogador encontrado.')
       } else {
         const err = res.error ?? ''
-        if (err.includes('403')) setSearchError('Chave da API inválida ou expirada (403). A chave TRN-Api-Key precisa ser atualizada.')
+        if (err.includes('401') || err.includes('403')) setSearchError(`Chave da API inválida ou sem permissão (${err.match(/\d{3}/)?.[0] ?? '40x'}). Gere uma nova chave em tracker.gg/developer.`)
+        else if (err.includes('406')) setSearchError('Requisição recusada pelo tracker.gg (406). Tente novamente ou verifique a chave da API.')
         else if (err.includes('429')) setSearchError('Limite de requisições atingido (429). Aguarde alguns minutos e tente novamente.')
-        else if (err.includes('401')) setSearchError('Não autorizado (401). Verifique a chave da API.')
-        else if (err.includes('404')) setSearchError('Endpoint não encontrado (404). A API pode ter mudado.')
-        else setSearchError(`Erro na busca: ${err || 'desconhecido'}`)
+        else if (err.includes('404')) setSearchError('Jogador não encontrado.')
+        else setSearchError(`Erro na busca (${err || 'desconhecido'}). Tente novamente.`)
       }
     } catch {
       setSearchError('Erro na busca.')
