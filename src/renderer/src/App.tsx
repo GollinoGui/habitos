@@ -22,6 +22,8 @@ import RocketLeague from './pages/RocketLeague'
 import Volleyball from './pages/Volleyball'
 import BeachTennis from './pages/BeachTennis'
 import Basketball from './pages/Basketball'
+import CS2 from './pages/CS2'
+import Valorant from './pages/Valorant'
 import Games from './pages/Games'
 import Sudoku from './pages/Sudoku'
 import Challenges from './pages/Challenges'
@@ -193,6 +195,8 @@ function MobileSwipeLayout(): React.JSX.Element {
           <Route path="/sports/volleyball" element={<Volleyball />} />
           <Route path="/sports/beach-tennis" element={<BeachTennis />} />
           <Route path="/sports/basketball" element={<Basketball />} />
+          <Route path="/sports/cs2" element={<CS2 />} />
+          <Route path="/sports/valorant" element={<Valorant />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/sudoku" element={<Sudoku />} />
           <Route path="/challenges" element={<Challenges />} />
@@ -352,6 +356,11 @@ function AppContent(): React.JSX.Element {
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/sports" element={<Sports />} />
                   <Route path="/sports/rocket-league" element={<RocketLeague />} />
+                  <Route path="/sports/volleyball" element={<Volleyball />} />
+                  <Route path="/sports/beach-tennis" element={<BeachTennis />} />
+                  <Route path="/sports/basketball" element={<Basketball />} />
+                  <Route path="/sports/cs2" element={<CS2 />} />
+                  <Route path="/sports/valorant" element={<Valorant />} />
                   <Route path="/games" element={<Games />} />
                   <Route path="/games/sudoku" element={<Sudoku />} />
                   <Route path="/challenges" element={<Challenges />} />

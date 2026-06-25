@@ -363,6 +363,40 @@ function createTables(): void {
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS cs2_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      type TEXT NOT NULL DEFAULT 'competitivo',
+      map TEXT,
+      kills INTEGER DEFAULT 0,
+      deaths INTEGER DEFAULT 0,
+      assists INTEGER DEFAULT 0,
+      hs_pct INTEGER DEFAULT 0,
+      adr INTEGER DEFAULT 0,
+      mvps INTEGER DEFAULT 0,
+      score INTEGER DEFAULT 0,
+      result TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS valorant_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date DATE NOT NULL,
+      type TEXT NOT NULL DEFAULT 'competitivo',
+      map TEXT,
+      agent TEXT,
+      kills INTEGER DEFAULT 0,
+      deaths INTEGER DEFAULT 0,
+      assists INTEGER DEFAULT 0,
+      acs INTEGER DEFAULT 0,
+      first_bloods INTEGER DEFAULT 0,
+      rr_change INTEGER DEFAULT 0,
+      result TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `)
   db.run('INSERT OR IGNORE INTO user_profile (id) VALUES (1)')
   runMigrations()

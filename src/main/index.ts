@@ -49,6 +49,8 @@ import { registerRocketLeagueHandlers } from './ipc/rocketleague'
 import { registerVolleyballHandlers } from './ipc/volleyball'
 import { registerBeachTennisHandlers } from './ipc/beachtennis'
 import { registerBasketballHandlers } from './ipc/basketball'
+import { registerCS2Handlers } from './ipc/cs2'
+import { registerValorantHandlers } from './ipc/valorant'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -247,6 +249,8 @@ app.whenReady().then(async () => {
   registerVolleyballHandlers()
   registerBeachTennisHandlers()
   registerBasketballHandlers()
+  registerCS2Handlers()
+  registerValorantHandlers()
 
   ipcMain.handle('demo:open', () => {
     const demoWindow = new BrowserWindow({

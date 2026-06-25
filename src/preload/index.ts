@@ -182,6 +182,18 @@ const realApi = {
     delete: (id: number) => ipcRenderer.invoke('basketball:delete', id),
     stats: () => ipcRenderer.invoke('basketball:stats'),
   },
+  cs2: {
+    list: (limit?: number) => ipcRenderer.invoke('cs2:list', limit),
+    add: (data: object) => ipcRenderer.invoke('cs2:add', data),
+    delete: (id: number) => ipcRenderer.invoke('cs2:delete', id),
+    stats: () => ipcRenderer.invoke('cs2:stats'),
+  },
+  valorant: {
+    list: (limit?: number) => ipcRenderer.invoke('valorant:list', limit),
+    add: (data: object) => ipcRenderer.invoke('valorant:add', data),
+    delete: (id: number) => ipcRenderer.invoke('valorant:delete', id),
+    stats: () => ipcRenderer.invoke('valorant:stats'),
+  },
   app: {
     exportData: () => ipcRenderer.invoke('app:export-data'),
     importData: (json: string) => ipcRenderer.invoke('app:import-data', json),
@@ -575,6 +587,18 @@ function buildDemoApi() {
       add: async () => 99,
       delete: async () => true,
       stats: async () => ({ total: 0, games: 0, trainings: 0, wins: 0, losses: 0, avgPoints: 0, avgRebounds: 0, avgAssists: 0 }),
+    },
+    cs2: {
+      list: async () => [],
+      add: async () => 99,
+      delete: async () => true,
+      stats: async () => ({ total: 0, competitive: 0, wins: 0, losses: 0, avgKills: 0, avgDeaths: 0, avgAssists: 0, avgAdr: 0, kd: 0 }),
+    },
+    valorant: {
+      list: async () => [],
+      add: async () => 99,
+      delete: async () => true,
+      stats: async () => ({ total: 0, competitive: 0, wins: 0, losses: 0, avgKills: 0, avgAcs: 0, kd: 0, totalRr: 0 }),
     },
     app: {
       exportData: async () => JSON.stringify({ demo: true }),
