@@ -52,23 +52,33 @@ function rlFetchViaWeb(platform: string, username: string): Promise<unknown> {
       return
     }
 
-    win.webContents.debugger.on('message', async (_ev, method, params) => {
-      if (method !== 'Network.responseReceived') return
-      const url: string = params.response?.url ?? ''
-      if (!url.startsWith(apiPrefix)) return
+    // Track requests that match our API prefix so we can read body after loading finishes
+    const pendingRequests = new Map<string, number>() // requestId → status
 
-      if ((params.response.status ?? 0) >= 400) {
-        finish(() => { win.destroy(); reject(new Error(String(params.response.status))) })
+    win.webContents.debugger.on('message', async (_ev, method, params) => {
+      if (method === 'Network.responseReceived') {
+        const url: string = params.response?.url ?? ''
+        if (!url.startsWith(apiPrefix)) return
+        const status: number = params.response?.status ?? 0
+        if (status >= 400) {
+          finish(() => { win.destroy(); reject(new Error(String(status))) })
+        } else {
+          pendingRequests.set(params.requestId, status)
+        }
         return
       }
 
-      try {
-        const { body } = await win.webContents.debugger.sendCommand(
-          'Network.getResponseBody', { requestId: params.requestId }
-        )
-        finish(() => { win.destroy(); resolve(JSON.parse(body)) })
-      } catch (e) {
-        finish(() => { win.destroy(); reject(e) })
+      if (method === 'Network.loadingFinished') {
+        if (!pendingRequests.has(params.requestId)) return
+        pendingRequests.delete(params.requestId)
+        try {
+          const { body } = await win.webContents.debugger.sendCommand(
+            'Network.getResponseBody', { requestId: params.requestId }
+          )
+          finish(() => { win.destroy(); resolve(JSON.parse(body)) })
+        } catch (e) {
+          finish(() => { win.destroy(); reject(e) })
+        }
       }
     })
 
