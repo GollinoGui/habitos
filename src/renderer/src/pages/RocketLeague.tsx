@@ -63,13 +63,6 @@ const RL_STYLES = `
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface RLSearchPlayer {
-  platformSlug: string
-  platformUserHandle: string
-  platformUserIdentifier: string
-  avatarUrl?: string
-}
-
 interface RLStat {
   value: number
   displayValue?: string
@@ -276,10 +269,10 @@ function MMRChart({ sessions }: { sessions: RLSession[] }): React.JSX.Element | 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function RocketLeague(): React.JSX.Element {
-  const [searchQuery, setSearchQuery]     = useState('')
-  const [searchResults, setSearchResults] = useState<RLSearchPlayer[]>([])
-  const [searching, setSearching]         = useState(false)
-  const [searchError, setSearchError]     = useState('')
+  const [linkPlatform, setLinkPlatform] = useState('epic')
+  const [linkUsername, setLinkUsername] = useState('')
+  const [linking, setLinking]           = useState(false)
+  const [linkError, setLinkError]       = useState('')
 
   const [linkedProfile, setLinkedProfile] = useState<RLLinkedProfile | null>(null)
   const [profileData, setProfileData]     = useState<RLProfile | null>(null)
@@ -349,38 +342,31 @@ export default function RocketLeague(): React.JSX.Element {
     }
   }
 
-  async function handleSearch() {
-    if (!searchQuery.trim() || !hasApi) return
-    setSearching(true)
-    setSearchError('')
-    setSearchResults([])
+  async function handleLinkProfile(e: React.FormEvent) {
+    e.preventDefault()
+    if (!linkUsername.trim() || !hasApi) return
+    setLinking(true)
+    setLinkError('')
     try {
-      const res = await window.api!.rocketLeague!.search(searchQuery) as { ok: boolean; data?: RLSearchPlayer[]; error?: string }
-      if (res.ok) {
-        setSearchResults(res.data ?? [])
-        if (!res.data?.length) setSearchError('Nenhum jogador encontrado.')
+      const res = await window.api!.rocketLeague!.getProfile(linkPlatform, linkUsername.trim()) as { ok: boolean; data?: RLProfile; error?: string }
+      if (res.ok && res.data) {
+        const p: RLLinkedProfile = { platform: linkPlatform, username: linkUsername.trim() }
+        localStorage.setItem('habitos_rl_profile', JSON.stringify(p))
+        setLinkedProfile(p)
+        setProfileData(res.data)
+        setLinkUsername('')
       } else {
         const err = res.error ?? ''
-        if (err.includes('401') || err.includes('403')) setSearchError(`Chave da API inválida ou sem permissão (${err.match(/\d{3}/)?.[0] ?? '40x'}). Gere uma nova chave em tracker.gg/developer.`)
-        else if (err.includes('406')) setSearchError('Requisição recusada pelo tracker.gg (406). Tente novamente ou verifique a chave da API.')
-        else if (err.includes('429')) setSearchError('Limite de requisições atingido (429). Aguarde alguns minutos e tente novamente.')
-        else if (err.includes('404')) setSearchError('Jogador não encontrado.')
-        else setSearchError(`Erro na busca (${err || 'desconhecido'}). Tente novamente.`)
+        if (err.includes('404')) setLinkError('Jogador não encontrado. Verifique o nome e a plataforma.')
+        else if (err.includes('429')) setLinkError('Muitas requisições. Aguarde alguns segundos e tente de novo.')
+        else if (err.includes('406') || err.includes('403') || err.includes('401')) setLinkError(`Erro de acesso à API (${err.match(/\d{3}/)?.[0] ?? 'desconhecido'}). Tente novamente em breve.`)
+        else setLinkError(`Erro ao vincular (${err || 'desconhecido'}).`)
       }
     } catch {
-      setSearchError('Erro na busca.')
+      setLinkError('Erro ao conectar com o tracker.gg.')
     } finally {
-      setSearching(false)
+      setLinking(false)
     }
-  }
-
-  function linkProfile(player: RLSearchPlayer) {
-    const p: RLLinkedProfile = { platform: player.platformSlug, username: player.platformUserHandle }
-    localStorage.setItem('habitos_rl_profile', JSON.stringify(p))
-    setLinkedProfile(p)
-    setSearchResults([])
-    setSearchQuery('')
-    fetchProfile(p.platform, p.username)
   }
 
   function unlinkProfile() {
@@ -518,57 +504,50 @@ export default function RocketLeague(): React.JSX.Element {
 
       {hasApi && (
         <>
-          {/* ── Search ──────────────────────────────────────────────────────── */}
+          {/* ── Link Profile ─────────────────────────────────────────────────── */}
           {!linkedProfile && (
             <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
               <div>
                 <h2 className="font-semibold text-text-primary">Vincular perfil</h2>
-                <p className="text-xs text-text-muted mt-1">Busque pelo nome do jogador para importar estatísticas via RLTracker.</p>
+                <p className="text-xs text-text-muted mt-1">
+                  Selecione sua plataforma e informe seu nome de usuário exato para importar estatísticas via RLTracker.
+                </p>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  placeholder="Nome do jogador..."
-                  className="flex-1 px-3 py-2 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-sm focus:outline-none focus:border-orange-400 placeholder:text-text-muted transition-colors"
-                />
-                <button
-                  onClick={handleSearch}
-                  disabled={searching || !searchQuery.trim()}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-all hover:brightness-110 active:scale-95"
-                  style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', boxShadow: '0 2px 10px rgba(249,115,22,0.35)' }}
-                >
-                  {searching ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
-                  Buscar
-                </button>
-              </div>
-              {searchError && <p className="text-sm text-red-400">{searchError}</p>}
-              {searchResults.length > 0 && (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {searchResults.map((player, i) => (
-                    <button
-                      key={i}
-                      onClick={() => linkProfile(player)}
-                      className="rl-search-result w-full flex items-center gap-3 p-3 rounded-lg border border-bg-border hover:border-orange-400/60 bg-bg-primary hover:bg-orange-500/5 text-left"
-                    >
-                      {player.avatarUrl ? (
-                        <img src={player.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-orange-400/30" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-bg-border flex items-center justify-center shrink-0">
-                          <Gamepad2 size={15} className="text-text-muted" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-text-primary text-sm truncate">{player.platformUserHandle}</p>
-                        <p className="text-xs text-text-muted">{PLATFORM_LABELS[player.platformSlug] ?? player.platformSlug}</p>
-                      </div>
-                      <span className="text-xs font-medium text-orange-400 shrink-0">Vincular →</span>
-                    </button>
-                  ))}
+              <form onSubmit={handleLinkProfile} className="space-y-3">
+                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                  <select
+                    value={linkPlatform}
+                    onChange={e => setLinkPlatform(e.target.value)}
+                    className="px-3 py-2 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-sm focus:outline-none focus:border-orange-400 transition-colors shrink-0"
+                  >
+                    <option value="epic">Epic Games</option>
+                    <option value="steam">Steam</option>
+                    <option value="psn">PlayStation</option>
+                    <option value="xbl">Xbox</option>
+                    <option value="switch">Switch</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={linkUsername}
+                    onChange={e => setLinkUsername(e.target.value)}
+                    placeholder="Seu nome de usuário exato..."
+                    className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-sm focus:outline-none focus:border-orange-400 placeholder:text-text-muted transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    disabled={linking || !linkUsername.trim()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-all hover:brightness-110 active:scale-95 shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', boxShadow: '0 2px 10px rgba(249,115,22,0.35)' }}
+                  >
+                    {linking ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                    Vincular
+                  </button>
                 </div>
-              )}
+                {linkError && <p className="text-sm text-red-400">{linkError}</p>}
+              </form>
+              <p className="text-xs text-text-muted">
+                Dica: o nome deve ser idêntico ao que aparece no tracker.gg — incluindo letras maiúsculas e caracteres especiais.
+              </p>
             </div>
           )}
 
