@@ -195,11 +195,82 @@ const QUOTES = [
 
 function getDailyQuote() {
   const days = Math.floor(Date.now() / 86400000)
-  return QUOTES[days % QUOTES.length]
+  const bibles = QUOTES.filter(q => q.type === 'bible')
+  const thinkers = QUOTES.filter(q => q.type === 'thinker')
+  if (days % 2 === 0) return bibles[Math.floor(days / 2) % bibles.length]
+  return thinkers[Math.floor(days / 2) % thinkers.length]
 }
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function getCurrentStreak(sessions: RLSession[]): number {
+  if (!sessions.length) return 0
+  const isPos = sessions[0].mmr_gain >= 0
+  let count = 0
+  for (const s of sessions) {
+    if ((s.mmr_gain >= 0) === isPos) count++
+    else break
+  }
+  return isPos ? count : -count
+}
+
+// ── MMR Chart ─────────────────────────────────────────────────────────────────
+
+function MMRChart({ sessions }: { sessions: RLSession[] }): React.JSX.Element | null {
+  if (sessions.length < 2) return null
+  const recent = [...sessions].reverse().slice(-12)
+  const vals = recent.map(s => s.end_mmr)
+  const minV = Math.min(...vals) - 20
+  const maxV = Math.max(...vals) + 20
+  const range = maxV - minV || 50
+  const W = 100
+  const H = 48
+  const pts = vals.map((v, i) => ({
+    x: (i / (vals.length - 1)) * W,
+    y: H - ((v - minV) / range) * H
+  }))
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')
+  const area = `${line} L${W},${H} L0,${H}Z`
+  const trend = vals[vals.length - 1] - vals[0]
+  const col = trend >= 0 ? '#4ade80' : '#f87171'
+
+  return (
+    <div className="bg-bg-secondary border border-bg-border rounded-xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {trend >= 0
+            ? <TrendingUp size={14} className="text-green-400" />
+            : <TrendingDown size={14} className="text-red-400" />}
+          <span className="text-sm font-semibold text-text-primary">Progressão MMR</span>
+          <span className="text-xs text-text-muted">últimas {recent.length} sessões</span>
+        </div>
+        <span className={`text-sm font-bold ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          {trend >= 0 ? '+' : ''}{trend} no período
+        </span>
+      </div>
+      <div className="w-full" style={{ height: 56 }}>
+        <svg width="100%" height="56" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="rl-chart-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={col} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={col} stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={area} fill="url(#rl-chart-grad)" />
+          <path d={line} fill="none" stroke={col} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {pts.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={col} />
+          ))}
+        </svg>
+      </div>
+      <div className="flex justify-between mt-1">
+        <span className="text-xs text-text-muted">{recent[0].date.slice(5)}</span>
+        <span className="text-xs text-text-muted">{recent[recent.length - 1].date.slice(5)}</span>
+      </div>
+    </div>
+  )
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -285,7 +356,12 @@ export default function RocketLeague(): React.JSX.Element {
         setSearchResults(res.data ?? [])
         if (!res.data?.length) setSearchError('Nenhum jogador encontrado.')
       } else {
-        setSearchError('Erro na busca. Tente novamente.')
+        const err = res.error ?? ''
+        if (err.includes('403')) setSearchError('Chave da API inválida ou expirada (403). A chave TRN-Api-Key precisa ser atualizada.')
+        else if (err.includes('429')) setSearchError('Limite de requisições atingido (429). Aguarde alguns minutos e tente novamente.')
+        else if (err.includes('401')) setSearchError('Não autorizado (401). Verifique a chave da API.')
+        else if (err.includes('404')) setSearchError('Endpoint não encontrado (404). A API pode ter mudado.')
+        else setSearchError(`Erro na busca: ${err || 'desconhecido'}`)
       }
     } catch {
       setSearchError('Erro na busca.')
@@ -347,6 +423,18 @@ export default function RocketLeague(): React.JSX.Element {
     .reduce((acc, s) => acc + s.mmr_gain, 0)
 
   const peakMMR = sessions.length > 0 ? Math.max(...sessions.map(s => s.end_mmr)) : null
+
+  const streak = getCurrentStreak(sessions)
+  const totalMMRAll = sessions.reduce((acc, s) => acc + s.mmr_gain, 0)
+  const avgMMRPerSession = sessions.length ? Math.round(totalMMRAll / sessions.length) : 0
+  const sessionsThisWeek = sessions.filter(s => {
+    const d = new Date(s.date + 'T12:00:00')
+    const now = new Date()
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - now.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+    return d >= weekStart
+  }).length
 
   const rankColor = getRankColor(activeSegment?.stats.tier?.metadata?.name)
   const dailyQuote = getDailyQuote()
@@ -534,7 +622,7 @@ export default function RocketLeague(): React.JSX.Element {
                   </div>
 
                   {activeSegment ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       {/* Rank */}
                       <div
                         className="bg-bg-primary rounded-xl p-4 col-span-2 sm:col-span-1 flex flex-col gap-1"
@@ -542,8 +630,9 @@ export default function RocketLeague(): React.JSX.Element {
                           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                           transform: rankHovered ? 'translateY(-3px)' : 'translateY(0)',
                           boxShadow: rankHovered
-                            ? `0 0 24px ${rankColor}50, 0 10px 32px rgba(0,0,0,0.2)`
+                            ? `0 0 28px ${rankColor}55, 0 10px 32px rgba(0,0,0,0.22)`
                             : `0 0 0px transparent`,
+                          border: `1px solid ${rankColor}20`,
                         }}
                         onMouseEnter={() => setRankHovered(true)}
                         onMouseLeave={() => setRankHovered(false)}
@@ -553,8 +642,8 @@ export default function RocketLeague(): React.JSX.Element {
                           <img
                             src={activeSegment.stats.tier.metadata.iconUrl}
                             alt=""
-                            className="w-10 h-10 object-contain"
-                            style={{ filter: `drop-shadow(0 0 6px ${rankColor}60)` }}
+                            className="w-12 h-12 object-contain"
+                            style={{ filter: `drop-shadow(0 0 8px ${rankColor}70)` }}
                           />
                         )}
                         <p className="font-bold text-text-primary text-sm leading-tight">
@@ -578,6 +667,26 @@ export default function RocketLeague(): React.JSX.Element {
                         <p className="text-xs text-text-muted">MMR</p>
                       </div>
 
+                      {/* Win Streak */}
+                      <div className="rl-stat-card bg-bg-primary rounded-xl p-4 flex flex-col gap-1">
+                        <p className="text-xs text-text-muted">Sequência</p>
+                        {(() => {
+                          const ws = activeSegment.stats.winStreak?.value ?? 0
+                          const isWin = ws >= 0
+                          return (
+                            <>
+                              {isWin
+                                ? <TrendingUp size={18} className="text-green-400" />
+                                : <TrendingDown size={18} className="text-red-400" />}
+                              <p className={`text-xl font-bold ${isWin ? 'text-green-400' : 'text-red-400'}`}>
+                                {ws > 0 ? '+' : ''}{ws}
+                              </p>
+                              <p className="text-xs text-text-muted">{isWin ? 'vitórias' : 'derrotas'}</p>
+                            </>
+                          )
+                        })()}
+                      </div>
+
                       {/* Matches */}
                       <div className="rl-stat-card bg-bg-primary rounded-xl p-4 flex flex-col gap-1">
                         <p className="text-xs text-text-muted">Partidas</p>
@@ -585,7 +694,9 @@ export default function RocketLeague(): React.JSX.Element {
                         <p className="text-xl font-bold text-text-primary">
                           {activeSegment.stats.matchesPlayed?.value?.toLocaleString('pt-BR') ?? '—'}
                         </p>
-                        <p className="text-xs text-text-muted">jogadas</p>
+                        <p className="text-xs text-text-muted">
+                          {activeSegment.stats.wins?.value?.toLocaleString('pt-BR') ?? '—'} vitórias
+                        </p>
                       </div>
 
                       {/* Winrate */}
@@ -613,22 +724,59 @@ export default function RocketLeague(): React.JSX.Element {
 
           {/* ── Session summary ──────────────────────────────────────────────── */}
           {sessions.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-                <p className="text-xs text-text-muted mb-1">MMR hoje</p>
-                <p className={`text-2xl font-bold ${totalMMRToday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {totalMMRToday > 0 ? '+' : ''}{totalMMRToday}
-                </p>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+                  <p className="text-xs text-text-muted mb-1">MMR hoje</p>
+                  <p className={`text-2xl font-bold ${totalMMRToday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {totalMMRToday > 0 ? '+' : ''}{totalMMRToday}
+                  </p>
+                </div>
+                <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+                  <p className="text-xs text-text-muted mb-1">Esta semana</p>
+                  <p className="text-2xl font-bold text-orange-400">{sessionsThisWeek}</p>
+                  <p className="text-xs text-text-muted">sessões</p>
+                </div>
+                <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+                  <p className="text-xs text-text-muted mb-1">Média/sessão</p>
+                  <p className={`text-2xl font-bold ${avgMMRPerSession >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {avgMMRPerSession > 0 ? '+' : ''}{avgMMRPerSession}
+                  </p>
+                  <p className="text-xs text-text-muted">MMR</p>
+                </div>
+                <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+                  <p className="text-xs text-text-muted mb-1">Peak local</p>
+                  <p className="text-2xl font-bold text-yellow-400">{peakMMR ?? '—'}</p>
+                  <p className="text-xs text-text-muted">MMR</p>
+                </div>
+                <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
+                  <p className="text-xs text-text-muted mb-1">Total sessões</p>
+                  <p className="text-2xl font-bold text-text-primary">{sessions.length}</p>
+                </div>
               </div>
-              <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-                <p className="text-xs text-text-muted mb-1">Peak local</p>
-                <p className="text-2xl font-bold text-yellow-400">{peakMMR ?? '—'}</p>
-              </div>
-              <div className="rl-stat-card bg-bg-secondary border border-bg-border rounded-xl p-4 text-center">
-                <p className="text-xs text-text-muted mb-1">Sessões</p>
-                <p className="text-2xl font-bold text-text-primary">{sessions.length}</p>
-              </div>
-            </div>
+
+              {/* Streak banner */}
+              {Math.abs(streak) >= 2 && (
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold ${
+                  streak > 0
+                    ? 'bg-green-400/10 border-green-400/30 text-green-400'
+                    : 'bg-red-400/10 border-red-400/30 text-red-400'
+                }`}>
+                  {streak > 0
+                    ? <TrendingUp size={16} />
+                    : <TrendingDown size={16} />}
+                  <span>
+                    {streak > 0
+                      ? `${streak} sessões de ganho seguidas!`
+                      : `${Math.abs(streak)} sessões de queda seguidas`}
+                  </span>
+                  <span className="ml-auto text-xs opacity-60 font-normal">baseado nas sessões locais</span>
+                </div>
+              )}
+
+              {/* MMR Chart */}
+              <MMRChart sessions={sessions} />
+            </>
           )}
 
           {/* ── Session logger ───────────────────────────────────────────────── */}
