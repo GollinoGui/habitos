@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { dbAll, dbRun, save } from '../db'
 
-const TRN_API_KEY = '32e5241a-13f1-40f7-a150-c4d4adb940f7'
+const TRN_API_KEY = '9f69be4b-32aa-4881-a1ee-443eada0d05c'
 const BASE = 'https://api.tracker.gg/api/v2/rocket-league/standard'
 
 async function rlFetch(path: string): Promise<unknown> {
