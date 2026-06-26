@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Gamepad2, Search, RefreshCw, Unlink, TrendingUp, TrendingDown,
   Trophy, Target, Swords, Trash2, Plus, ChevronDown, ChevronUp,
-  BookOpen, ChevronRight, Zap,
+  BookOpen, ChevronRight, Zap, Tv, Star, ExternalLink,
 } from 'lucide-react'
+import RLGarage, { type RLCarPreset } from './RLGarage'
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,7 @@ interface RLSession {
   matches: number
   wins: number
   notes?: string
+  preset_id?: number | null
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -209,6 +211,649 @@ function getCurrentStreak(sessions: RLSession[]): number {
   return isPos ? count : -count
 }
 
+// ── Esports Types ─────────────────────────────────────────────────────────────
+
+interface OctaneEvent {
+  _id: string
+  name: string
+  tier: string
+  region: string
+  startDate?: string
+  endDate?: string
+  prize?: { amount: number; currency: string }
+  image?: string
+}
+
+interface OctanePlayer {
+  _id: string
+  tag: string
+  name?: string
+  country?: string
+  team?: { team?: { name?: string } }
+}
+
+interface TwitchStream {
+  user_login: string
+  user_name: string
+  game_name: string
+  title: string
+  viewer_count: number
+}
+
+interface RLStreamer {
+  name: string
+  login: string
+}
+
+// ── Esports Constants ─────────────────────────────────────────────────────────
+
+const DEFAULT_STREAMERS: RLStreamer[] = [
+  { name: 'jstn', login: 'jstn_rl' },
+  { name: 'Musty', login: 'amustycow' },
+  { name: 'Squishy', login: 'squishymuffinz' },
+  { name: 'GarrettG', login: 'garrett_g' },
+  { name: 'Firstkiller', login: 'firstkiller' },
+  { name: 'Lethamyr', login: 'lethamyr' },
+  { name: 'Sunless Khan', login: 'sunlesskhan' },
+  { name: 'Klassux', login: 'klassux' },
+  { name: 'Rizzo', login: 'rizzo' },
+  { name: 'Monkey Moon', login: 'monkeymoon' },
+  { name: 'Arsenal', login: 'arsenalrl' },
+  { name: 'ViolentPanda', login: 'violentpanda' },
+  { name: 'Kaydop', login: 'kaydop' },
+  { name: 'Fairy Peak', login: 'fairypeak' },
+  { name: 'Crispy', login: 'crispymcpuffin' },
+]
+
+const TIER_STYLE: Record<string, { label: string; color: string }> = {
+  S: { label: 'S-Tier', color: '#f59e0b' },
+  A: { label: 'A-Tier', color: '#94a3b8' },
+  B: { label: 'B-Tier', color: '#cd7f32' },
+  C: { label: 'C-Tier', color: '#6b7280' },
+}
+
+const REGION_LABEL: Record<string, string> = {
+  INT: 'Mundial', NA: 'América do Norte', EU: 'Europa',
+  SAM: 'América do Sul', MENA: 'Oriente Médio',
+  APAC: 'Ásia-Pacífico', OCE: 'Oceania', SSA: 'África',
+}
+
+function countryFlag(code?: string): string {
+  if (!code || code.length < 2) return '🌍'
+  const base = 0x1F1E6 - 65
+  return String.fromCodePoint(...code.toUpperCase().slice(0, 2).split('').map(c => base + c.charCodeAt(0)))
+}
+
+function formatPrize(amount?: number): string {
+  if (!amount) return ''
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace('.0', '')}M`
+  if (amount >= 1_000) return `$${Math.round(amount / 1_000)}k`
+  return `$${amount}`
+}
+
+function fmtDate(iso?: string): string {
+  if (!iso) return ''
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+}
+
+function fmtViewers(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1).replace('.0', '')}k` : String(n)
+}
+
+// ── Esports Tab ───────────────────────────────────────────────────────────────
+
+function normalizeLogin(input: string): string {
+  const match = input.match(/twitch\.tv\/([a-zA-Z0-9_]+)/)
+  if (match) return match[1].toLowerCase()
+  return input.trim().toLowerCase().replace(/^@/, '')
+}
+
+function RLEsportsTab(): React.JSX.Element {
+  const hasApi = !!(window.api?.rocketLeague)
+
+  // ── OAuth user ────────────────────────────────────────────────────────────
+  const [userToken, setUserToken]         = useState(() => localStorage.getItem('rl_twitch_user_token') ?? '')
+  const [userId, setUserId]               = useState(() => localStorage.getItem('rl_twitch_user_id') ?? '')
+  const [userName, setUserName]           = useState(() => localStorage.getItem('rl_twitch_user_name') ?? '')
+  const [loadingOAuth, setLoadingOAuth]   = useState(false)
+  const [oauthError, setOauthError]       = useState('')
+  const [followed, setFollowed]           = useState<Array<{ broadcaster_login: string; broadcaster_name: string }>>([])
+  const [followedStreams, setFollowedStreams] = useState<TwitchStream[]>([])
+  const [loadingFollowed, setLoadingFollowed] = useState(false)
+  const [followedError, setFollowedError]     = useState('')
+
+  // ── Curated / custom list ─────────────────────────────────────────────────
+  const [selectedLogins, setSelectedLogins] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('rl_streamers_selected')
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set(DEFAULT_STREAMERS.map(s => s.login))
+    } catch { return new Set(DEFAULT_STREAMERS.map(s => s.login)) }
+  })
+  const [customStreamers, setCustomStreamers] = useState<RLStreamer[]>(() => {
+    try { return JSON.parse(localStorage.getItem('rl_streamers_custom') ?? '[]') } catch { return [] }
+  })
+  const [showManage, setShowManage] = useState(false)
+  const [addInput, setAddInput]     = useState('')
+  const [liveStreams,     setLiveStreams]     = useState<TwitchStream[]>([])
+  const [loadingLive,    setLoadingLive]    = useState(false)
+  const [liveError,      setLiveError]      = useState('')
+  const [twitchNotSetup, setTwitchNotSetup] = useState(false)
+
+  // ── Octane ────────────────────────────────────────────────────────────────
+  const [events, setEvents]   = useState<OctaneEvent[]>([])
+  const [players, setPlayers] = useState<OctanePlayer[]>([])
+  const [loadingEv, setLoadingEv] = useState(false)
+  const [loadingPl, setLoadingPl] = useState(false)
+  const [evError, setEvError] = useState('')
+  const [plError, setPlError] = useState('')
+
+  const fetchLiveRef     = useRef<(() => Promise<void>) | null>(null)
+  const fetchFollowedRef = useRef<(() => Promise<void>) | null>(null)
+
+  const allStreamers  = [...DEFAULT_STREAMERS, ...customStreamers]
+  const activeLogins  = allStreamers.filter(s => selectedLogins.has(s.login))
+
+  async function fetchEvents() {
+    if (!hasApi) return
+    setLoadingEv(true); setEvError('')
+    try {
+      const res = await window.api!.rocketLeague!.esportsEvents() as { ok: boolean; data?: { events?: OctaneEvent[] } }
+      if (res.ok && res.data?.events) setEvents(res.data.events)
+      else setEvError('Não foi possível carregar torneios.')
+    } catch { setEvError('Erro ao buscar torneios.') }
+    finally { setLoadingEv(false) }
+  }
+
+  async function fetchPlayers() {
+    if (!hasApi) return
+    setLoadingPl(true); setPlError('')
+    try {
+      const res = await window.api!.rocketLeague!.esportsPlayers() as { ok: boolean; data?: { players?: OctanePlayer[] } }
+      if (res.ok && res.data?.players) setPlayers(res.data.players)
+      else setPlError('Não foi possível carregar jogadores.')
+    } catch { setPlError('Erro ao buscar jogadores.') }
+    finally { setLoadingPl(false) }
+  }
+
+  async function fetchLive(logins = activeLogins.map(s => s.login)) {
+    if (!hasApi || !logins.length) return
+    setLoadingLive(true); setLiveError('')
+    try {
+      const res = await window.api!.rocketLeague!.twitchLive(logins) as { ok: boolean; data?: unknown[]; error?: string }
+      if (res.ok) { setLiveStreams((res.data ?? []) as TwitchStream[]); setTwitchNotSetup(false) }
+      else if (res.error === 'credentials-not-configured') setTwitchNotSetup(true)
+      else setLiveError('Erro Twitch: ' + res.error)
+    } catch { setLiveError('Erro ao verificar streams.') }
+    finally { setLoadingLive(false) }
+  }
+
+  async function fetchFollowed(tok = userToken, uid = userId) {
+    if (!hasApi || !tok || !uid) return
+    setLoadingFollowed(true); setFollowedError('')
+    try {
+      const res = await window.api!.rocketLeague!.twitchFollowed(tok, uid) as {
+        ok: boolean
+        followed?: Array<{ broadcaster_login: string; broadcaster_name: string }>
+        streams?: TwitchStream[]
+        error?: string
+      }
+      if (res.ok) { setFollowed(res.followed ?? []); setFollowedStreams((res.streams ?? []) as TwitchStream[]) }
+      else {
+        if (res.error?.includes('401')) { clearUserSession(); setFollowedError('Sessão expirada. Faça login novamente.') }
+        else setFollowedError('Erro: ' + res.error)
+      }
+    } catch { setFollowedError('Erro ao buscar canais seguidos.') }
+    finally { setLoadingFollowed(false) }
+  }
+
+  fetchLiveRef.current     = () => fetchLive()
+  fetchFollowedRef.current = () => fetchFollowed()
+
+  useEffect(() => {
+    fetchEvents(); fetchPlayers()
+    fetchLive()
+    if (userToken && userId) fetchFollowed()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetchLiveRef.current?.()
+      if (userToken && userId) fetchFollowedRef.current?.()
+    }, 2 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [userToken, userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auth actions ──────────────────────────────────────────────────────────
+
+  async function handleLogin() {
+    setLoadingOAuth(true); setOauthError('')
+    try {
+      const res = await window.api!.rocketLeague!.twitchOAuth()
+      localStorage.setItem('rl_twitch_user_token', res.access_token)
+      localStorage.setItem('rl_twitch_user_refresh', res.refresh_token)
+      localStorage.setItem('rl_twitch_user_id', res.user_id)
+      localStorage.setItem('rl_twitch_user_name', res.user_name)
+      setUserToken(res.access_token); setUserId(res.user_id); setUserName(res.user_name)
+      fetchFollowed(res.access_token, res.user_id)
+    } catch (e) {
+      const msg = String(e)
+      if (!msg.includes('cancelled')) setOauthError('Erro ao fazer login: ' + msg)
+    } finally { setLoadingOAuth(false) }
+  }
+
+  function clearUserSession() {
+    ['rl_twitch_user_token','rl_twitch_user_refresh','rl_twitch_user_id','rl_twitch_user_name']
+      .forEach(k => localStorage.removeItem(k))
+    setUserToken(''); setUserId(''); setUserName('')
+    setFollowed([]); setFollowedStreams([])
+  }
+
+  // ── List helpers ──────────────────────────────────────────────────────────
+
+  function toggleLogin(login: string) {
+    const next = new Set(selectedLogins)
+    if (next.has(login)) next.delete(login); else next.add(login)
+    setSelectedLogins(next)
+    localStorage.setItem('rl_streamers_selected', JSON.stringify([...next]))
+    const newLogins = [...DEFAULT_STREAMERS, ...customStreamers].filter(s => next.has(s.login)).map(s => s.login)
+    if (newLogins.length) fetchLive(newLogins)
+  }
+
+  function addCustomStreamer() {
+    const login = normalizeLogin(addInput)
+    if (!login || allStreamers.some(s => s.login === login)) return
+    const updated = [...customStreamers, { name: login, login }]
+    setCustomStreamers(updated); localStorage.setItem('rl_streamers_custom', JSON.stringify(updated))
+    const next = new Set(selectedLogins); next.add(login)
+    setSelectedLogins(next); localStorage.setItem('rl_streamers_selected', JSON.stringify([...next]))
+    setAddInput('')
+  }
+
+  function removeCustom(login: string) {
+    const updated = customStreamers.filter(s => s.login !== login)
+    setCustomStreamers(updated); localStorage.setItem('rl_streamers_custom', JSON.stringify(updated))
+    const next = new Set(selectedLogins); next.delete(login)
+    setSelectedLogins(next); localStorage.setItem('rl_streamers_selected', JSON.stringify([...next]))
+  }
+
+  const getManualLive   = (login: string) => liveStreams.find(s => s.user_login.toLowerCase() === login.toLowerCase())
+  const getFollowedLive = (login: string) => followedStreams.find(s => s.user_login.toLowerCase() === login.toLowerCase())
+
+  const sortedActive = [...activeLogins].sort((a, b) => {
+    const al = !!getManualLive(a.login), bl = !!getManualLive(b.login)
+    if (al !== bl) return al ? -1 : 1
+    return (getManualLive(b.login)?.viewer_count ?? 0) - (getManualLive(a.login)?.viewer_count ?? 0)
+  })
+
+  const sortedFollowed = [...followed].sort((a, b) => {
+    const al = !!getFollowedLive(a.broadcaster_login), bl = !!getFollowedLive(b.broadcaster_login)
+    if (al !== bl) return al ? -1 : 1
+    return (getFollowedLive(b.broadcaster_login)?.viewer_count ?? 0) - (getFollowedLive(a.broadcaster_login)?.viewer_count ?? 0)
+  })
+  const shownFollowed = [
+    ...sortedFollowed.filter(f => !!getFollowedLive(f.broadcaster_login)),
+    ...sortedFollowed.filter(f => !getFollowedLive(f.broadcaster_login)).slice(0, 10),
+  ]
+  const hiddenOffline     = Math.max(0, followed.length - shownFollowed.length)
+  const manualLiveCount   = liveStreams.length
+  const followedLiveCount = followedStreams.length
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Twitch Ao Vivo ───────────────────────────────────────────────────── */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-border">
+          <Tv size={14} style={{ color: '#9147ff' }} />
+          <span className="text-sm font-semibold text-text-primary">Twitch Ao Vivo</span>
+          {(followedLiveCount + manualLiveCount) > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+              style={{ background: 'rgba(145,71,255,0.15)', color: '#9147ff' }}>
+              {followedLiveCount + manualLiveCount} ao vivo
+            </span>
+          )}
+        </div>
+
+        <>
+          {/* spacer */}
+            {/* ── Seguindo no Twitch (OAuth) ──────────────────────────────── */}
+            <div className="border-b border-bg-border">
+              <div className="flex items-center justify-between px-4 py-2.5" style={{ background: 'rgba(145,71,255,0.05)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold" style={{ color: '#9147ff' }}>
+                    {userName ? `Seguindo · ${userName}` : 'Seguindo no Twitch'}
+                  </span>
+                  {followedLiveCount > 0 && (
+                    <span className="text-xs" style={{ color: '#9147ff' }}>({followedLiveCount} ao vivo)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {loadingFollowed && <RefreshCw size={11} className="animate-spin text-text-muted" />}
+                  {userName ? (
+                    <>
+                      <button onClick={() => fetchFollowed()} className="text-xs text-text-muted hover:text-text-primary transition-colors">Atualizar</button>
+                      <button onClick={clearUserSession} className="text-xs text-red-400 hover:text-red-300 transition-colors">Sair</button>
+                    </>
+                  ) : (
+                    <button onClick={handleLogin} disabled={loadingOAuth}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-60 hover:brightness-110 transition-all"
+                      style={{ background: 'linear-gradient(135deg, #9147ff, #6c35c8)' }}>
+                      {loadingOAuth ? <RefreshCw size={11} className="animate-spin" /> : <Tv size={11} />}
+                      {loadingOAuth ? 'Aguardando login…' : 'Entrar com Twitch'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {oauthError    && <p className="px-4 py-2 text-xs text-red-400 bg-red-400/5 border-b border-bg-border">{oauthError}</p>}
+              {followedError && <p className="px-4 py-2 text-xs text-red-400 bg-red-400/5 border-b border-bg-border">{followedError}</p>}
+
+              {!userName && !loadingOAuth && !oauthError && (
+                <p className="px-4 py-3 text-xs text-text-muted text-center">
+                  Entre com sua conta Twitch para ver os canais que você segue em tempo real.
+                </p>
+              )}
+              {userName && loadingFollowed && !shownFollowed.length && (
+                <div className="p-6 flex justify-center"><RefreshCw size={16} className="animate-spin text-text-muted" /></div>
+              )}
+              {shownFollowed.map(ch => {
+                const stream = getFollowedLive(ch.broadcaster_login)
+                const live   = !!stream
+                return (
+                  <div key={ch.broadcaster_login} className="flex items-center gap-3 px-4 py-2.5 border-b border-bg-border last:border-b-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${live ? 'bg-red-500' : 'bg-bg-border'}`}
+                      style={live ? { boxShadow: '0 0 6px rgba(239,68,68,0.9)' } : {}} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-sm font-medium ${live ? 'text-text-primary' : 'text-text-muted'}`}>
+                          {stream?.user_name ?? ch.broadcaster_name}
+                        </span>
+                        {live && stream && (
+                          <>
+                            <span className="text-xs text-text-muted truncate max-w-[140px]">{stream.game_name}</span>
+                            <span className="text-xs font-semibold shrink-0" style={{ color: '#9147ff' }}>{fmtViewers(stream.viewer_count)} viewers</span>
+                          </>
+                        )}
+                        {!live && <span className="text-xs text-text-muted opacity-40">offline</span>}
+                      </div>
+                      {live && stream?.title && <p className="text-xs text-text-muted truncate mt-0.5 opacity-60">{stream.title}</p>}
+                    </div>
+                    {live ? (
+                      <button onClick={() => window.api!.rocketLeague!.openUrl(`https://twitch.tv/${ch.broadcaster_login}`)}
+                        className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-white hover:brightness-110"
+                        style={{ background: 'linear-gradient(135deg, #9147ff, #6c35c8)' }}>
+                        ASSISTIR <ExternalLink size={10} />
+                      </button>
+                    ) : (
+                      <button onClick={() => window.api!.rocketLeague!.openUrl(`https://twitch.tv/${ch.broadcaster_login}`)}
+                        className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-purple-400 hover:bg-bg-border/40 transition-colors">
+                        <ExternalLink size={12} />
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              {hiddenOffline > 0 && (
+                <p className="px-4 py-2 text-xs text-text-muted text-center opacity-50">+ {hiddenOffline} outros offline</p>
+              )}
+            </div>
+
+            {/* ── Lista personalizada ─────────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between px-4 py-2.5" style={{ background: 'rgba(249,115,22,0.03)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-text-secondary">Lista personalizada</span>
+                  {manualLiveCount > 0 && <span className="text-xs font-medium text-orange-400">{manualLiveCount} ao vivo</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {loadingLive && <RefreshCw size={11} className="animate-spin text-text-muted" />}
+                  <button onClick={() => fetchLive()} className="text-xs text-text-muted hover:text-text-primary transition-colors">Atualizar</button>
+                </div>
+              </div>
+
+              {liveError && <p className="px-4 py-2 text-xs text-red-400 bg-red-400/5 border-b border-bg-border">{liveError}</p>}
+              {twitchNotSetup && (
+                <div className="px-4 py-3 border-b border-bg-border" style={{ background: 'rgba(249,115,22,0.05)' }}>
+                  <p className="text-xs text-orange-400 font-medium">Credenciais Twitch não configuradas</p>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    Preencha <span className="font-mono text-[11px]">src/main/twitchSecrets.ts</span> com seu Client ID e Client Secret do{' '}
+                    <button onClick={() => window.api!.rocketLeague!.openUrl('https://dev.twitch.tv/console')}
+                      className="underline text-orange-300 hover:text-orange-200 transition-colors">
+                      dev.twitch.tv/console
+                    </button>
+                    {' '}e reinicie o app.
+                  </p>
+                </div>
+              )}
+
+              <div className="divide-y divide-bg-border">
+                {sortedActive.map(s => {
+                  const stream = getManualLive(s.login)
+                  const live   = !!stream
+                  return (
+                    <div key={s.login} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${live ? 'bg-red-500' : 'bg-bg-border'}`}
+                        style={live ? { boxShadow: '0 0 6px rgba(239,68,68,0.9)' } : {}} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-sm font-medium ${live ? 'text-text-primary' : 'text-text-muted'}`}>{s.name}</span>
+                          {live && stream && (
+                            <>
+                              <span className="text-xs text-text-muted">{stream.game_name}</span>
+                              <span className="text-xs font-semibold" style={{ color: '#9147ff' }}>{fmtViewers(stream.viewer_count)} viewers</span>
+                            </>
+                          )}
+                          {!live && <span className="text-xs text-text-muted opacity-40">offline</span>}
+                        </div>
+                        {live && stream?.title && <p className="text-xs text-text-muted truncate mt-0.5 opacity-60">{stream.title}</p>}
+                      </div>
+                      {live ? (
+                        <button onClick={() => window.api!.rocketLeague!.openUrl(`https://twitch.tv/${s.login}`)}
+                          className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-white hover:brightness-110"
+                          style={{ background: 'linear-gradient(135deg, #9147ff, #6c35c8)' }}>
+                          ASSISTIR <ExternalLink size={10} />
+                        </button>
+                      ) : (
+                        <button onClick={() => window.api!.rocketLeague!.openUrl(`https://twitch.tv/${s.login}`)}
+                          className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-purple-400 hover:bg-bg-border/40 transition-colors">
+                          <ExternalLink size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                {activeLogins.length === 0 && (
+                  <p className="px-4 py-4 text-xs text-text-muted text-center">Nenhum streamer selecionado.</p>
+                )}
+              </div>
+
+              {/* Manage panel */}
+              <div className="border-t border-bg-border">
+                <button onClick={() => setShowManage(v => !v)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-text-muted hover:text-text-primary hover:bg-bg-border/20 transition-colors">
+                  <Plus size={12} />
+                  Gerenciar lista
+                  {showManage ? <ChevronUp size={12} className="ml-auto" /> : <ChevronDown size={12} className="ml-auto" />}
+                </button>
+
+                {showManage && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-bg-border">
+                    {/* Add by URL or username */}
+                    <div className="flex gap-2 pt-3">
+                      <input type="text" value={addInput}
+                        onChange={e => setAddInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addCustomStreamer()}
+                        placeholder="twitch.tv/usuario  ou  nome de usuário"
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-xs focus:outline-none focus:border-purple-500/60 placeholder:text-text-muted transition-colors" />
+                      <button onClick={addCustomStreamer} disabled={!addInput.trim()}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-40 hover:brightness-110"
+                        style={{ background: 'rgba(145,71,255,0.7)' }}>
+                        <Plus size={12} />
+                      </button>
+                    </div>
+
+                    {/* Curated list checkboxes */}
+                    <p className="text-xs font-medium text-text-muted">Lista curada de pros</p>
+                    <div className="grid grid-cols-2 gap-1 max-h-52 overflow-y-auto">
+                      {DEFAULT_STREAMERS.map(s => (
+                        <button key={s.login} onClick={() => toggleLogin(s.login)}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors"
+                          style={selectedLogins.has(s.login)
+                            ? { background: 'rgba(145,71,255,0.15)', color: '#c084fc' }
+                            : { color: 'var(--color-text-muted)' }}>
+                          <div className={`w-3 h-3 rounded-sm border shrink-0 flex items-center justify-center ${selectedLogins.has(s.login) ? 'border-purple-400 bg-purple-500/30' : 'border-bg-border'}`}>
+                            {selectedLogins.has(s.login) && <span className="text-[9px] leading-none font-bold">✓</span>}
+                          </div>
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Custom streamers */}
+                    {customStreamers.length > 0 && (
+                      <>
+                        <p className="text-xs font-medium text-text-muted">Adicionados por você</p>
+                        <div className="space-y-1">
+                          {customStreamers.map(s => (
+                            <div key={s.login} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-bg-primary/50 text-xs">
+                              <button onClick={() => toggleLogin(s.login)}
+                                className={`w-3 h-3 rounded-sm border shrink-0 flex items-center justify-center ${selectedLogins.has(s.login) ? 'border-purple-400 bg-purple-500/30' : 'border-bg-border'}`}>
+                                {selectedLogins.has(s.login) && <span className="text-[9px] leading-none font-bold">✓</span>}
+                              </button>
+                              <span className="flex-1 text-text-secondary truncate">{s.login}</span>
+                              <button onClick={() => removeCustom(s.login)}
+                                className="text-text-muted hover:text-red-400 transition-colors shrink-0">
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+        </>
+      </div>
+
+      {/* ── Torneios RLCS ────────────────────────────────────────────────────── */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-bg-border">
+          <div className="flex items-center gap-2">
+            <Trophy size={14} style={{ color: '#f59e0b' }} />
+            <span className="text-sm font-semibold text-text-primary">Torneios RLCS</span>
+            <span className="text-xs text-text-muted">via Octane.gg</span>
+          </div>
+          <button onClick={fetchEvents}
+            className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors">
+            <RefreshCw size={12} className={loadingEv ? 'animate-spin' : ''} />
+            Atualizar
+          </button>
+        </div>
+
+        {loadingEv && (
+          <div className="p-10 flex justify-center">
+            <RefreshCw size={20} className="animate-spin text-text-muted" />
+          </div>
+        )}
+        {evError && !loadingEv && (
+          <p className="p-4 text-sm text-red-400 text-center">{evError}</p>
+        )}
+        {!loadingEv && events.length > 0 && (
+          <div className="divide-y divide-bg-border">
+            {events.map(ev => {
+              const tier = TIER_STYLE[ev.tier] ?? { label: ev.tier, color: '#6b7280' }
+              return (
+                <div key={ev._id} className="flex items-center gap-3 px-4 py-3">
+                  {ev.image ? (
+                    <img src={ev.image} alt="" className="w-10 h-10 rounded-lg object-contain bg-bg-primary shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-bg-primary flex items-center justify-center shrink-0">
+                      <Trophy size={16} style={{ color: tier.color }} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-text-primary truncate">{ev.name}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded font-bold shrink-0"
+                        style={{ background: `${tier.color}22`, color: tier.color }}>
+                        {tier.label}
+                      </span>
+                      {ev.prize?.amount ? (
+                        <span className="text-xs font-semibold text-green-400 shrink-0">
+                          {formatPrize(ev.prize.amount)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-text-muted flex-wrap">
+                      <span>{REGION_LABEL[ev.region] ?? ev.region}</span>
+                      {ev.startDate && (
+                        <span>· {fmtDate(ev.startDate)}{ev.endDate && ev.endDate !== ev.startDate ? ` – ${fmtDate(ev.endDate)}` : ''}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {!loadingEv && !evError && events.length === 0 && (
+          <p className="p-8 text-center text-xs text-text-muted">Nenhum torneio encontrado.</p>
+        )}
+      </div>
+
+      {/* ── Pro Players ──────────────────────────────────────────────────────── */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-bg-border">
+          <div className="flex items-center gap-2">
+            <Star size={14} style={{ color: '#f97316' }} />
+            <span className="text-sm font-semibold text-text-primary">Pro Players</span>
+            <span className="text-xs text-text-muted">via Octane.gg</span>
+          </div>
+          <button onClick={fetchPlayers}
+            className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors">
+            <RefreshCw size={12} className={loadingPl ? 'animate-spin' : ''} />
+            Atualizar
+          </button>
+        </div>
+
+        {loadingPl && (
+          <div className="p-10 flex justify-center">
+            <RefreshCw size={20} className="animate-spin text-text-muted" />
+          </div>
+        )}
+        {plError && !loadingPl && (
+          <p className="p-4 text-sm text-red-400 text-center">{plError}</p>
+        )}
+        {!loadingPl && players.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-bg-border">
+            {players.map(p => (
+              <div key={p._id} className="bg-bg-secondary px-4 py-3">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-base leading-none shrink-0">{countryFlag(p.country)}</span>
+                  <span className="text-sm font-bold text-text-primary truncate">{p.tag}</span>
+                </div>
+                {p.name && <p className="text-xs text-text-muted truncate">{p.name}</p>}
+                {p.team?.team?.name && (
+                  <p className="text-xs font-medium truncate mt-0.5" style={{ color: '#f97316' }}>
+                    {p.team.team.name}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {!loadingPl && !plError && players.length === 0 && (
+          <p className="p-8 text-center text-xs text-text-muted">Nenhum jogador encontrado.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── MMR Chart ─────────────────────────────────────────────────────────────────
 
 function MMRChart({ sessions }: { sessions: RLSession[] }): React.JSX.Element | null {
@@ -283,12 +928,14 @@ export default function RocketLeague(): React.JSX.Element {
   const [sessions, setSessions]         = useState<RLSession[]>([])
   const [form, setForm]                 = useState({
     date: new Date().toISOString().slice(0, 10),
-    start_mmr: '', end_mmr: '', matches: '', wins: '', notes: '',
+    start_mmr: '', end_mmr: '', matches: '', wins: '', notes: '', preset_id: '',
   })
   const [saving, setSaving]             = useState(false)
   const [showSessionForm, setShowSessionForm] = useState(false)
 
   const [rankHovered, setRankHovered]   = useState(false)
+  const [activeTab, setActiveTab]       = useState<'overview' | 'garage' | 'esports'>('overview')
+  const [garagePresets, setGaragePresets] = useState<RLCarPreset[]>([])
 
   // Detecta primeira visita do dia para a animação da frase
   const [isFirstTimeToday] = useState(() => {
@@ -300,7 +947,7 @@ export default function RocketLeague(): React.JSX.Element {
     return false
   })
 
-  const hasApi = !!(window as { electronApi?: { rocketLeague?: unknown } }).electronApi?.rocketLeague
+  const hasApi = !!(window.api?.rocketLeague)
 
   useEffect(() => {
     const saved = localStorage.getItem('habitos_rl_profile')
@@ -312,7 +959,19 @@ export default function RocketLeague(): React.JSX.Element {
       } catch { /* ignore */ }
     }
     loadSessions()
+    loadGaragePresets()
   }, [])
+
+  async function loadGaragePresets() {
+    if (!hasApi) return
+    const raw = await window.api!.rocketLeague!.listPresets() as Array<{
+      id: number; name: string; slots: string; created_at: string
+    }>
+    setGaragePresets(raw.map(p => ({
+      ...p,
+      slots: (() => { try { return JSON.parse(p.slots) } catch { return {} } })(),
+    })))
+  }
 
   async function loadSessions() {
     if (!hasApi) return
@@ -387,9 +1046,10 @@ export default function RocketLeague(): React.JSX.Element {
       matches: parseInt(form.matches) || 0,
       wins: parseInt(form.wins) || 0,
       notes: form.notes,
+      preset_id: form.preset_id ? parseInt(form.preset_id) : undefined,
     })
     setSaving(false)
-    setForm(f => ({ ...f, start_mmr: '', end_mmr: '', matches: '', wins: '', notes: '' }))
+    setForm(f => ({ ...f, start_mmr: '', end_mmr: '', matches: '', wins: '', notes: '', preset_id: '' }))
     setShowSessionForm(false)
     loadSessions()
   }
@@ -497,13 +1157,43 @@ export default function RocketLeague(): React.JSX.Element {
           <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
             <Gamepad2 size={28} style={{ color: '#f97316', opacity: 0.6 }} />
           </div>
-          <p className="text-sm font-medium text-text-secondary mb-1">Disponível no app desktop</p>
-          <p className="text-xs">Abra o aplicativo no Windows para acessar esta seção.</p>
+          <p className="text-sm font-medium text-text-secondary mb-1">Faça login para continuar</p>
+          <p className="text-xs">Entre na sua conta para acessar a seção de Rocket League.</p>
         </div>
       )}
 
       {hasApi && (
         <>
+          {/* ── Tab switcher ──────────────────────────────────────────────────── */}
+          <div className="flex gap-1 bg-bg-secondary border border-bg-border rounded-xl p-1 w-fit">
+            {([
+              { key: 'overview', label: 'Visão Geral' },
+              { key: 'garage',   label: '🚗 Garagem'  },
+              { key: 'esports',  label: '🏆 Esports'  },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
+                style={activeTab === tab.key
+                  ? { background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', boxShadow: '0 2px 10px rgba(249,115,22,0.38)' }
+                  : { color: 'var(--color-text-muted)' }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Garagem Tab ───────────────────────────────────────────────────── */}
+          {activeTab === 'garage' && (
+            <RLGarage onPresetsChange={p => setGaragePresets(p)} />
+          )}
+
+          {/* ── Esports Tab ───────────────────────────────────────────────────── */}
+          {activeTab === 'esports' && <RLEsportsTab />}
+
+          {activeTab === 'overview' && (
+          <>
           {/* ── Link Profile ─────────────────────────────────────────────────── */}
           {!linkedProfile && (
             <div className="bg-bg-secondary border border-bg-border rounded-xl p-6 space-y-4">
@@ -846,6 +1536,21 @@ export default function RocketLeague(): React.JSX.Element {
                       className="w-full px-3 py-2 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-sm focus:outline-none focus:border-orange-400 placeholder:text-text-muted transition-colors"
                     />
                   </div>
+                  {garagePresets.length > 0 && (
+                    <div className="sm:col-span-3">
+                      <label className="text-xs text-text-muted block mb-1">Preset usado (opcional)</label>
+                      <select
+                        value={form.preset_id}
+                        onChange={e => setForm(f => ({ ...f, preset_id: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-sm focus:outline-none focus:border-orange-400 transition-colors"
+                      >
+                        <option value="">Nenhum preset</option>
+                        {garagePresets.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {mmrGain !== null && (
@@ -867,6 +1572,7 @@ export default function RocketLeague(): React.JSX.Element {
             )}
           </div>
 
+          {/* ── Session history ──────────────────────────────────────────────── */}
           {/* ── Session history ──────────────────────────────────────────────── */}
           {sessions.length > 0 && (
             <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
@@ -891,7 +1597,7 @@ export default function RocketLeague(): React.JSX.Element {
                           {session.start_mmr} → {session.end_mmr}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5">
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {session.matches > 0 && (
                           <span className="text-xs text-text-muted">
                             {session.wins}W / {session.matches - session.wins}L
@@ -899,6 +1605,11 @@ export default function RocketLeague(): React.JSX.Element {
                           </span>
                         )}
                         {session.notes && <span className="text-xs text-text-muted truncate">{session.notes}</span>}
+                        {session.preset_id && garagePresets.find(p => p.id === session.preset_id) && (
+                          <span className="text-xs text-text-muted flex items-center gap-1">
+                            🚗 {garagePresets.find(p => p.id === session.preset_id)!.name}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button
@@ -911,6 +1622,8 @@ export default function RocketLeague(): React.JSX.Element {
                 ))}
               </div>
             </div>
+          )}
+          </>
           )}
         </>
       )}
