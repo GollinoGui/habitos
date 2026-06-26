@@ -303,7 +303,7 @@ export default function Sports(): React.JSX.Element {
       <section>
         <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Esportes</h2>
         <div className="grid sm:grid-cols-2 gap-4">
-          {visibleSports.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
+          {visibleSports.map(({ key, ...cfg }) => <SportCard key={key} {...cfg} />)}
         </div>
       </section>
 
@@ -311,7 +311,7 @@ export default function Sports(): React.JSX.Element {
       <section>
         <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Jogos Steam / PC</h2>
         <div className="grid sm:grid-cols-2 gap-4">
-          {GAMES_CONFIG.map(cfg => <SportCard key={cfg.key} {...cfg} />)}
+          {GAMES_CONFIG.map(({ key, ...cfg }) => <SportCard key={key} {...cfg} />)}
         </div>
       </section>
 

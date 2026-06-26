@@ -111,71 +111,6 @@ async function rlFetchProfile(platform: string, username: string): Promise<unkno
   }
 }
 
-// ── In-memory cache ───────────────────────────────────────────────────────────
-
-const esportsCache = new Map<string, { data: unknown; expires: number }>()
-
-function getCached(key: string): unknown | null {
-  const e = esportsCache.get(key)
-  if (!e || Date.now() > e.expires) return null
-  return e.data
-}
-
-function setCached(key: string, data: unknown, ttlMs: number): void {
-  esportsCache.set(key, { data, expires: Date.now() + ttlMs })
-}
-
-// ── Octane.gg fetch (via BrowserWindow + CDP — bypass anti-bot) ───────────────
-
-function octaneFetch(path: string): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const win = new BrowserWindow({
-      show: false,
-      webPreferences: { nodeIntegration: false, contextIsolation: true },
-    })
-
-    let done = false
-    const finish = (fn: () => void) => { if (!done) { done = true; fn() } }
-
-    try { win.webContents.debugger.attach('1.3') }
-    catch (e) { win.destroy(); reject(e); return }
-
-    const pending = new Map<string, boolean>()
-
-    win.webContents.debugger.on('message', async (_ev, method, params) => {
-      if (method === 'Network.responseReceived') {
-        const url: string = params.response?.url ?? ''
-        if (!url.includes('zsr.octane.gg')) return
-        const status: number = params.response?.status ?? 0
-        if (status >= 400) {
-          finish(() => { win.destroy(); reject(new Error(String(status))) })
-        } else {
-          pending.set(params.requestId, true)
-        }
-        return
-      }
-      if (method === 'Network.loadingFinished' && pending.has(params.requestId)) {
-        pending.delete(params.requestId)
-        try {
-          const { body } = await win.webContents.debugger.sendCommand(
-            'Network.getResponseBody', { requestId: params.requestId }
-          )
-          finish(() => { win.destroy(); resolve(JSON.parse(body)) })
-        } catch (e) { finish(() => { win.destroy(); reject(e) }) }
-      }
-    })
-
-    win.webContents.debugger.sendCommand('Network.enable')
-    win.loadURL(`https://zsr.octane.gg${path}`)
-
-    setTimeout(
-      () => finish(() => { try { win.destroy() } catch { /* closed */ } reject(new Error('timeout')) }),
-      20_000
-    )
-    win.on('closed', () => finish(() => reject(new Error('closed'))))
-  })
-}
-
 // ── Twitch helpers ────────────────────────────────────────────────────────────
 
 let twitchTokenCache: { token: string; expires: number } | null = null
@@ -256,32 +191,6 @@ export function registerRocketLeagueHandlers(): void {
     dbRun('DELETE FROM rl_car_presets WHERE id = ?', [id])
     save()
     return true
-  })
-
-  ipcMain.handle('rl:esports-events', async () => {
-    const key = 'events'
-    const cached = getCached(key)
-    if (cached) return { ok: true, data: cached }
-    try {
-      const data = await octaneFetch('/events?tier=S&tier=A&sort=start_date&order=desc&perPage=16')
-      setCached(key, data, 30 * 60 * 1000)
-      return { ok: true, data }
-    } catch (e) {
-      return { ok: false, error: String(e) }
-    }
-  })
-
-  ipcMain.handle('rl:esports-players', async () => {
-    const key = 'players'
-    const cached = getCached(key)
-    if (cached) return { ok: true, data: cached }
-    try {
-      const data = await octaneFetch('/players?page=1&perPage=24')
-      setCached(key, data, 60 * 60 * 1000)
-      return { ok: true, data }
-    } catch (e) {
-      return { ok: false, error: String(e) }
-    }
   })
 
   ipcMain.handle('rl:twitch-live', async (_e, logins: string[]) => {

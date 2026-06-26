@@ -1351,18 +1351,70 @@ function buildApi(): any {
       },
     },
 
-    // ── Rocket League (desktop-only via Electron IPC) ─────────────────────
+    // ── Rocket League ─────────────────────────────────────────────────────
     rocketLeague: {
       search: async (query: string) =>
         _electronApi?.rocketLeague.search(query) ?? { ok: false, error: 'Desktop only' },
       getProfile: async (platform: string, username: string) =>
         _electronApi?.rocketLeague.getProfile(platform, username) ?? { ok: false, error: 'Desktop only' },
-      addSession: async (data: object) =>
-        _electronApi?.rocketLeague.addSession(data),
-      listSessions: async (limit?: number) =>
-        _electronApi?.rocketLeague.listSessions(limit) ?? [],
-      deleteSession: async (id: number) =>
-        _electronApi?.rocketLeague.deleteSession(id),
+      // Sessions and presets: use Electron/SQLite on desktop (preserves existing data),
+      // fall back to Supabase on mobile (requires migration 007_rocket_league.sql).
+      addSession: async (data: object) => {
+        if (_electronApi) return _electronApi.rocketLeague.addSession(data)
+        const row = data as Record<string, unknown>
+        const { error } = await supabase.from('rocket_league_sessions').insert({
+          user_id: uid(),
+          date: row.date,
+          start_mmr: row.start_mmr,
+          end_mmr: row.end_mmr,
+          mmr_gain: (row.end_mmr as number) - (row.start_mmr as number),
+          matches: row.matches ?? 0,
+          wins: row.wins ?? 0,
+          notes: row.notes ?? null,
+          preset_id: row.preset_id ?? null,
+        })
+        if (error) throw new Error(error.message)
+      },
+      listSessions: async (limit?: number) => {
+        if (_electronApi) return _electronApi.rocketLeague.listSessions(limit)
+        let q = supabase.from('rocket_league_sessions')
+          .select('*').eq('user_id', uid()).order('date', { ascending: false }).order('id', { ascending: false })
+        if (limit) q = q.limit(limit)
+        const { data } = await q
+        return data ?? []
+      },
+      deleteSession: async (id: number) => {
+        if (_electronApi) return _electronApi.rocketLeague.deleteSession(id)
+        await supabase.from('rocket_league_sessions').delete().eq('id', id).eq('user_id', uid())
+      },
+      savePreset: async (data: object) => {
+        if (_electronApi) return _electronApi.rocketLeague.savePreset(data)
+        const row = data as { name: string; slots: string }
+        const { data: inserted, error } = await supabase.from('rl_car_presets')
+          .insert({ user_id: uid(), name: row.name, slots: row.slots })
+          .select('id').single()
+        if (error) throw new Error(error.message)
+        return inserted?.id
+      },
+      listPresets: async () => {
+        if (_electronApi) return _electronApi.rocketLeague.listPresets()
+        const { data } = await supabase.from('rl_car_presets')
+          .select('*').eq('user_id', uid()).order('id', { ascending: false })
+        return data ?? []
+      },
+      deletePreset: async (id: number) => {
+        if (_electronApi) return _electronApi.rocketLeague.deletePreset(id)
+        await supabase.from('rl_car_presets').delete().eq('id', id).eq('user_id', uid())
+        return true
+      },
+      twitchLive: async (logins: string[]) =>
+        _electronApi?.rocketLeague.twitchLive(logins) ?? { ok: false, error: 'Desktop only' },
+      twitchOAuth: async () =>
+        _electronApi?.rocketLeague.twitchOAuth() ?? Promise.reject(new Error('Desktop only')),
+      twitchFollowed: async (userToken: string, userId: string) =>
+        _electronApi?.rocketLeague.twitchFollowed(userToken, userId) ?? { ok: false, error: 'Desktop only' },
+      openUrl: async (url: string) =>
+        _electronApi?.rocketLeague.openUrl(url),
     },
 
     volleyball: {
@@ -1384,6 +1436,25 @@ function buildApi(): any {
       add: async (data: object) => _electronApi?.basketball.add(data),
       delete: async (id: number) => _electronApi?.basketball.delete(id),
       stats: async () => _electronApi?.basketball.stats() ?? { total: 0, games: 0, trainings: 0, wins: 0, losses: 0, avgPoints: 0, avgRebounds: 0, avgAssists: 0 },
+    },
+
+    // ── User Settings ──────────────────────────────────────────────────────
+    settings: {
+      get: async (key: string) => {
+        const { data } = await supabase.from('user_settings')
+          .select('value').eq('user_id', uid()).eq('key', key).maybeSingle()
+        return data?.value ?? null
+      },
+      set: async (key: string, value: unknown) => {
+        if (value === null || value === undefined) {
+          await supabase.from('user_settings').delete().eq('user_id', uid()).eq('key', key)
+          return
+        }
+        await supabase.from('user_settings').upsert(
+          { user_id: uid(), key, value, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,key' }
+        )
+      },
     },
 
     demo: { open: async () => {} },

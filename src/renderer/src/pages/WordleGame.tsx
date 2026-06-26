@@ -29,15 +29,15 @@ const WORDS = [
   'TORTA','TRAGO','TRAMA','TRENS','TRIBO','TRIGO','TRONO','TURCO','TURBO','VALOR',
   'VALER','VERDE','VERSO','VESTE','VIOLA','VIRAR','VOLTA','VULTO','ZEBRA','ZEROS',
   'ABALO','ABATE','ACENO','ACIMA','ACNES','ACODE','ACUSA','ADIAR','ADORO','AFETO',
-  'AGACO','AGITO','AGORA','AGUDA','AGUDO','AJUDA','ALCES','ALCOL','ALDEA','ALEIA',
+  'AGACO','AGITO','AGUDA','AGUDO','ALCES','ALCOL','ALDEA','ALEIA',
   'ALETA','ALGAS','ALGOZ','ALIAR','ALMAS','ALOES','ALTOS','AMARA','AMBAS','AMENO',
   'AMORA','AMPLO','ANCAS','ANIMO','ANOSA','ANOTE','ANSIA','APELO','APITO','APNEA',
   'APOIO','ARAME','ARARA','ARDER','AREIA','AROMA','AROTE','ARQUE','ARRAS','ARRIA',
   'ARROZ','ATLAS','ATRAS','ATRIZ','ATUAR','AUDIO','AUTAR','AVARO','AVISO','AVOAR',
   'BAIXO','BALAS','BALSA','BAMBU','BANCA','BANDA','BANHO','BAQUE','BARCA','BARDO',
-  'BARRA','BEIJO','BELAS','BELAS','BERCO','BESTA','BEZER','BICHO','BICOS','BILHA',
-  'BISAO','BOCAS','BOLAR','BOLAR','BOLHA','BOLOR','BONCO','BONUS','BORDO','BOSCO',
-  'BOTAS','BOXEA','BRACO','BRASA','BREVE','BROCA','BRUMA','BRUTA','BURCA','BUSCA',
+  'BARRA','BEIJO','BELAS','BERCO','BESTA','BEZER','BICHO','BICOS','BILHA',
+  'BISAO','BOCAS','BOLAR','BOLHA','BOLOR','BONCO','BONUS','BORDO','BOSCO',
+  'BOTAS','BOXEA','BRACO','BREVE','BROCA','BRUMA','BRUTA','BURCA','BUSCA',
   'CACHO','CACOS','CADEA','CAIMA','CAIRU','CALCE','CALCO','CALDO','CAMPE','CANOS',
   'CAOBA','CAPIM','CAPUZ','CASCA','CASOS','CAVAR','CENAS','CERCA','CERCO','CERTA',
   'CESTA','CHAPA','CHUVA','CIMAR','CINCO','CINZA','CITAR','CLIPE','CLONE','COCOA',
@@ -148,25 +148,49 @@ interface SavedState {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function WordleGame(): React.JSX.Element {
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const [today, setToday] = useState(format(new Date(), 'yyyy-MM-dd'))
   const storageKey = `habitos_wordle_${today}`
   const answer = useMemo(() => getDailyWord(today), [today])
   const { grantXP } = useProfileStore()
-  const dateLabel = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
+  const dateLabel = useMemo(() => {
+    const [y, m, d] = today.split('-').map(Number)
+    return format(new Date(y, m - 1, d), "EEEE, d 'de' MMMM", { locale: ptBR })
+  }, [today])
 
-  const loadState = (): SavedState => {
+  function loadStateForKey(key: string): SavedState {
     try {
-      const s = JSON.parse(localStorage.getItem(storageKey) || '{}') as Partial<SavedState>
+      const s = JSON.parse(localStorage.getItem(key) || '{}') as Partial<SavedState>
       if (s.guesses && s.results && s.status) return s as SavedState
     } catch { /* empty */ }
     return { guesses: [], results: [], status: 'playing' }
   }
 
-  const [state, setState] = useState<SavedState>(loadState)
+  const [state, setState] = useState<SavedState>(() => loadStateForKey(storageKey))
   const [current, setCurrent] = useState('')
   const [shake, setShake] = useState(false)
   const [reveal, setReveal] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
+  const cloudLoaded = useRef(false)
+
+  // Detect day change when window regains focus (Electron keeps window in memory)
+  useEffect(() => {
+    function onFocus() {
+      const now = format(new Date(), 'yyyy-MM-dd')
+      if (now !== today) setToday(now)
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [today])
+
+  // When day changes, reset game to the new day's state
+  useEffect(() => {
+    setState(loadStateForKey(storageKey))
+    setCurrent('')
+    setShake(false)
+    setReveal(null)
+    setErrorMsg('')
+    cloudLoaded.current = false
+  }, [storageKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // persist to localStorage
   useEffect(() => {
@@ -174,7 +198,6 @@ export default function WordleGame(): React.JSX.Element {
   }, [state, storageKey])
 
   // cloud sync: restore from cloud on mount if localStorage was empty (e.g. fresh install)
-  const cloudLoaded = useRef(false)
   useEffect(() => {
     if (cloudLoaded.current) return
     if (state.guesses.length > 0 || state.status !== 'playing') return // already have data
@@ -187,7 +210,7 @@ export default function WordleGame(): React.JSX.Element {
         localStorage.setItem(storageKey, JSON.stringify(s))
       }
     })
-  }, [])
+  }, [storageKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // cloud sync: save on every meaningful state change
   useEffect(() => {

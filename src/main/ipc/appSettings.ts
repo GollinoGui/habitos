@@ -62,7 +62,9 @@ export function registerAppSettingsHandlers(): void {
       workout_program_days: dbAll('SELECT * FROM workout_program_days'),
       workout_program_exercises: dbAll('SELECT * FROM workout_program_exercises'),
       xp_history: dbAll('SELECT * FROM xp_history ORDER BY created_at DESC LIMIT 500'),
-      achievements: dbAll('SELECT * FROM achievements')
+      achievements: dbAll('SELECT * FROM achievements'),
+      rocket_league_sessions: dbAll('SELECT * FROM rocket_league_sessions ORDER BY date DESC, id DESC'),
+      rl_car_presets: dbAll('SELECT * FROM rl_car_presets ORDER BY id DESC'),
     }
     return JSON.stringify(data, null, 2)
   })

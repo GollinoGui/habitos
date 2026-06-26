@@ -188,8 +188,6 @@ declare global {
         savePreset: (data: object) => Promise<number>
         listPresets: () => Promise<unknown[]>
         deletePreset: (id: number) => Promise<boolean>
-        esportsEvents: () => Promise<{ ok: boolean; data?: unknown; error?: string }>
-        esportsPlayers: () => Promise<{ ok: boolean; data?: unknown; error?: string }>
         twitchLive: (logins: string[]) => Promise<{ ok: boolean; data?: unknown[]; error?: string }>
         twitchOAuth: () => Promise<{ access_token: string; refresh_token: string; expires_in: number; user_id: string; user_login: string; user_name: string; profile_image_url: string }>
         twitchFollowed: (userToken: string, userId: string) => Promise<{ ok: boolean; followed?: unknown[]; streams?: unknown[]; error?: string }>
@@ -212,6 +210,10 @@ declare global {
         add: (data: object) => Promise<number>
         delete: (id: number) => Promise<boolean>
         stats: () => Promise<{ total: number; games: number; trainings: number; wins: number; losses: number; avgPoints: number; avgRebounds: number; avgAssists: number }>
+      }
+      settings?: {
+        get: (key: string) => Promise<unknown>
+        set: (key: string, value: unknown) => Promise<void>
       }
       demo: { open: () => Promise<void> }
       db: { setUser: (userId: string | null) => Promise<void> }

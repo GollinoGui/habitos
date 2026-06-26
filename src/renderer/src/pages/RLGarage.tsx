@@ -97,11 +97,145 @@ const GARAGE_STYLES = `
   .rlg-rbtn.sel      { transform: scale(1.08); }
 `
 
+// ── Hitbox system ─────────────────────────────────────────────────────────────
+
+type HitboxType = 'octane' | 'dominus' | 'plank' | 'breakout' | 'hybrid'
+
+const HITBOX_MAP: Record<string, HitboxType> = {
+  // Octane
+  Octane: 'octane', Backfire: 'octane', Gizmo: 'octane', Marauder: 'octane',
+  Scarab: 'octane', Takumi: 'octane', 'Takumi RX-T': 'octane', Triton: 'octane',
+  Zippy: 'octane', Fennec: 'octane', Dingo: 'octane', 'Twin Mill III': 'octane',
+  // Dominus
+  Dominus: 'dominus', 'Jäger 619 RS': 'dominus', 'Chikara GXT': 'dominus',
+  'Peregrine TT': 'dominus', Vulcan: 'dominus', Aftershock: 'dominus',
+  Esper: 'dominus', Diestro: 'dominus', GT500: 'dominus', Twinzer: 'dominus',
+  Delorean: 'dominus', 'Artemis G1-X': 'dominus', 'Tyranno GXT': 'dominus',
+  'Harbinger GXT': 'dominus', Nexus: 'dominus',
+  // Plank
+  Batmobile: 'plank', Mantis: 'plank', 'Centio V17': 'plank',
+  'Maverick GXT': 'plank', Nimbus: 'plank', 'Ronin GXT': 'plank',
+  // Breakout
+  Breakout: 'breakout', 'Animus GP': 'breakout', Cyclone: 'breakout',
+  'Imperator DT5': 'breakout', Werewolf: 'breakout', 'Road Hog': 'breakout',
+  'Road Hog XL': 'breakout', Endo: 'breakout', 'Octane ZSR': 'breakout',
+  'Breakout Type-S': 'breakout', Boneshaker: 'breakout',
+  // Hybrid
+  Merc: 'hybrid', 'Mudcat GXT': 'hybrid', Hotshot: 'hybrid',
+  Paladin: 'hybrid', 'X-Devil': 'hybrid', Venom: 'hybrid',
+  'Growler GXT': 'hybrid', 'Nexus SC': 'hybrid',
+}
+
+interface CarProfile {
+  body: string; hood: string; bump: string
+  fWind: string; roof: string; rWind: string; rBump: string
+  wheels: number[][]; wheelW: number; wheelH: number
+  exhausts: number[][]
+  flames: number[][]
+  glow: [number, number, number]
+  decal: string
+  hitboxLabel: string
+  highlights: number[][]
+}
+
+const CAR_PROFILES: Record<HitboxType, CarProfile> = {
+  octane: {
+    body:  'M34,14 L66,14 L76,22 L78,108 Q50,123 22,108 L24,22 Z',
+    hood:  'M38,8 L62,8 L66,14 L34,14 Z',
+    bump:  'M41,5 L59,5 L62,8 L38,8 Z',
+    fWind: 'M37,22 L63,22 L61,46 L39,46 Z',
+    roof:  'M39,46 L61,46 L61,96 L39,96 Z',
+    rWind: 'M39,96 L61,96 L63,116 L37,116 Z',
+    rBump: 'M37,116 L63,116 L65,121 L35,121 Z',
+    wheels: [[10,26],[75,26],[10,108],[75,108]],
+    wheelW: 15, wheelH: 26,
+    exhausts: [[39,121,9,5],[52,121,9,5]],
+    flames: [[43.5,133,4,8.5],[56.5,133,4,8.5]],
+    glow: [50, 155, 26],
+    decal: 'M46,5 L54,5 L57,122 L43,122 Z',
+    hitboxLabel: 'Octane',
+    highlights: [[24,22,22,108],[76,22,78,108]],
+  },
+  dominus: {
+    body:  'M28,18 L72,18 L83,26 L83,105 Q50,118 17,105 L17,26 Z',
+    hood:  'M32,11 L68,11 L72,18 L28,18 Z',
+    bump:  'M36,7 L64,7 L68,11 L32,11 Z',
+    fWind: 'M30,26 L70,26 L68,48 L32,48 Z',
+    roof:  'M32,48 L68,48 L68,96 L32,96 Z',
+    rWind: 'M32,96 L68,96 L70,110 L30,110 Z',
+    rBump: 'M30,110 L70,110 L72,115 L28,115 Z',
+    wheels: [[3,28],[82,28],[3,100],[82,100]],
+    wheelW: 14, wheelH: 24,
+    exhausts: [[33,115,12,5],[55,115,12,5]],
+    flames: [[39,127,5,8],[61,127,5,8]],
+    glow: [50, 148, 30],
+    decal: 'M45,7 L55,7 L57,113 L43,113 Z',
+    hitboxLabel: 'Dominus',
+    highlights: [[17,26,17,105],[83,26,83,105]],
+  },
+  plank: {
+    body:  'M24,28 L76,28 L90,36 L90,96 Q50,107 10,96 L10,36 Z',
+    hood:  'M28,21 L72,21 L76,28 L24,28 Z',
+    bump:  'M32,17 L68,17 L72,21 L28,21 Z',
+    fWind: 'M26,36 L74,36 L72,54 L28,54 Z',
+    roof:  'M28,54 L72,54 L72,86 L28,86 Z',
+    rWind: 'M28,86 L72,86 L74,99 L26,99 Z',
+    rBump: 'M26,99 L74,99 L76,104 L24,104 Z',
+    wheels: [[-1,36],[87,36],[-1,88],[87,88]],
+    wheelW: 13, wheelH: 22,
+    exhausts: [[30,104,14,5],[56,104,14,5]],
+    flames: [[37,116,5,7],[63,116,5,7]],
+    glow: [50, 136, 36],
+    decal: 'M45,17 L55,17 L57,102 L43,102 Z',
+    hitboxLabel: 'Plank',
+    highlights: [[10,36,10,96],[90,36,90,96]],
+  },
+  breakout: {
+    body:  'M34,8 L66,8 L76,16 L78,115 Q50,130 22,115 L24,16 Z',
+    hood:  'M38,2 L62,2 L66,8 L34,8 Z',
+    bump:  'M42,0 L58,0 L62,2 L38,2 Z',
+    fWind: 'M37,16 L63,16 L61,38 L39,38 Z',
+    roof:  'M39,38 L61,38 L61,102 L39,102 Z',
+    rWind: 'M39,102 L61,102 L63,122 L37,122 Z',
+    rBump: 'M37,122 L63,122 L65,127 L35,127 Z',
+    wheels: [[10,20],[75,20],[10,110],[75,110]],
+    wheelW: 15, wheelH: 26,
+    exhausts: [[39,127,9,5],[52,127,9,5]],
+    flames: [[43.5,139,4,9],[56.5,139,4,9]],
+    glow: [50, 161, 24],
+    decal: 'M46,0 L54,0 L57,126 L43,126 Z',
+    hitboxLabel: 'Breakout',
+    highlights: [[24,16,22,115],[76,16,78,115]],
+  },
+  hybrid: {
+    body:  'M31,16 L69,16 L79,24 L80,106 Q50,120 20,106 L21,24 Z',
+    hood:  'M35,9 L65,9 L69,16 L31,16 Z',
+    bump:  'M38,6 L62,6 L65,9 L35,9 Z',
+    fWind: 'M34,24 L66,24 L64,46 L36,46 Z',
+    roof:  'M36,46 L64,46 L64,96 L36,96 Z',
+    rWind: 'M36,96 L64,96 L66,112 L34,112 Z',
+    rBump: 'M34,112 L66,112 L68,117 L32,117 Z',
+    wheels: [[7,24],[78,24],[7,103],[78,103]],
+    wheelW: 15, wheelH: 25,
+    exhausts: [[37,117,10,5],[53,117,10,5]],
+    flames: [[42,129,4,8.5],[58,129,4,8.5]],
+    glow: [50, 151, 28],
+    decal: 'M46,6 L54,6 L57,116 L43,116 Z',
+    hitboxLabel: 'Hybrid',
+    highlights: [[21,24,20,106],[79,24,80,106]],
+  },
+}
+
+function getHitbox(bodyName?: string): HitboxType {
+  if (!bodyName) return 'octane'
+  return HITBOX_MAP[bodyName] ?? 'octane'
+}
+
 // ── Car SVG Preview ──────────────────────────────────────────────────────────
 
 function CarPreview({ build }: { build: Record<string, RLCarSlot> }): React.JSX.Element {
-  const g     = (k: string) => build[k] ? getRarityDef(build[k].rarity) : null
-  const col   = (k: string, def: string) => g(k)?.color ?? def
+  const g   = (k: string) => build[k] ? getRarityDef(build[k].rarity) : null
+  const col = (k: string, def: string) => g(k)?.color ?? def
 
   const bodyCol  = col('body',   '#1e3a5f')
   const wheelCol = col('wheels', '#4a4a5a')
@@ -111,14 +245,18 @@ function CarPreview({ build }: { build: Record<string, RLCarSlot> }): React.JSX.
   const bmBody  = build['body']?.rarity  === 'black_market'
   const bmBoost = build['boost']?.rarity === 'black_market'
 
+  const hitbox = getHitbox(build['body']?.name)
+  const p = CAR_PROFILES[hitbox]
+  const { wheelW: ww, wheelH: wh } = p
+
   return (
     <div style={{ position: 'relative', width: 88, height: 140 }}>
       <div className={bmBody ? 'rlg-bm' : ''} style={{ position: 'absolute', inset: 0 }}>
         <svg viewBox="0 0 100 160" width={88} height={140} style={{ overflow: 'visible' }}>
           <defs>
             <radialGradient id="rlg-bg" cx="50%" cy="35%" r="65%">
-              <stop offset="0%"   stopColor={bodyCol} stopOpacity="1"    />
-              <stop offset="100%" stopColor={bodyCol} stopOpacity="0.7"  />
+              <stop offset="0%"   stopColor={bodyCol} stopOpacity="1"   />
+              <stop offset="100%" stopColor={bodyCol} stopOpacity="0.7" />
             </radialGradient>
             <linearGradient id="rlg-wf" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%"   stopColor="rgba(160,225,255,0.55)" />
@@ -137,72 +275,68 @@ function CarPreview({ build }: { build: Record<string, RLCarSlot> }): React.JSX.
 
           {/* Boost ground glow */}
           <ellipse
-            cx="50" cy="155" rx="26" ry="10"
+            cx={p.glow[0]} cy={p.glow[1]} rx={p.glow[2]} ry="10"
             fill="url(#rlg-bstg)"
-            style={{ animation: 'rlg-boost 1.35s ease-in-out infinite', transformOrigin: '50px 155px' }}
+            style={{ animation: 'rlg-boost 1.35s ease-in-out infinite', transformOrigin: `${p.glow[0]}px ${p.glow[1]}px` }}
           />
 
           {/* Wheels — dark outer + colored rim */}
-          {[[10,26],[75,26],[10,108],[75,108]].map(([x,y],i) => (
+          {p.wheels.map(([x, y], i) => (
             <g key={i}>
-              <rect x={x}   y={y}   width={15} height={26} rx={5} fill="#0e0e0e" />
-              <rect x={x+2} y={y+2} width={11} height={22} rx={4} fill={wheelCol} />
-              <rect x={x+4} y={y+6} width={7}  height={14} rx={3} fill="rgba(0,0,0,0.4)" />
+              <rect x={x}   y={y}   width={ww}     height={wh}     rx={5} fill="#0e0e0e" />
+              <rect x={x+2} y={y+2} width={ww-4}   height={wh-4}   rx={4} fill={wheelCol} />
+              <rect x={x+4} y={y+6} width={ww-8}   height={wh-12}  rx={3} fill="rgba(0,0,0,0.4)" />
             </g>
           ))}
 
           {/* Main body */}
-          <path d="M34,14 L66,14 L76,22 L78,108 Q50,123 22,108 L24,22 Z" fill="url(#rlg-bg)" />
+          <path d={p.body} fill="url(#rlg-bg)" />
 
-          {/* Hood / front section */}
-          <path d="M38,8  L62,8  L66,14 L34,14 Z" fill={bodyCol} opacity="0.88" />
-          {/* Front bumper lip */}
-          <path d="M41,5  L59,5  L62,8  L38,8  Z" fill={bodyCol} opacity="0.58" />
+          {/* Hood */}
+          <path d={p.hood} fill={bodyCol} opacity="0.88" />
+          {/* Front bumper */}
+          <path d={p.bump} fill={bodyCol} opacity="0.58" />
 
-          {/* Decal center stripe */}
-          {decalDef && (
-            <path
-              d="M46,5 L54,5 L57,122 L43,122 Z"
-              fill={decalDef.color}
-              opacity="0.48"
-            />
-          )}
+          {/* Decal stripe */}
+          {decalDef && <path d={p.decal} fill={decalDef.color} opacity="0.48" />}
 
           {/* Front windshield */}
-          <path d="M37,22 L63,22 L61,46 L39,46 Z" fill="url(#rlg-wf)" />
+          <path d={p.fWind} fill="url(#rlg-wf)" />
 
           {/* Roof panel */}
-          <path d="M39,46 L61,46 L61,96 L39,96 Z" fill={bodyCol} opacity="0.55" />
+          <path d={p.roof} fill={bodyCol} opacity="0.55" />
 
           {/* Rear windshield */}
-          <path d="M39,96 L61,96 L63,116 L37,116 Z" fill="url(#rlg-wr)" />
+          <path d={p.rWind} fill="url(#rlg-wr)" />
 
           {/* Side highlight edges */}
-          <path d="M24,22 L22,108" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" fill="none" />
-          <path d="M76,22 L78,108" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" fill="none" />
+          {p.highlights.map(([x1, y1, x2, y2], i) => (
+            <path key={i} d={`M${x1},${y1} L${x2},${y2}`} stroke="rgba(255,255,255,0.10)" strokeWidth="1.5" fill="none" />
+          ))}
 
           {/* Rear bumper */}
-          <path d="M37,116 L63,116 L65,121 L35,121 Z" fill={bodyCol} opacity="0.62" />
+          <path d={p.rBump} fill={bodyCol} opacity="0.62" />
 
           {/* Exhaust ports */}
-          <rect x="39" y="121" width="9" height="5" rx="2.5" fill="#111" />
-          <rect x="52" y="121" width="9" height="5" rx="2.5" fill="#111" />
+          {p.exhausts.map(([x, y, w, h], i) => (
+            <rect key={i} x={x} y={y} width={w} height={h} rx={2.5} fill="#111" />
+          ))}
 
           {/* Boost flames */}
-          <ellipse
-            cx="43.5" cy="133" rx="4"   ry="8.5"
-            fill={bmBoost ? '#ec4899' : boostCol}
-            opacity="0.9"
-            className={bmBoost ? 'rlg-bm' : ''}
-            style={{ animation: 'rlg-boost 1s ease-in-out infinite', transformOrigin: '43.5px 122px' }}
-          />
-          <ellipse
-            cx="56.5" cy="133" rx="4"   ry="8.5"
-            fill={bmBoost ? '#ec4899' : boostCol}
-            opacity="0.9"
-            className={bmBoost ? 'rlg-bm' : ''}
-            style={{ animation: 'rlg-boost 1.1s ease-in-out infinite', transformOrigin: '56.5px 122px', animationDelay: '0.22s' }}
-          />
+          {p.flames.map(([cx, cy, rx, ry], i) => (
+            <ellipse
+              key={i}
+              cx={cx} cy={cy} rx={rx} ry={ry}
+              fill={bmBoost ? '#ec4899' : boostCol}
+              opacity="0.9"
+              className={bmBoost ? 'rlg-bm' : ''}
+              style={{
+                animation: `rlg-boost ${1 + i * 0.1}s ease-in-out infinite`,
+                transformOrigin: `${cx}px ${cy - ry}px`,
+                animationDelay: i > 0 ? '0.22s' : undefined,
+              }}
+            />
+          ))}
         </svg>
       </div>
     </div>
@@ -688,6 +822,15 @@ export default function RLGarage({ onPresetsChange }: RLGarageProps): React.JSX.
               style={{ background: 'rgba(0,0,0,0.15)' }}
             >
               <CarPreview build={currentBuild} />
+              {/* Hitbox badge */}
+              {currentBuild['body'] && (
+                <div className="mt-2 text-center">
+                  <span className="text-[10px] text-text-muted">Hitbox: </span>
+                  <span className="text-[10px] font-bold" style={{ color: '#f97316' }}>
+                    {CAR_PROFILES[getHitbox(currentBuild['body']?.name)].hitboxLabel}
+                  </span>
+                </div>
+              )}
               {selectedPreset !== null && (
                 <div className="mt-3 text-center">
                   <div className="text-[10px] text-text-muted">Preset ativo</div>

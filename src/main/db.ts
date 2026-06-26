@@ -309,6 +309,14 @@ function createTables(): void {
       matches INTEGER DEFAULT 0,
       wins INTEGER DEFAULT 0,
       notes TEXT,
+      preset_id INTEGER DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS rl_car_presets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      slots TEXT NOT NULL DEFAULT '{}',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -464,6 +472,10 @@ function runMigrations(): void {
   }
   if (!btCols.find((c: Record<string, unknown>) => c.name === 'tournament_stage')) {
     db.run('ALTER TABLE beach_tennis_sessions ADD COLUMN tournament_stage TEXT DEFAULT NULL')
+  }
+  const rlSessionCols = dbAll('PRAGMA table_info(rocket_league_sessions)')
+  if (!rlSessionCols.find((c: Record<string, unknown>) => c.name === 'preset_id')) {
+    db.run('ALTER TABLE rocket_league_sessions ADD COLUMN preset_id INTEGER DEFAULT NULL')
   }
 }
 

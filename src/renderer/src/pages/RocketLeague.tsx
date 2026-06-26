@@ -213,25 +213,6 @@ function getCurrentStreak(sessions: RLSession[]): number {
 
 // ── Esports Types ─────────────────────────────────────────────────────────────
 
-interface OctaneEvent {
-  _id: string
-  name: string
-  tier: string
-  region: string
-  startDate?: string
-  endDate?: string
-  prize?: { amount: number; currency: string }
-  image?: string
-}
-
-interface OctanePlayer {
-  _id: string
-  tag: string
-  name?: string
-  country?: string
-  team?: { team?: { name?: string } }
-}
-
 interface TwitchStream {
   user_login: string
   user_name: string
@@ -265,35 +246,33 @@ const DEFAULT_STREAMERS: RLStreamer[] = [
   { name: 'Crispy', login: 'crispymcpuffin' },
 ]
 
-const TIER_STYLE: Record<string, { label: string; color: string }> = {
-  S: { label: 'S-Tier', color: '#f59e0b' },
-  A: { label: 'A-Tier', color: '#94a3b8' },
-  B: { label: 'B-Tier', color: '#cd7f32' },
-  C: { label: 'C-Tier', color: '#6b7280' },
-}
+const PRO_PLAYERS: { tag: string; name: string; country: string; team: string }[] = [
+  { tag: 'jstn',         name: 'Justin Morales',     country: 'US', team: 'NRG' },
+  { tag: 'Squishy',      name: 'Mariano Arruda',     country: 'US', team: 'NRG' },
+  { tag: 'GarrettG',     name: 'Garrett Gordon',     country: 'US', team: 'NRG' },
+  { tag: 'Fairy Peak',   name: 'Victor Locquet',     country: 'FR', team: 'Karmine Corp' },
+  { tag: 'Kaydop',       name: 'Alexandre Courant',  country: 'FR', team: 'Karmine Corp' },
+  { tag: 'Alpha54',      name: 'Yacine Benjaa',      country: 'FR', team: 'Karmine Corp' },
+  { tag: 'M0nkey M00n',  name: 'Théo Theron',        country: 'FR', team: 'Team BDS' },
+  { tag: 'AztraL',       name: 'Gabriel Amos',       country: 'FR', team: 'Team BDS' },
+  { tag: 'Arsenal',      name: 'Jacob Morrow',       country: 'US', team: 'Spacestation' },
+  { tag: 'Firstkiller',  name: 'Marcelino Nunez',    country: 'US', team: 'Spacestation' },
+  { tag: 'Sizz',         name: 'Kevin Hecker',       country: 'US', team: 'Spacestation' },
+  { tag: 'Crispy',       name: 'Ethan Ebro',         country: 'US', team: 'Complexity' },
+  { tag: 'Atomic',       name: 'Aaron Zaret',        country: 'US', team: 'Complexity' },
+  { tag: 'Scrub Killa',  name: 'Brandon Morais',     country: 'GB', team: 'Various' },
+  { tag: 'ViolentPanda', name: 'Remco den Boer',     country: 'NL', team: 'Retired' },
+  { tag: 'Turbopolsa',   name: 'Pierre Silfver',     country: 'SE', team: 'Retired' },
+  { tag: 'Musty',        name: 'Amustycow',          country: 'US', team: 'Content Creator' },
+  { tag: 'Lethamyr',     name: 'Wyatt Troutt',       country: 'US', team: 'Content Creator' },
+  { tag: 'Sunless Khan', name: 'Wyatt',              country: 'US', team: 'Content Creator' },
+  { tag: 'Klassux',      name: 'Kyle',               country: 'US', team: 'Content Creator' },
+  { tag: 'Rizzo',        name: 'Kyle Rizzo',         country: 'CA', team: 'Content Creator' },
+]
 
-const REGION_LABEL: Record<string, string> = {
-  INT: 'Mundial', NA: 'América do Norte', EU: 'Europa',
-  SAM: 'América do Sul', MENA: 'Oriente Médio',
-  APAC: 'Ásia-Pacífico', OCE: 'Oceania', SSA: 'África',
-}
-
-function countryFlag(code?: string): string {
-  if (!code || code.length < 2) return '🌍'
+function countryFlag(code: string): string {
   const base = 0x1F1E6 - 65
   return String.fromCodePoint(...code.toUpperCase().slice(0, 2).split('').map(c => base + c.charCodeAt(0)))
-}
-
-function formatPrize(amount?: number): string {
-  if (!amount) return ''
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace('.0', '')}M`
-  if (amount >= 1_000) return `$${Math.round(amount / 1_000)}k`
-  return `$${amount}`
-}
-
-function fmtDate(iso?: string): string {
-  if (!iso) return ''
-  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 }
 
 function fmtViewers(n: number): string {
@@ -312,9 +291,9 @@ function RLEsportsTab(): React.JSX.Element {
   const hasApi = !!(window.api?.rocketLeague)
 
   // ── OAuth user ────────────────────────────────────────────────────────────
-  const [userToken, setUserToken]         = useState(() => localStorage.getItem('rl_twitch_user_token') ?? '')
-  const [userId, setUserId]               = useState(() => localStorage.getItem('rl_twitch_user_id') ?? '')
-  const [userName, setUserName]           = useState(() => localStorage.getItem('rl_twitch_user_name') ?? '')
+  const [userToken, setUserToken]         = useState('')
+  const [userId, setUserId]               = useState('')
+  const [userName, setUserName]           = useState('')
   const [loadingOAuth, setLoadingOAuth]   = useState(false)
   const [oauthError, setOauthError]       = useState('')
   const [followed, setFollowed]           = useState<Array<{ broadcaster_login: string; broadcaster_name: string }>>([])
@@ -323,15 +302,9 @@ function RLEsportsTab(): React.JSX.Element {
   const [followedError, setFollowedError]     = useState('')
 
   // ── Curated / custom list ─────────────────────────────────────────────────
-  const [selectedLogins, setSelectedLogins] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem('rl_streamers_selected')
-      return saved ? new Set(JSON.parse(saved) as string[]) : new Set(DEFAULT_STREAMERS.map(s => s.login))
-    } catch { return new Set(DEFAULT_STREAMERS.map(s => s.login)) }
-  })
-  const [customStreamers, setCustomStreamers] = useState<RLStreamer[]>(() => {
-    try { return JSON.parse(localStorage.getItem('rl_streamers_custom') ?? '[]') } catch { return [] }
-  })
+  const [selectedLogins, setSelectedLogins] = useState<Set<string>>(new Set(DEFAULT_STREAMERS.map(s => s.login)))
+  const [customStreamers, setCustomStreamers] = useState<RLStreamer[]>([])
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [showManage, setShowManage] = useState(false)
   const [addInput, setAddInput]     = useState('')
   const [liveStreams,     setLiveStreams]     = useState<TwitchStream[]>([])
@@ -339,41 +312,11 @@ function RLEsportsTab(): React.JSX.Element {
   const [liveError,      setLiveError]      = useState('')
   const [twitchNotSetup, setTwitchNotSetup] = useState(false)
 
-  // ── Octane ────────────────────────────────────────────────────────────────
-  const [events, setEvents]   = useState<OctaneEvent[]>([])
-  const [players, setPlayers] = useState<OctanePlayer[]>([])
-  const [loadingEv, setLoadingEv] = useState(false)
-  const [loadingPl, setLoadingPl] = useState(false)
-  const [evError, setEvError] = useState('')
-  const [plError, setPlError] = useState('')
-
   const fetchLiveRef     = useRef<(() => Promise<void>) | null>(null)
   const fetchFollowedRef = useRef<(() => Promise<void>) | null>(null)
 
   const allStreamers  = [...DEFAULT_STREAMERS, ...customStreamers]
   const activeLogins  = allStreamers.filter(s => selectedLogins.has(s.login))
-
-  async function fetchEvents() {
-    if (!hasApi) return
-    setLoadingEv(true); setEvError('')
-    try {
-      const res = await window.api!.rocketLeague!.esportsEvents() as { ok: boolean; data?: { events?: OctaneEvent[] } }
-      if (res.ok && res.data?.events) setEvents(res.data.events)
-      else setEvError('Não foi possível carregar torneios.')
-    } catch { setEvError('Erro ao buscar torneios.') }
-    finally { setLoadingEv(false) }
-  }
-
-  async function fetchPlayers() {
-    if (!hasApi) return
-    setLoadingPl(true); setPlError('')
-    try {
-      const res = await window.api!.rocketLeague!.esportsPlayers() as { ok: boolean; data?: { players?: OctanePlayer[] } }
-      if (res.ok && res.data?.players) setPlayers(res.data.players)
-      else setPlError('Não foi possível carregar jogadores.')
-    } catch { setPlError('Erro ao buscar jogadores.') }
-    finally { setLoadingPl(false) }
-  }
 
   async function fetchLive(logins = activeLogins.map(s => s.login)) {
     if (!hasApi || !logins.length) return
@@ -409,11 +352,32 @@ function RLEsportsTab(): React.JSX.Element {
   fetchLiveRef.current     = () => fetchLive()
   fetchFollowedRef.current = () => fetchFollowed()
 
+  // Load all persisted settings from Supabase on mount
   useEffect(() => {
-    fetchEvents(); fetchPlayers()
+    if (!window.api?.settings) { setSettingsLoaded(true); return }
+    Promise.all([
+      window.api.settings.get('rl_twitch_user'),
+      window.api.settings.get('rl_streamers_selected'),
+      window.api.settings.get('rl_streamers_custom'),
+    ]).then(([twitchUser, selected, custom]) => {
+      if (twitchUser) {
+        const u = twitchUser as { token: string; userId: string; userName: string }
+        setUserToken(u.token ?? '')
+        setUserId(u.userId ?? '')
+        setUserName(u.userName ?? '')
+      }
+      if (selected) setSelectedLogins(new Set(selected as string[]))
+      if (custom) setCustomStreamers(custom as RLStreamer[])
+      setSettingsLoaded(true)
+    }).catch(() => setSettingsLoaded(true))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial fetch after settings are loaded from Supabase
+  useEffect(() => {
+    if (!settingsLoaded) return
     fetchLive()
     if (userToken && userId) fetchFollowed()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settingsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -429,10 +393,10 @@ function RLEsportsTab(): React.JSX.Element {
     setLoadingOAuth(true); setOauthError('')
     try {
       const res = await window.api!.rocketLeague!.twitchOAuth()
-      localStorage.setItem('rl_twitch_user_token', res.access_token)
-      localStorage.setItem('rl_twitch_user_refresh', res.refresh_token)
-      localStorage.setItem('rl_twitch_user_id', res.user_id)
-      localStorage.setItem('rl_twitch_user_name', res.user_name)
+      window.api?.settings?.set('rl_twitch_user', {
+        token: res.access_token, refresh: res.refresh_token,
+        userId: res.user_id, userName: res.user_name,
+      })
       setUserToken(res.access_token); setUserId(res.user_id); setUserName(res.user_name)
       fetchFollowed(res.access_token, res.user_id)
     } catch (e) {
@@ -442,8 +406,7 @@ function RLEsportsTab(): React.JSX.Element {
   }
 
   function clearUserSession() {
-    ['rl_twitch_user_token','rl_twitch_user_refresh','rl_twitch_user_id','rl_twitch_user_name']
-      .forEach(k => localStorage.removeItem(k))
+    window.api?.settings?.set('rl_twitch_user', null)
     setUserToken(''); setUserId(''); setUserName('')
     setFollowed([]); setFollowedStreams([])
   }
@@ -454,7 +417,7 @@ function RLEsportsTab(): React.JSX.Element {
     const next = new Set(selectedLogins)
     if (next.has(login)) next.delete(login); else next.add(login)
     setSelectedLogins(next)
-    localStorage.setItem('rl_streamers_selected', JSON.stringify([...next]))
+    window.api?.settings?.set('rl_streamers_selected', [...next])
     const newLogins = [...DEFAULT_STREAMERS, ...customStreamers].filter(s => next.has(s.login)).map(s => s.login)
     if (newLogins.length) fetchLive(newLogins)
   }
@@ -463,17 +426,21 @@ function RLEsportsTab(): React.JSX.Element {
     const login = normalizeLogin(addInput)
     if (!login || allStreamers.some(s => s.login === login)) return
     const updated = [...customStreamers, { name: login, login }]
-    setCustomStreamers(updated); localStorage.setItem('rl_streamers_custom', JSON.stringify(updated))
+    setCustomStreamers(updated)
+    window.api?.settings?.set('rl_streamers_custom', updated)
     const next = new Set(selectedLogins); next.add(login)
-    setSelectedLogins(next); localStorage.setItem('rl_streamers_selected', JSON.stringify([...next]))
+    setSelectedLogins(next)
+    window.api?.settings?.set('rl_streamers_selected', [...next])
     setAddInput('')
   }
 
   function removeCustom(login: string) {
     const updated = customStreamers.filter(s => s.login !== login)
-    setCustomStreamers(updated); localStorage.setItem('rl_streamers_custom', JSON.stringify(updated))
+    setCustomStreamers(updated)
+    window.api?.settings?.set('rl_streamers_custom', updated)
     const next = new Set(selectedLogins); next.delete(login)
-    setSelectedLogins(next); localStorage.setItem('rl_streamers_selected', JSON.stringify([...next]))
+    setSelectedLogins(next)
+    window.api?.settings?.set('rl_streamers_selected', [...next])
   }
 
   const getManualLive   = (login: string) => liveStreams.find(s => s.user_login.toLowerCase() === login.toLowerCase())
@@ -741,114 +708,62 @@ function RLEsportsTab(): React.JSX.Element {
 
       {/* ── Torneios RLCS ────────────────────────────────────────────────────── */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-bg-border">
-          <div className="flex items-center gap-2">
-            <Trophy size={14} style={{ color: '#f59e0b' }} />
-            <span className="text-sm font-semibold text-text-primary">Torneios RLCS</span>
-            <span className="text-xs text-text-muted">via Octane.gg</span>
-          </div>
-          <button onClick={fetchEvents}
-            className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors">
-            <RefreshCw size={12} className={loadingEv ? 'animate-spin' : ''} />
-            Atualizar
-          </button>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-border">
+          <Trophy size={14} style={{ color: '#f59e0b' }} />
+          <span className="text-sm font-semibold text-text-primary">Torneios RLCS</span>
         </div>
-
-        {loadingEv && (
-          <div className="p-10 flex justify-center">
-            <RefreshCw size={20} className="animate-spin text-text-muted" />
+        <div className="p-5 space-y-3">
+          <p className="text-xs text-text-muted">
+            Acompanhe a agenda e resultados oficiais do Rocket League Championship Series.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => window.api!.rocketLeague!.openUrl('https://liquipedia.net/rocketleague/Rocket_League_Championship_Series')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-bg-border text-text-secondary hover:text-text-primary hover:border-yellow-400/50 transition-colors"
+            >
+              <Trophy size={11} style={{ color: '#f59e0b' }} />
+              Liquipedia RLCS
+              <ExternalLink size={10} className="opacity-50" />
+            </button>
+            <button
+              onClick={() => window.api!.rocketLeague!.openUrl('https://www.rocketleague.com/news')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-bg-border text-text-secondary hover:text-text-primary hover:border-orange-400/50 transition-colors"
+            >
+              <Zap size={11} style={{ color: '#f97316' }} />
+              Site Oficial RL
+              <ExternalLink size={10} className="opacity-50" />
+            </button>
+            <button
+              onClick={() => window.api!.rocketLeague!.openUrl('https://start.gg/game/rocket-league/1/tournaments')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-bg-border text-text-secondary hover:text-text-primary hover:border-blue-400/50 transition-colors"
+            >
+              <BookOpen size={11} className="text-blue-400" />
+              Start.gg
+              <ExternalLink size={10} className="opacity-50" />
+            </button>
           </div>
-        )}
-        {evError && !loadingEv && (
-          <p className="p-4 text-sm text-red-400 text-center">{evError}</p>
-        )}
-        {!loadingEv && events.length > 0 && (
-          <div className="divide-y divide-bg-border">
-            {events.map(ev => {
-              const tier = TIER_STYLE[ev.tier] ?? { label: ev.tier, color: '#6b7280' }
-              return (
-                <div key={ev._id} className="flex items-center gap-3 px-4 py-3">
-                  {ev.image ? (
-                    <img src={ev.image} alt="" className="w-10 h-10 rounded-lg object-contain bg-bg-primary shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-bg-primary flex items-center justify-center shrink-0">
-                      <Trophy size={16} style={{ color: tier.color }} />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-text-primary truncate">{ev.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded font-bold shrink-0"
-                        style={{ background: `${tier.color}22`, color: tier.color }}>
-                        {tier.label}
-                      </span>
-                      {ev.prize?.amount ? (
-                        <span className="text-xs font-semibold text-green-400 shrink-0">
-                          {formatPrize(ev.prize.amount)}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-text-muted flex-wrap">
-                      <span>{REGION_LABEL[ev.region] ?? ev.region}</span>
-                      {ev.startDate && (
-                        <span>· {fmtDate(ev.startDate)}{ev.endDate && ev.endDate !== ev.startDate ? ` – ${fmtDate(ev.endDate)}` : ''}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        {!loadingEv && !evError && events.length === 0 && (
-          <p className="p-8 text-center text-xs text-text-muted">Nenhum torneio encontrado.</p>
-        )}
+        </div>
       </div>
 
       {/* ── Pro Players ──────────────────────────────────────────────────────── */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-bg-border">
-          <div className="flex items-center gap-2">
-            <Star size={14} style={{ color: '#f97316' }} />
-            <span className="text-sm font-semibold text-text-primary">Pro Players</span>
-            <span className="text-xs text-text-muted">via Octane.gg</span>
-          </div>
-          <button onClick={fetchPlayers}
-            className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors">
-            <RefreshCw size={12} className={loadingPl ? 'animate-spin' : ''} />
-            Atualizar
-          </button>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-border">
+          <Star size={14} style={{ color: '#f97316' }} />
+          <span className="text-sm font-semibold text-text-primary">Pro Players</span>
+          <span className="text-xs text-text-muted">{PRO_PLAYERS.length} jogadores</span>
         </div>
-
-        {loadingPl && (
-          <div className="p-10 flex justify-center">
-            <RefreshCw size={20} className="animate-spin text-text-muted" />
-          </div>
-        )}
-        {plError && !loadingPl && (
-          <p className="p-4 text-sm text-red-400 text-center">{plError}</p>
-        )}
-        {!loadingPl && players.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-bg-border">
-            {players.map(p => (
-              <div key={p._id} className="bg-bg-secondary px-4 py-3">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-base leading-none shrink-0">{countryFlag(p.country)}</span>
-                  <span className="text-sm font-bold text-text-primary truncate">{p.tag}</span>
-                </div>
-                {p.name && <p className="text-xs text-text-muted truncate">{p.name}</p>}
-                {p.team?.team?.name && (
-                  <p className="text-xs font-medium truncate mt-0.5" style={{ color: '#f97316' }}>
-                    {p.team.team.name}
-                  </p>
-                )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-bg-border">
+          {PRO_PLAYERS.map(p => (
+            <div key={p.tag} className="bg-bg-secondary px-4 py-3">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-base leading-none shrink-0">{countryFlag(p.country)}</span>
+                <span className="text-sm font-bold text-text-primary truncate">{p.tag}</span>
               </div>
-            ))}
-          </div>
-        )}
-        {!loadingPl && !plError && players.length === 0 && (
-          <p className="p-8 text-center text-xs text-text-muted">Nenhum jogador encontrado.</p>
-        )}
+              <p className="text-xs text-text-muted truncate">{p.name}</p>
+              <p className="text-xs font-medium truncate mt-0.5" style={{ color: '#f97316' }}>{p.team}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -950,16 +865,21 @@ export default function RocketLeague(): React.JSX.Element {
   const hasApi = !!(window.api?.rocketLeague)
 
   useEffect(() => {
-    const saved = localStorage.getItem('habitos_rl_profile')
-    if (saved) {
-      try {
-        const p: RLLinkedProfile = JSON.parse(saved)
-        setLinkedProfile(p)
-        fetchProfile(p.platform, p.username)
-      } catch { /* ignore */ }
+    async function init() {
+      if (window.api?.settings) {
+        try {
+          const saved = await window.api.settings.get('rl_linked_profile')
+          if (saved) {
+            const p = saved as RLLinkedProfile
+            setLinkedProfile(p)
+            fetchProfile(p.platform, p.username)
+          }
+        } catch { /* ignore */ }
+      }
+      loadSessions()
+      loadGaragePresets()
     }
-    loadSessions()
-    loadGaragePresets()
+    init()
   }, [])
 
   async function loadGaragePresets() {
@@ -1010,7 +930,7 @@ export default function RocketLeague(): React.JSX.Element {
       const res = await window.api!.rocketLeague!.getProfile(linkPlatform, linkUsername.trim()) as { ok: boolean; data?: RLProfile; error?: string }
       if (res.ok && res.data) {
         const p: RLLinkedProfile = { platform: linkPlatform, username: linkUsername.trim() }
-        localStorage.setItem('habitos_rl_profile', JSON.stringify(p))
+        window.api?.settings?.set('rl_linked_profile', p)
         setLinkedProfile(p)
         setProfileData(res.data)
         setLinkUsername('')
@@ -1029,7 +949,7 @@ export default function RocketLeague(): React.JSX.Element {
   }
 
   function unlinkProfile() {
-    localStorage.removeItem('habitos_rl_profile')
+    window.api?.settings?.set('rl_linked_profile', null)
     setLinkedProfile(null)
     setProfileData(null)
     setProfileError('')

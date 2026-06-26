@@ -75,6 +75,7 @@ async function deleteUserData(userId: string): Promise<void> {
     'habit_completions', 'habits',
     'calendar_events', 'calendar_notes',
     'xp_history', 'achievements',
+    'rocket_league_sessions', 'rl_car_presets',
   ]
   for (const table of tables) {
     const { error } = await supabase.from(table).delete().eq('user_id', userId)
@@ -126,6 +127,8 @@ export async function syncDesktopToCloud(userId: string): Promise<SyncResult> {
     await bulk('calendar_notes',    d.calendar_notes    ?? [], userId)
     await bulk('xp_history',        d.xp_history        ?? [], userId)
     await bulk('achievements',      d.achievements      ?? [], userId)
+    const rlPresets = await bulk('rl_car_presets', d.rl_car_presets ?? [], userId)
+    await bulk('rocket_league_sessions', d.rocket_league_sessions ?? [], userId, { preset_id: rlPresets })
 
     // Sync profile
     const profile = await window.api!.profile.get() as { name?: string; total_xp?: number; level?: number } | null
