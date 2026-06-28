@@ -1,273 +1,80 @@
-// Known Rocket League items with name + default rarity per slot type
+import { products, slots as slotsMap, qualities as qualitiesMap } from '@rocketleagueapi/items'
+
 export interface RLItemDef {
   name: string
   rarity: string
 }
 
-export const RL_ITEMS: Record<string, RLItemDef[]> = {
-  body: [
-    { name: 'Fennec', rarity: 'import' },
-    { name: 'Octane', rarity: 'import' },
-    { name: 'Dominus', rarity: 'import' },
-    { name: 'Breakout', rarity: 'common' },
-    { name: 'Batmobile', rarity: 'import' },
-    { name: 'Mantis', rarity: 'import' },
-    { name: 'Peregrine TT', rarity: 'import' },
-    { name: 'Centio V17', rarity: 'import' },
-    { name: 'Maverick GXT', rarity: 'import' },
-    { name: 'Twinzer', rarity: 'import' },
-    { name: 'Nimbus', rarity: 'import' },
-    { name: 'Artemis G1-X', rarity: 'import' },
-    { name: 'Ronin GXT', rarity: 'import' },
-    { name: 'Jäger 619 RS', rarity: 'import' },
-    { name: 'GT500', rarity: 'import' },
-    { name: 'Endo', rarity: 'import' },
-    { name: 'Paladin', rarity: 'import' },
-    { name: 'Cyclone', rarity: 'import' },
-    { name: 'Takumi RX-T', rarity: 'import' },
-    { name: 'Chikara GXT', rarity: 'import' },
-    { name: 'Tyranno GXT', rarity: 'import' },
-    { name: 'Imperator DT5', rarity: 'import' },
-    { name: 'Werewolf', rarity: 'import' },
-    { name: 'Mudcat GXT', rarity: 'import' },
-    { name: 'Dingo', rarity: 'import' },
-    { name: 'Octane ZSR', rarity: 'import' },
-    { name: 'Harbinger GXT', rarity: 'import' },
-    { name: 'Animus GP', rarity: 'import' },
-    { name: 'Venom', rarity: 'rare' },
-    { name: 'Hotshot', rarity: 'rare' },
-    { name: 'Merc', rarity: 'rare' },
-    { name: 'Road Hog', rarity: 'rare' },
-    { name: 'X-Devil', rarity: 'common' },
-    { name: 'Gizmo', rarity: 'common' },
-    { name: 'Backfire', rarity: 'common' },
-    { name: 'Scarab', rarity: 'common' },
-    { name: 'Takumi', rarity: 'common' },
-    { name: 'Marauder', rarity: 'common' },
-    { name: 'Triton', rarity: 'common' },
-    { name: 'Paladin', rarity: 'common' },
-    { name: 'Zippy', rarity: 'uncommon' },
-    { name: 'Diestro', rarity: 'import' },
-    { name: 'Vulcan', rarity: 'import' },
-    { name: 'Aftershock', rarity: 'import' },
-    { name: 'Esper', rarity: 'import' },
-    { name: 'Breakout Type-S', rarity: 'import' },
-    { name: 'Twin Mill III', rarity: 'import' },
-    { name: 'Growler GXT', rarity: 'import' },
-    { name: 'Road Hog XL', rarity: 'import' },
-    { name: 'Delorean', rarity: 'import' },
-    { name: 'Nexus SC', rarity: 'import' },
-    { name: 'Boneshaker', rarity: 'import' },
-  ],
-  decal: [
-    { name: 'Heatwave', rarity: 'black_market' },
-    { name: 'Dissolver', rarity: 'black_market' },
-    { name: 'Bubbly', rarity: 'black_market' },
-    { name: 'Mainframe', rarity: 'black_market' },
-    { name: 'Slipstream', rarity: 'black_market' },
-    { name: 'Spectre', rarity: 'black_market' },
-    { name: 'Storm Watch', rarity: 'black_market' },
-    { name: 'Tidal Stream', rarity: 'black_market' },
-    { name: 'Fire God', rarity: 'black_market' },
-    { name: 'Interstellar', rarity: 'black_market' },
-    { name: 'Trigon', rarity: 'black_market' },
-    { name: 'Wet Paint', rarity: 'black_market' },
-    { name: 'Stripes', rarity: 'import' },
-    { name: 'Dragon Lord', rarity: 'import' },
-    { name: 'Playmaker', rarity: 'import' },
-    { name: 'Scorer', rarity: 'import' },
-    { name: 'Tactician', rarity: 'import' },
-    { name: 'Guardian', rarity: 'import' },
-    { name: 'Victor', rarity: 'import' },
-    { name: 'Sniper', rarity: 'import' },
-    { name: 'Sweeper', rarity: 'import' },
-    { name: 'Show-Off', rarity: 'import' },
-    { name: 'Hypnotist', rarity: 'black_market' },
-    { name: 'Vector', rarity: 'black_market' },
-    { name: 'Dune Racer', rarity: 'import' },
-    { name: 'Chameleon', rarity: 'black_market' },
-    { name: 'Labyrinth', rarity: 'black_market' },
-  ],
-  wheels: [
-    { name: 'Cristiano', rarity: 'black_market' },
-    { name: 'Draco', rarity: 'black_market' },
-    { name: 'Voltaic', rarity: 'exotic' },
-    { name: 'Reactor', rarity: 'exotic' },
-    { name: 'Photon', rarity: 'exotic' },
-    { name: 'Zomba', rarity: 'exotic' },
-    { name: 'Clockwork', rarity: 'exotic' },
-    { name: 'Camo', rarity: 'exotic' },
-    { name: 'Mandala', rarity: 'exotic' },
-    { name: 'Pulsus', rarity: 'exotic' },
-    { name: 'Goldstone', rarity: 'exotic' },
-    { name: 'ARA-51', rarity: 'exotic' },
-    { name: 'Friction', rarity: 'exotic' },
-    { name: 'Emerald', rarity: 'very_rare' },
-    { name: 'Komodo', rarity: 'very_rare' },
-    { name: 'Neptune', rarity: 'very_rare' },
-    { name: 'Zeta', rarity: 'very_rare' },
-    { name: 'Stern', rarity: 'very_rare' },
-    { name: 'Sparkles', rarity: 'very_rare' },
-    { name: 'Carbo-Serve', rarity: 'very_rare' },
-    { name: 'Chrono', rarity: 'very_rare' },
-    { name: 'Yamane', rarity: 'very_rare' },
-    { name: 'Dimonix', rarity: 'very_rare' },
-    { name: 'OEM', rarity: 'uncommon' },
-    { name: 'Rat Rod', rarity: 'rare' },
-    { name: 'Alchemist', rarity: 'rare' },
-    { name: 'Dune-Sweeper', rarity: 'rare' },
-    { name: 'Raga', rarity: 'rare' },
-    { name: 'Dire Wolf', rarity: 'exotic' },
-    { name: 'Cirrus', rarity: 'exotic' },
-    { name: 'Quimby', rarity: 'exotic' },
-    { name: 'Apparatus', rarity: 'exotic' },
-    { name: 'Glitch', rarity: 'exotic' },
-    { name: 'Tunica', rarity: 'exotic' },
-    { name: 'Threadneedle', rarity: 'exotic' },
-    { name: 'Capacitor', rarity: 'exotic' },
-    { name: 'Reticle', rarity: 'exotic' },
-    { name: 'Wonderment', rarity: 'exotic' },
-    { name: 'Hexed', rarity: 'exotic' },
-    { name: 'Gravity', rarity: 'exotic' },
-    { name: 'Blender', rarity: 'exotic' },
-    { name: 'Invader', rarity: 'very_rare' },
-  ],
-  boost: [
-    { name: 'Heatwave', rarity: 'black_market' },
-    { name: 'Fennec Boost', rarity: 'black_market' },
-    { name: 'Tachyon', rarity: 'black_market' },
-    { name: 'Plasma', rarity: 'black_market' },
-    { name: 'Thermal', rarity: 'black_market' },
-    { name: 'Nitrous', rarity: 'black_market' },
-    { name: 'Neuro-Agitator', rarity: 'black_market' },
-    { name: 'Popcorn', rarity: 'black_market' },
-    { name: 'Helios', rarity: 'black_market' },
-    { name: 'Standard Blue', rarity: 'uncommon' },
-    { name: 'Standard Orange', rarity: 'uncommon' },
-    { name: 'Standard Pink', rarity: 'uncommon' },
-    { name: 'Standard Purple', rarity: 'uncommon' },
-    { name: 'Standard Red', rarity: 'uncommon' },
-    { name: 'Standard Green', rarity: 'uncommon' },
-    { name: 'White Hex Tide', rarity: 'black_market' },
-    { name: 'Atomizer', rarity: 'black_market' },
-    { name: 'Ombre (Tidal)', rarity: 'black_market' },
-    { name: 'Reaper', rarity: 'very_rare' },
-    { name: 'Burnout', rarity: 'very_rare' },
-    { name: 'Electroshock', rarity: 'very_rare' },
-    { name: 'Ion', rarity: 'very_rare' },
-    { name: 'Hypernova', rarity: 'very_rare' },
-    { name: 'Seasonal Boost', rarity: 'rare' },
-    { name: 'Singularity', rarity: 'black_market' },
-    { name: 'Dark Matter', rarity: 'black_market' },
-    { name: 'Shattered', rarity: 'black_market' },
-    { name: 'Hypersonic', rarity: 'black_market' },
-    { name: 'Standard White', rarity: 'uncommon' },
-    { name: 'Standard Yellow', rarity: 'uncommon' },
-  ],
-  topper: [
-    { name: 'Pigeon', rarity: 'black_market' },
-    { name: 'Robin', rarity: 'black_market' },
-    { name: 'Feather Duster', rarity: 'uncommon' },
-    { name: 'Backstroke', rarity: 'import' },
-    { name: 'Propellerhead', rarity: 'import' },
-    { name: 'Party Hat', rarity: 'uncommon' },
-    { name: 'Wizard Hat', rarity: 'uncommon' },
-    { name: 'Crown', rarity: 'rare' },
-    { name: 'Silicone Bib', rarity: 'uncommon' },
-    { name: 'Dunce Cap', rarity: 'uncommon' },
-    { name: 'Graduation Cap', rarity: 'uncommon' },
-    { name: 'Unicorn', rarity: 'very_rare' },
-    { name: 'Delorean', rarity: 'import' },
-    { name: 'Rhino Horns', rarity: 'very_rare' },
-    { name: 'Dragon Horns', rarity: 'very_rare' },
-    { name: 'Fireman Hat', rarity: 'uncommon' },
-    { name: 'Viking Helmet', rarity: 'rare' },
-    { name: 'Chef Hat', rarity: 'uncommon' },
-    { name: 'Cowboy Hat', rarity: 'uncommon' },
-    { name: 'Beret', rarity: 'uncommon' },
-    { name: 'Taco', rarity: 'rare' },
-    { name: 'Sombrero', rarity: 'uncommon' },
-    { name: 'Foam Hat', rarity: 'uncommon' },
-    { name: 'Top Hat', rarity: 'uncommon' },
-    { name: 'Bunny Ears', rarity: 'uncommon' },
-    { name: 'Cat Ears', rarity: 'rare' },
-    { name: 'Antenna Ball', rarity: 'uncommon' },
-  ],
-  antenna: [
-    { name: 'Endo Fin', rarity: 'import' },
-    { name: 'Dominus Fin', rarity: 'import' },
-    { name: 'Angel Wings', rarity: 'very_rare' },
-    { name: 'Boxing Glove', rarity: 'uncommon' },
-    { name: 'Disc Ball', rarity: 'uncommon' },
-    { name: 'Eight Ball', rarity: 'uncommon' },
-    { name: 'Fish Bowl', rarity: 'uncommon' },
-    { name: 'Globe', rarity: 'uncommon' },
-    { name: 'Golden Nugget', rarity: 'uncommon' },
-    { name: 'Lucky Cat', rarity: 'very_rare' },
-    { name: 'Pine Tree', rarity: 'uncommon' },
-    { name: 'Shades', rarity: 'rare' },
-    { name: 'Smoke Signal', rarity: 'very_rare' },
-    { name: 'Teddy Bear', rarity: 'uncommon' },
-    { name: 'Tiki Man', rarity: 'uncommon' },
-    { name: 'Ninja Star', rarity: 'rare' },
-    { name: 'Fire Skull', rarity: 'very_rare' },
-    { name: 'Disco Ball', rarity: 'uncommon' },
-  ],
-  goalExplosion: [
-    { name: 'Dueling Dragons', rarity: 'black_market' },
-    { name: 'Shattered', rarity: 'black_market' },
-    { name: 'Gravity Bomb', rarity: 'black_market' },
-    { name: 'Sub-Zero', rarity: 'black_market' },
-    { name: 'Electroshock', rarity: 'black_market' },
-    { name: 'Hellfire', rarity: 'black_market' },
-    { name: 'Fireworks', rarity: 'black_market' },
-    { name: 'Supernova III', rarity: 'black_market' },
-    { name: 'Solar Flare', rarity: 'black_market' },
-    { name: 'Goldfish', rarity: 'black_market' },
-    { name: 'Reaper', rarity: 'black_market' },
-    { name: 'Toon', rarity: 'black_market' },
-    { name: 'Ethereal', rarity: 'black_market' },
-    { name: 'Singularity', rarity: 'black_market' },
-    { name: 'Sacred', rarity: 'black_market' },
-    { name: 'Meteor Storm', rarity: 'black_market' },
-    { name: 'Carbon', rarity: 'rare' },
-    { name: 'Standard', rarity: 'common' },
-    { name: 'Voxel', rarity: 'very_rare' },
-    { name: 'Score', rarity: 'very_rare' },
-    { name: 'Flamethrower', rarity: 'very_rare' },
-    { name: 'Shockwave', rarity: 'black_market' },
-    { name: 'Nanobrain', rarity: 'black_market' },
-    { name: 'Poly Pop', rarity: 'black_market' },
-    { name: 'Cloudburst', rarity: 'black_market' },
-    { name: 'Vortex', rarity: 'black_market' },
-    { name: 'Apex', rarity: 'black_market' },
-  ],
-  trail: [
-    { name: 'Hexed', rarity: 'black_market' },
-    { name: 'Biomass', rarity: 'black_market' },
-    { name: 'Molten', rarity: 'black_market' },
-    { name: 'Pixel Fire', rarity: 'black_market' },
-    { name: 'Digiwave', rarity: 'black_market' },
-    { name: 'Hydro', rarity: 'black_market' },
-    { name: 'Plasma', rarity: 'black_market' },
-    { name: 'Nitrous', rarity: 'very_rare' },
-    { name: 'Laser Wave', rarity: 'very_rare' },
-    { name: 'Standard', rarity: 'common' },
-    { name: 'Spark Trail', rarity: 'rare' },
-    { name: 'Streamline', rarity: 'very_rare' },
-    { name: 'Ion', rarity: 'very_rare' },
-    { name: 'Telekinesis', rarity: 'very_rare' },
-    { name: 'Smokescreen', rarity: 'rare' },
-    { name: 'Burnout', rarity: 'very_rare' },
-    { name: 'Luminosity', rarity: 'very_rare' },
-    { name: 'Twinzer', rarity: 'very_rare' },
-    { name: 'Thermal', rarity: 'very_rare' },
-    { name: 'Fireworks', rarity: 'black_market' },
-    { name: 'Fractal Fire', rarity: 'black_market' },
-    { name: 'Aura', rarity: 'very_rare' },
-    { name: 'Comet', rarity: 'very_rare' },
-  ],
+// Slot numbers → our slot keys
+const SLOT_MAP: Record<number, string> = {
+  0:  'body',
+  1:  'decal',
+  2:  'wheels',
+  3:  'boost',
+  5:  'topper',
+  15: 'goalExplosion',
 }
+
+// Quality numbers → rarity strings
+const QUALITY_MAP: Record<number, string> = {
+  0: 'common',
+  1: 'uncommon',
+  2: 'rare',
+  3: 'very_rare',
+  4: 'import',
+  5: 'exotic',
+  6: 'black_market',
+  7: 'premium',
+  8: 'limited',
+  9: 'legacy',
+}
+
+// Rarity sort order (best first)
+const RARITY_ORDER: Record<string, number> = {
+  black_market: 0,
+  exotic: 1,
+  import: 2,
+  very_rare: 3,
+  rare: 4,
+  uncommon: 5,
+  common: 6,
+  premium: 7,
+  limited: 8,
+  legacy: 9,
+}
+
+function buildItems(): Record<string, RLItemDef[]> {
+  const result: Record<string, RLItemDef[]> = {
+    body: [], decal: [], wheels: [], boost: [], topper: [], goalExplosion: [],
+  }
+
+  const all = Object.values(products as Record<string, {
+    name: string; slot: number; quality: number; blueprint: boolean; currency: boolean; special: number
+  }>)
+
+  for (const item of all) {
+    const slotKey = SLOT_MAP[item.slot]
+    if (!slotKey) continue
+    if (item.blueprint || item.currency) continue
+    const rarity = QUALITY_MAP[item.quality] ?? 'common'
+    result[slotKey].push({ name: item.name, rarity })
+  }
+
+  // Sort each slot: rarity desc, then name asc
+  for (const key of Object.keys(result)) {
+    result[key].sort((a, b) => {
+      const rd = (RARITY_ORDER[a.rarity] ?? 9) - (RARITY_ORDER[b.rarity] ?? 9)
+      if (rd !== 0) return rd
+      return a.name.localeCompare(b.name)
+    })
+    // Remove duplicates by name
+    result[key] = result[key].filter((item, i, arr) => i === 0 || arr[i - 1].name !== item.name)
+  }
+
+  return result
+}
+
+export const RL_ITEMS: Record<string, RLItemDef[]> = buildItems()
 
 export function searchItems(slotKey: string, query: string): RLItemDef[] {
   const list = RL_ITEMS[slotKey] ?? []
@@ -277,3 +84,6 @@ export function searchItems(slotKey: string, query: string): RLItemDef[] {
     .filter(item => item.name.toLowerCase().includes(q))
     .slice(0, 8)
 }
+
+// Expose slot/quality labels for display if needed
+export { slotsMap, qualitiesMap }

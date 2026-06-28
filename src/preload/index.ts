@@ -163,6 +163,7 @@ const realApi = {
     addSession: (data: object) => ipcRenderer.invoke('rl:add-session', data),
     listSessions: (limit?: number) => ipcRenderer.invoke('rl:list-sessions', limit),
     deleteSession: (id: number) => ipcRenderer.invoke('rl:delete-session', id),
+    updateSession: (id: number, data: object) => ipcRenderer.invoke('rl:update-session', id, data),
     savePreset: (data: object) => ipcRenderer.invoke('rl:save-preset', data),
     listPresets: () => ipcRenderer.invoke('rl:list-presets'),
     deletePreset: (id: number) => ipcRenderer.invoke('rl:delete-preset', id),
@@ -170,6 +171,8 @@ const realApi = {
     twitchOAuth: () => ipcRenderer.invoke('rl:twitch-oauth'),
     twitchFollowed: (userToken: string, userId: string) => ipcRenderer.invoke('rl:twitch-followed', userToken, userId),
     openUrl: (url: string) => ipcRenderer.invoke('rl:open-url', url),
+    startggQuery: (query: string, variables?: Record<string, unknown>) =>
+      ipcRenderer.invoke('rl:startgg', query, variables),
   },
   volleyball: {
     list: (limit?: number) => ipcRenderer.invoke('volleyball:list', limit),
@@ -576,6 +579,7 @@ function buildDemoApi() {
       addSession: async () => 99,
       listSessions: async () => [],
       deleteSession: async () => true,
+      updateSession: async () => true,
     },
     volleyball: {
       list: async () => [],

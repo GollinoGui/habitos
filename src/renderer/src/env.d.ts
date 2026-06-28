@@ -185,6 +185,7 @@ declare global {
         addSession: (data: object) => Promise<number>
         listSessions: (limit?: number) => Promise<unknown[]>
         deleteSession: (id: number) => Promise<boolean>
+        updateSession: (id: number, data: object) => Promise<boolean>
         savePreset: (data: object) => Promise<number>
         listPresets: () => Promise<unknown[]>
         deletePreset: (id: number) => Promise<boolean>
@@ -192,6 +193,7 @@ declare global {
         twitchOAuth: () => Promise<{ access_token: string; refresh_token: string; expires_in: number; user_id: string; user_login: string; user_name: string; profile_image_url: string }>
         twitchFollowed: (userToken: string, userId: string) => Promise<{ ok: boolean; followed?: unknown[]; streams?: unknown[]; error?: string }>
         openUrl: (url: string) => Promise<void>
+        startggQuery: (query: string, variables?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown; error?: string }>
       }
       volleyball?: {
         list: (limit?: number) => Promise<unknown[]>

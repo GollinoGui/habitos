@@ -1,6 +1,6 @@
 import { ipcMain, net, BrowserWindow, shell } from 'electron'
 import { dbAll, dbRun, save } from '../db'
-import { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } from '../twitchSecrets'
+import { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, STARTGG_TOKEN } from '../twitchSecrets'
 
 const TRN_API_KEY = '9f69be4b-32aa-4881-a1ee-443eada0d05c'
 const API_BASE = 'https://api.tracker.gg/api/v2/rocket-league/standard'
@@ -153,12 +153,12 @@ export function registerRocketLeagueHandlers(): void {
 
   ipcMain.handle('rl:add-session', (_e, data: {
     date: string; start_mmr: number; end_mmr: number
-    matches: number; wins: number; notes?: string; preset_id?: number
+    matches: number; wins: number; notes?: string; preset_id?: number; tags?: string
   }) => {
     const gain = data.end_mmr - data.start_mmr
     const result = dbRun(
-      'INSERT INTO rocket_league_sessions (date, start_mmr, end_mmr, mmr_gain, matches, wins, notes, preset_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [data.date, data.start_mmr, data.end_mmr, gain, data.matches || 0, data.wins || 0, data.notes || null, data.preset_id ?? null]
+      'INSERT INTO rocket_league_sessions (date, start_mmr, end_mmr, mmr_gain, matches, wins, notes, preset_id, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [data.date, data.start_mmr, data.end_mmr, gain, data.matches || 0, data.wins || 0, data.notes || null, data.preset_id ?? null, data.tags || null]
     )
     save()
     return result.lastInsertRowid
@@ -170,6 +170,19 @@ export function registerRocketLeagueHandlers(): void {
 
   ipcMain.handle('rl:delete-session', (_e, id: number) => {
     dbRun('DELETE FROM rocket_league_sessions WHERE id = ?', [id])
+    save()
+    return true
+  })
+
+  ipcMain.handle('rl:update-session', (_e, id: number, data: {
+    date: string; start_mmr: number; end_mmr: number
+    matches: number; wins: number; notes?: string; preset_id?: number | null; tags?: string
+  }) => {
+    const gain = data.end_mmr - data.start_mmr
+    dbRun(
+      'UPDATE rocket_league_sessions SET date=?, start_mmr=?, end_mmr=?, mmr_gain=?, matches=?, wins=?, notes=?, preset_id=?, tags=? WHERE id=?',
+      [data.date, data.start_mmr, data.end_mmr, gain, data.matches || 0, data.wins || 0, data.notes || null, data.preset_id ?? null, data.tags || null, id]
+    )
     save()
     return true
   })
@@ -283,6 +296,25 @@ export function registerRocketLeagueHandlers(): void {
     })
   })
 
+  ipcMain.handle('rl:startgg', async (_e, query: string, variables?: Record<string, unknown>) => {
+    if (!STARTGG_TOKEN) return { ok: false, error: 'token-not-configured' }
+    try {
+      const resp = await net.fetch('https://api.start.gg/gql/alpha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${STARTGG_TOKEN}`,
+        },
+        body: JSON.stringify({ query, variables: variables ?? {} }),
+      })
+      if (!resp.ok) return { ok: false, error: `HTTP ${resp.status}` }
+      const data = await resp.json()
+      return { ok: true, data }
+    } catch (e) {
+      return { ok: false, error: String(e) }
+    }
+  })
+
   ipcMain.handle('rl:twitch-followed', async (_e, userToken: string, userId: string) => {
     try {
       const raw = await twitchFetch(
@@ -307,4 +339,5 @@ export function registerRocketLeagueHandlers(): void {
       return { ok: false, error: String(e) }
     }
   })
+
 }

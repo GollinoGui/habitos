@@ -477,6 +477,9 @@ function runMigrations(): void {
   if (!rlSessionCols.find((c: Record<string, unknown>) => c.name === 'preset_id')) {
     db.run('ALTER TABLE rocket_league_sessions ADD COLUMN preset_id INTEGER DEFAULT NULL')
   }
+  if (!rlSessionCols.find((c: Record<string, unknown>) => c.name === 'tags')) {
+    db.run('ALTER TABLE rocket_league_sessions ADD COLUMN tags TEXT DEFAULT NULL')
+  }
 }
 
 export function save(): void {
