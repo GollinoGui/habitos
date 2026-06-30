@@ -19,6 +19,7 @@ export interface MobileNotifSettings {
 export interface SaveResult {
   ok: boolean
   reason?: 'unsupported' | 'denied'
+  warning?: 'inexact_alarm'
 }
 
 function isNative(): boolean {
@@ -46,6 +47,23 @@ async function ensurePermission(): Promise<'granted' | 'denied'> {
   return requested.display === 'granted' ? 'granted' : 'denied'
 }
 
+// On Android 12+ a scheduled alarm without this permission is delivered "inexact" —
+// the OS can silently delay or batch it for hours (Doze), which is why the daily
+// reminder can appear to just never fire with no error anywhere. Prompts the user
+// to flip "Alarmes e lembretes" in system settings; falls back to inexact delivery
+// (still scheduled, just unreliable) if they decline.
+async function ensureExactAlarmPermission(): Promise<boolean> {
+  try {
+    const current = await LocalNotifications.checkExactNotificationSetting()
+    if (current.exact_alarm === 'granted') return true
+    const requested = await LocalNotifications.changeExactNotificationSetting()
+    return requested.exact_alarm === 'granted'
+  } catch {
+    // Plugin method unavailable (older Android / API) — exact alarms aren't required there
+    return true
+  }
+}
+
 export async function saveMobileNotifSettings(settings: MobileNotifSettings): Promise<SaveResult> {
   persist(settings)
   if (!isNative()) return { ok: false, reason: 'unsupported' }
@@ -67,7 +85,9 @@ export async function saveMobileNotifSettings(settings: MobileNotifSettings): Pr
       schedule: { on: { hour: settings.hour, minute: settings.minute }, allowWhileIdle: true }
     }]
   })
-  return { ok: true }
+
+  const exactGranted = await ensureExactAlarmPermission()
+  return exactGranted ? { ok: true } : { ok: true, warning: 'inexact_alarm' }
 }
 
 export async function testMobileNotification(): Promise<{ sent: boolean }> {

@@ -491,7 +491,7 @@ function buildDemoApi() {
     },
     notifications: {
       getSettings: async () => ({ enabled: true, hour: 20, minute: 0 }),
-      saveSettings: async () => {},
+      saveSettings: async () => ({ ok: true }),
       test: async () => ({ sent: false }),
     },
     journal: {

@@ -4,8 +4,10 @@ import {
   Gamepad2, Search, RefreshCw, Unlink, TrendingUp, TrendingDown,
   Trophy, Target, Swords, Trash2, Plus, ChevronDown, ChevronUp,
   BookOpen, ChevronRight, Zap, Tv, Star, ExternalLink, Pencil, Check, X,
+  Bell, BellOff, ListTree,
 } from 'lucide-react'
 import RLGarage, { type RLCarPreset } from './RLGarage'
+import SportNotes from '../components/SportNotes'
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -256,8 +258,15 @@ const DEFAULT_STREAMERS: RLStreamer[] = [
   { name: 'Crispy', login: 'crispymcpuffin' },
 ]
 
-type ProPlayer = { tag: string; name: string; country: string; team: string; earnings?: string; titles?: string[] }
-type RLTournament = { name: string; region: string; startDate: string; endDate: string; prize: string; link: string }
+type ProPlayer = { tag: string; name: string; country: string; team: string; earnings?: string; titles?: string[]; favorite?: boolean }
+type RLTournament = {
+  name: string; region: string; startDate: string; endDate: string; prize: string; link: string
+  reminder?: boolean; reminderEventId?: number
+}
+type SGGSet = {
+  id: string | number; fullRoundText: string; state: number; startAt: number | null
+  slots: { entrant: { name: string } | null; standing: { stats: { score: { value: number | null } | null } | null } | null }[]
+}
 
 // Dados atualizados: RLCS 2025-2026  (earnings = career aprox.; títulos = maiores conquistas)
 const DEFAULT_PRO_PLAYERS: ProPlayer[] = [
@@ -470,6 +479,10 @@ function RLEsportsTab(): React.JSX.Element {
   const [syncingPros, setSyncingPros] = useState(false)
   const [startggError, setStartggError] = useState('')
   const [prosTourneySlug, setProsTourneySlug] = useState('rlcs-2026-paris-major')
+  const [bracketSets, setBracketSets] = useState<SGGSet[]>([])
+  const [loadingBracket, setLoadingBracket] = useState(false)
+  const [bracketError, setBracketError] = useState('')
+  const [bracketEventName, setBracketEventName] = useState('')
 
   // ── Tournaments ───────────────────────────────────────────────────────────
   const [tournaments, setTournaments] = useState<RLTournament[]>(DEFAULT_TOURNAMENTS)
@@ -640,6 +653,10 @@ function RLEsportsTab(): React.JSX.Element {
     saveProPlayers(proPlayers.filter(p => p.tag !== tag))
   }
 
+  function toggleFavoritePro(tag: string) {
+    saveProPlayers(proPlayers.map(p => p.tag === tag ? { ...p, favorite: !p.favorite } : p))
+  }
+
   function startEditPro(p: ProPlayer) {
     setEditingPro(p.tag)
     setEditProForm({ ...p })
@@ -676,6 +693,23 @@ function RLEsportsTab(): React.JSX.Element {
   }
 
   function removeTourney(name: string) { saveTournaments(tournaments.filter(t => t.name !== name)) }
+
+  // Wires a tournament's start date into the same calendar.createEvent used by
+  // the device calendar sync (Calendar page), so the user gets the OS-level
+  // alert it provides instead of us reinventing scheduling here.
+  async function toggleTourneyReminder(t: RLTournament) {
+    if (!window.api?.calendar) return
+    if (t.reminder) {
+      if (t.reminderEventId) await window.api.calendar.deleteEvent(t.reminderEventId)
+      saveTournaments(tournaments.map(x => x.name === t.name ? { ...x, reminder: false, reminderEventId: undefined } : x))
+      return
+    }
+    if (!t.startDate) return
+    const created = await window.api.calendar.createEvent({
+      title: `🏆 ${t.name}`, date: t.startDate, type: 'event', color: '#f59e0b',
+    }) as { id: number }
+    saveTournaments(tournaments.map(x => x.name === t.name ? { ...x, reminder: true, reminderEventId: created?.id } : x))
+  }
 
   function startEditTourney(t: RLTournament) { setEditingTourney(t.name); setEditTourneyForm({ ...t }) }
 
@@ -725,6 +759,30 @@ function RLEsportsTab(): React.JSX.Element {
                 user {
                   location { country }
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+  `
+
+  const STARTGG_SETS_QUERY = `
+    query TournamentSets($slug: String!) {
+      tournament(slug: $slug) {
+        name
+        events {
+          name
+          numEntrants
+          sets(perPage: 16, sortType: RECENT) {
+            nodes {
+              id
+              fullRoundText
+              state
+              startAt
+              slots {
+                entrant { name }
+                standing { stats { score { value } } }
               }
             }
           }
@@ -811,6 +869,38 @@ function RLEsportsTab(): React.JSX.Element {
       setStartggError('Erro: ' + String(e))
     } finally {
       setSyncingPros(false)
+    }
+  }
+
+  async function fetchBracket() {
+    if (!prosTourneySlug.trim() || !window.api?.rocketLeague?.startggQuery) return
+    setLoadingBracket(true); setBracketError(''); setBracketEventName('')
+    try {
+      const res = await window.api.rocketLeague.startggQuery(
+        STARTGG_SETS_QUERY,
+        { slug: prosTourneySlug.trim() }
+      )
+      if (!res.ok) { setBracketError('Erro Start.gg: ' + res.error); return }
+
+      type SGGEvent = { name: string; numEntrants: number; sets: { nodes: SGGSet[] } }
+      type SGGTournament = { name: string; events: SGGEvent[] }
+      const tData: SGGTournament | undefined = (res.data as { data?: { tournament?: SGGTournament } })?.data?.tournament
+
+      if (!tData) { setBracketError('Torneio não encontrado. Verifique o slug.'); return }
+
+      const event3v3 = tData.events.find(e => e.name.toLowerCase().includes('3v3'))
+        ?? tData.events.reduce((a, b) => (a.numEntrants ?? 0) >= (b.numEntrants ?? 0) ? a : b, tData.events[0])
+
+      if (!event3v3) { setBracketError('Nenhum evento 3v3 encontrado no torneio.'); return }
+
+      const sets = (event3v3.sets?.nodes ?? []).filter(s => s.slots?.length === 2)
+      if (!sets.length) { setBracketError('Nenhuma partida encontrada ainda para este torneio.'); return }
+      setBracketEventName(event3v3.name)
+      setBracketSets(sets)
+    } catch (e) {
+      setBracketError('Erro: ' + String(e))
+    } finally {
+      setLoadingBracket(false)
     }
   }
 
@@ -905,7 +995,20 @@ function RLEsportsTab(): React.JSX.Element {
                 </div>
               </div>
 
-              {oauthError    && <p className="px-4 py-2 text-xs text-red-400 bg-red-400/5 border-b border-bg-border">{oauthError}</p>}
+              {oauthError && (
+                <div className="px-4 py-2 border-b border-bg-border bg-red-400/5">
+                  <p className="text-xs text-red-400">{oauthError}</p>
+                  <p className="text-xs text-text-muted mt-1">
+                    Se o login te levar para um site antigo, o app Twitch ainda tem uma URL de redirecionamento desatualizada cadastrada. Abra{' '}
+                    <button onClick={() => window.api!.rocketLeague!.openUrl('https://dev.twitch.tv/console/apps')}
+                      className="underline text-orange-300 hover:text-orange-200 transition-colors">
+                      dev.twitch.tv/console
+                    </button>
+                    {' '}→ seu app → "OAuth Redirect URLs" → remova a URL antiga e deixe apenas{' '}
+                    <span className="font-mono text-[11px]">http://localhost:31337/callback</span>.
+                  </p>
+                </div>
+              )}
               {followedError && <p className="px-4 py-2 text-xs text-red-400 bg-red-400/5 border-b border-bg-border">{followedError}</p>}
 
               {!userName && !loadingOAuth && !oauthError && (
@@ -1182,6 +1285,14 @@ function RLEsportsTab(): React.JSX.Element {
                     {t.prize && <span className="text-xs font-semibold" style={{ color: '#f59e0b' }}>{t.prize}</span>}
                   </div>
                 </div>
+                {t.startDate && (
+                  <button onClick={() => toggleTourneyReminder(t)}
+                    className="shrink-0 p-1.5 rounded-lg transition-colors"
+                    style={t.reminder ? { color: '#f59e0b', background: 'rgba(245,158,11,0.12)' } : undefined}
+                    title={t.reminder ? 'Remover lembrete do calendário' : 'Adicionar lembrete no calendário'}>
+                    {t.reminder ? <Bell size={12} /> : <BellOff size={12} className="text-text-muted" />}
+                  </button>
+                )}
                 {t.link ? (
                   <button onClick={() => window.api!.rocketLeague!.openUrl(t.link)}
                     className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-yellow-400 hover:bg-bg-border/40 transition-colors" title="Abrir Liquipedia">
@@ -1340,6 +1451,57 @@ function RLEsportsTab(): React.JSX.Element {
         </div>
       </div>
 
+      {/* ── Resultados ao vivo (Start.gg) ───────────────────────────────────── */}
+      <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-border">
+          <ListTree size={14} style={{ color: '#22c55e' }} />
+          <span className="text-sm font-semibold text-text-primary">Resultados ao vivo</span>
+          {bracketEventName && <span className="text-xs text-text-muted truncate">{bracketEventName}</span>}
+        </div>
+        <div className="px-4 py-3 flex items-center gap-2">
+          <input type="text" placeholder="Slug do torneio (ex: rlcs-2026-paris-major)" value={prosTourneySlug}
+            onChange={e => setProsTourneySlug(e.target.value)}
+            className="flex-1 px-2 py-1.5 rounded-lg bg-bg-primary border border-bg-border text-text-primary text-xs focus:outline-none focus:border-green-500/60 placeholder:text-text-muted" />
+          <button onClick={fetchBracket} disabled={!prosTourneySlug.trim() || loadingBracket}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-40 hover:brightness-110 shrink-0"
+            style={{ background: 'rgba(34,197,94,0.7)' }}>
+            <RefreshCw size={11} className={loadingBracket ? 'animate-spin' : ''} />
+            {loadingBracket ? 'Buscando…' : 'Buscar'}
+          </button>
+        </div>
+        {bracketError && <p className="px-4 pb-3 text-xs text-red-400">{bracketError}</p>}
+        {bracketSets.length > 0 && (
+          <div className="divide-y divide-bg-border max-h-80 overflow-y-auto">
+            {bracketSets.map(s => {
+              const [a, b] = s.slots
+              const aName = a?.entrant?.name ?? 'TBD'
+              const bName = b?.entrant?.name ?? 'TBD'
+              const aScore = a?.standing?.stats?.score?.value ?? null
+              const bScore = b?.standing?.stats?.score?.value ?? null
+              const stateLabel = s.state === 3 ? 'Finalizado' : s.state === 2 ? 'AO VIVO' : 'Aguardando'
+              const stateColor = s.state === 3 ? '#6b7280' : s.state === 2 ? '#ef4444' : '#f59e0b'
+              return (
+                <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-text-muted truncate">{s.fullRoundText}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-sm truncate ${aScore != null && bScore != null && aScore > bScore ? 'font-bold text-text-primary' : 'text-text-secondary'}`}>{aName}</span>
+                      <span className="text-xs font-bold text-text-muted shrink-0">
+                        {aScore ?? '–'} : {bScore ?? '–'}
+                      </span>
+                      <span className={`text-sm truncate ${aScore != null && bScore != null && bScore > aScore ? 'font-bold text-text-primary' : 'text-text-secondary'}`}>{bName}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${stateColor}20`, color: stateColor }}>
+                    {stateLabel}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* ── Pro Players ──────────────────────────────────────────────────────── */}
       <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-border">
@@ -1378,14 +1540,24 @@ function RLEsportsTab(): React.JSX.Element {
               >
                 {/* Rank */}
                 <div
-                  className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black leading-none"
+                  className="absolute top-1 right-1 min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center text-[12px] font-black leading-none shadow-sm"
                   style={{
-                    background: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b87333' : 'rgba(255,255,255,0.07)',
-                    color: idx < 3 ? '#000' : 'rgba(255,255,255,0.22)',
+                    background: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b87333' : 'rgba(255,255,255,0.12)',
+                    color: idx < 3 ? '#000' : 'rgba(255,255,255,0.55)',
                   }}
                 >
-                  {idx + 1}
+                  {idx + 1}º
                 </div>
+
+                {/* Favorite toggle */}
+                <button
+                  onClick={e => { e.stopPropagation(); toggleFavoritePro(p.tag) }}
+                  className="absolute top-1 left-1 w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                  style={{ background: p.favorite ? 'rgba(249,115,22,0.18)' : 'rgba(255,255,255,0.08)' }}
+                  title={p.favorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                >
+                  <Star size={11} className={p.favorite ? 'fill-orange-400 text-orange-400' : 'text-text-muted'} />
+                </button>
 
                 {/* Team icon */}
                 <div
@@ -1558,6 +1730,15 @@ function RLEsportsTab(): React.JSX.Element {
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <X size={15} />
+              </button>
+
+              <button
+                onClick={() => { toggleFavoritePro(selectedPro.tag); setSelectedPro(p => p && { ...p, favorite: !p.favorite }) }}
+                className="absolute top-4 right-12 p-1.5 rounded-lg transition-colors"
+                style={{ color: selectedPro.favorite ? '#fb923c' : 'var(--color-text-muted)' }}
+                title={selectedPro.favorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+              >
+                <Star size={15} className={selectedPro.favorite ? 'fill-orange-400' : ''} />
               </button>
 
               <div className="flex items-start gap-4 pr-8">
@@ -2242,6 +2423,8 @@ export default function RocketLeague(): React.JSX.Element {
               </button>
             ))}
           </div>
+
+          <SportNotes sportKey="rocket-league" color="#f97316" />
 
           {/* ── Garagem Tab ───────────────────────────────────────────────────── */}
           {activeTab === 'garage' && (

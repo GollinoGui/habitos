@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { format } from 'date-fns'
-import { CheckCircle2, Clock, Plus, Star, Trash2 } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronUp, Clock, Plus, Star, Trash2 } from 'lucide-react'
 import SectionHelpButton, { HelpTips } from '../components/Help/SectionHelpButton'
 
 interface MediaItem {
   id: number; title: string; type: string; author: string; total_pages: number;
   current_page: number; current_season: number; status: string; started_at: string;
   finished_at: string; cover_emoji: string; rating: number | null
+}
+
+interface MediaLog {
+  id: number; media_id: number; date: string; minutes_read: number; pages_read: number
+  notes: string | null; rating: number | null; season: number | null; episode: number | null
 }
 
 const TYPE_CONFIG: Record<string, { label: string; unit: string; unitPlural: string; creator: string; color: string; bgColor: string; emojis: string[] }> = {
@@ -65,6 +70,9 @@ export default function Reading(): React.JSX.Element {
   const [sessionNotes, setSessionNotes] = useState('')
   const [sessionRating, setSessionRating] = useState(0)
   const [todayMins, setTodayMins] = useState(0)
+  const [historyOpen, setHistoryOpen] = useState<number | null>(null)
+  const [historyLogs, setHistoryLogs] = useState<MediaLog[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const [title, setTitle] = useState('')
   const [type, setType] = useState('book')
@@ -136,16 +144,34 @@ export default function Reading(): React.JSX.Element {
       const episode = parseInt(sessionPages) || 0
       if (episode === 0 && mins === 0 && !notes && !rating) return
       await window.api.media.update(id, { current_season: season, current_page: episode })
-      if (mins > 0 || notes || rating) {
-        await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: 0, notes, rating })
-      }
+      await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: 0, notes, rating, season, episode })
     } else {
       const pages = parseInt(sessionPages) || 0
       if (mins === 0 && pages === 0 && !notes && !rating) return
       await window.api.media.logSession({ media_id: id, date: today, minutes_read: mins, pages_read: pages, notes, rating })
     }
     setSessionMins(''); setSessionPages(''); setSessionSeason(''); setSessionNotes(''); setSessionRating(0); setShowSession(null)
+    if (historyOpen === id) loadHistory(id)
     loadAll()
+  }
+
+  async function loadHistory(id: number) {
+    setHistoryLoading(true)
+    try {
+      const logs = await window.api.media.logs(id)
+      setHistoryLogs(logs as MediaLog[])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  function toggleHistory(id: number) {
+    if (historyOpen === id) {
+      setHistoryOpen(null)
+      return
+    }
+    setHistoryOpen(id)
+    loadHistory(id)
   }
 
   function handleTypeChange(t: string) {
@@ -417,6 +443,14 @@ export default function Reading(): React.JSX.Element {
                     Retomar
                   </button>
                 )}
+                {item.status !== 'wishlist' && (
+                  <button
+                    onClick={() => toggleHistory(item.id)}
+                    className="flex items-center gap-1 py-1.5 px-3 bg-bg-border text-text-muted text-xs rounded-lg hover:bg-bg-border/70 transition-colors"
+                  >
+                    Histórico {historyOpen === item.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                )}
                 {item.status === 'wishlist' && (
                   <button
                     onClick={() => updateStatus(item, 'reading')}
@@ -501,6 +535,42 @@ export default function Reading(): React.JSX.Element {
                     rows={2}
                     className="w-full bg-bg-primary border border-bg-border text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent-purple resize-none"
                   />
+                </div>
+              )}
+
+              {historyOpen === item.id && (
+                <div className="pt-2 border-t border-bg-border space-y-2">
+                  <p className="text-xs text-text-muted font-medium">Histórico de sessões</p>
+                  {historyLoading && <p className="text-xs text-text-muted">Carregando...</p>}
+                  {!historyLoading && historyLogs.length === 0 && (
+                    <p className="text-xs text-text-muted">Nenhuma sessão registrada ainda.</p>
+                  )}
+                  {!historyLoading && historyLogs.length > 0 && (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                      {historyLogs.map(log => (
+                        <div key={log.id} className="text-xs bg-bg-primary border border-bg-border rounded-lg px-2 py-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {item.type === 'series' && log.season != null && (
+                              <span className="font-semibold text-text-secondary shrink-0">
+                                T{log.season} E{log.episode ?? '?'}
+                              </span>
+                            )}
+                            <span className="text-text-muted shrink-0">{format(new Date(`${log.date}T00:00:00`), 'dd/MM/yyyy')}</span>
+                            {log.minutes_read > 0 && <span className="text-text-muted shrink-0">{log.minutes_read}min</span>}
+                            {item.type !== 'series' && log.pages_read > 0 && (
+                              <span className="text-text-muted shrink-0">{log.pages_read} {tc.unit}</span>
+                            )}
+                            {log.rating != null && (
+                              <span className="flex items-center gap-0.5 shrink-0">
+                                <Star size={10} className="fill-amber-400 text-amber-400" /> {log.rating}
+                              </span>
+                            )}
+                          </div>
+                          {log.notes && <p className="text-text-muted mt-0.5 break-words">{log.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

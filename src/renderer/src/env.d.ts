@@ -157,7 +157,10 @@ declare global {
         create: (data: object) => Promise<number>
         update: (id: number, data: object) => Promise<boolean>
         delete: (id: number) => Promise<boolean>
-        logSession: (data: object) => Promise<boolean>
+        logSession: (data: {
+          media_id: number; date: string; minutes_read: number; pages_read: number
+          notes?: string; rating?: number; season?: number; episode?: number
+        }) => Promise<boolean>
         todayMinutes: (date: string) => Promise<number>
         logs: (mediaId: number) => Promise<unknown[]>
       }
@@ -170,7 +173,7 @@ declare global {
       }
       notifications: {
         getSettings: () => Promise<{ enabled: boolean; hour: number; minute: number }>
-        saveSettings: (s: { enabled: boolean; hour: number; minute: number }) => Promise<boolean>
+        saveSettings: (s: { enabled: boolean; hour: number; minute: number }) => Promise<{ ok: boolean; reason?: 'unsupported' | 'denied'; warning?: 'inexact_alarm' }>
         test: () => Promise<{ sent: boolean }>
       }
       app: {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, Swords, Plus, Trash2, Trophy, Dumbbell, X, TrendingUp, TrendingDown } from 'lucide-react'
+import SportNotes from '../components/SportNotes'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -138,6 +139,8 @@ export default function Valorant(): React.JSX.Element {
           Adicionar
         </button>
       </div>
+
+      <SportNotes sportKey="valorant" color="#f43f5e" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

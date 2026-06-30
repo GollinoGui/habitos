@@ -153,17 +153,131 @@ const uid = () => _userId
 async function grantXpInternal(amount: number, reason: string): Promise<void> {
   await supabase.from('xp_history').insert({ user_id: uid(), amount, reason })
   const { data: profile } = await supabase
-    .from('user_profile').select('total_xp').eq('user_id', uid()).single()
+    .from('user_profile').select('total_xp, level').eq('user_id', uid()).single()
   const newXp = (profile?.total_xp ?? 0) + amount
+  const storedLevel = profile?.level ?? 1
   const levelInfo = getLevelInfo(newXp)
+  const newLevel = levelInfo.current.level
   await supabase.from('user_profile')
-    .upsert({ user_id: uid(), total_xp: newXp, level: levelInfo.current.level }, { onConflict: 'user_id' })
+    .upsert({ user_id: uid(), total_xp: newXp, level: newLevel }, { onConflict: 'user_id' })
+  if (newLevel > storedLevel) {
+    await unlockAchievement('level_up_' + newLevel, `Nível ${newLevel}: ${levelInfo.current.rank}`, `Alcançou o rank ${levelInfo.current.rank}`, '⬆️')
+  }
 }
 
 async function unlockAchievement(key: string, name: string, description: string, icon: string): Promise<boolean> {
   const { error } = await supabase.from('achievements')
     .insert({ user_id: uid(), key, name, description, icon })
   return !error
+}
+
+async function unlockWithXp(key: string, name: string, description: string, icon: string, xp: number, xpReason: string): Promise<string | null> {
+  if (await unlockAchievement(key, name, description, icon)) {
+    await grantXpInternal(xp, xpReason)
+    return key
+  }
+  return null
+}
+
+async function checkAllAchievementsMobile(): Promise<string[]> {
+  const unlocked: string[] = []
+  const push = (key: string | null) => { if (key) unlocked.push(key) }
+
+  // Hábitos
+  const { data: habits } = await supabase.from('habits')
+    .select('id').eq('user_id', uid()).eq('is_active', 1)
+  if ((habits?.length ?? 0) >= 1) {
+    push(await unlockWithXp('first_habit', 'Primeiro Hábito', 'Criou seu primeiro hábito', '🌟', 25, 'Primeiro hábito criado'))
+  }
+  for (const h of habits ?? []) {
+    const { data: completions } = await supabase.from('habit_completions')
+      .select('completed_at').eq('habit_id', h.id as number).eq('user_id', uid())
+      .order('completed_at', { ascending: false })
+    const streak = computeStreak((completions ?? []) as { completed_at: string }[])
+    if (streak >= 7) push(await unlockWithXp('streak_7', '7 Dias Seguidos', 'Completou um hábito por 7 dias consecutivos', '🔥', 50, 'Streak de 7 dias'))
+    if (streak >= 30) push(await unlockWithXp('streak_30', '30 Dias Seguidos', 'Completou um hábito por 30 dias consecutivos', '💎', 200, 'Streak de 30 dias'))
+    if (streak >= 100) push(await unlockWithXp('streak_100', '100 Dias Seguidos', 'Completou um hábito por 100 dias consecutivos', '🚀', 500, 'Streak de 100 dias'))
+  }
+
+  // Academia
+  const { count: gymCount } = await supabase.from('workouts')
+    .select('id', { count: 'exact', head: true }).eq('user_id', uid())
+  if ((gymCount ?? 0) >= 10) push(await unlockWithXp('gym_10', '10 Treinos', 'Registrou 10 treinos', '🏋️', 50, '10 treinos registrados'))
+  if ((gymCount ?? 0) >= 50) push(await unlockWithXp('gym_50', '50 Treinos', 'Registrou 50 treinos', '💪', 200, '50 treinos registrados'))
+  if ((gymCount ?? 0) >= 100) push(await unlockWithXp('gym_100', '100 Treinos', 'Registrou 100 treinos', '🥇', 500, '100 treinos registrados'))
+
+  const { count: bioCount } = await supabase.from('bioimpedance')
+    .select('id', { count: 'exact', head: true }).eq('user_id', uid())
+  if ((bioCount ?? 0) >= 1) push(await unlockWithXp('first_bio', 'Primeira Medição', 'Registrou sua primeira bioimpedância', '⚖️', 30, 'Primeira bioimpedância'))
+
+  // Sobriedade
+  const { data: addictionRows } = await supabase.from('addictions')
+    .select('started_free_at').eq('user_id', uid()).eq('is_active', 1)
+  for (const a of addictionRows ?? []) {
+    const days = Math.floor((Date.now() - new Date(a.started_free_at as string).getTime()) / 86400000)
+    if (days >= 7) push(await unlockWithXp('sober_7d', '7 Dias Livre', '7 dias livre de um vício', '🌱', 50, '7 dias livre de vício'))
+    if (days >= 30) push(await unlockWithXp('sober_30d', '30 Dias Livre', '30 dias livre de um vício', '🌿', 150, '30 dias livre de vício'))
+    if (days >= 90) push(await unlockWithXp('sober_90d', '90 Dias Livre', '90 dias livre de um vício', '🏆', 500, '90 dias livre de vício'))
+    if (days >= 365) push(await unlockWithXp('sober_365d', '1 Ano Livre', '365 dias livre de um vício', '👑', 1000, '1 ano livre de vício'))
+  }
+
+  // Metas
+  const { count: completedGoals } = await supabase.from('goals')
+    .select('id', { count: 'exact', head: true }).eq('user_id', uid()).eq('is_completed', 1)
+  if ((completedGoals ?? 0) >= 1) push(await unlockWithXp('goal_first', 'Primeira Meta!', 'Completou sua primeira meta', '🎯', 50, 'Primeira meta concluída'))
+  if ((completedGoals ?? 0) >= 5) push(await unlockWithXp('goal_5', '5 Metas Concluídas', 'Completou 5 metas', '🎊', 150, '5 metas concluídas'))
+
+  // Diário
+  const { data: journalRows } = await supabase.from('journal_entries')
+    .select('date').eq('user_id', uid()).order('date', { ascending: false })
+  const journalStreak = computeStreak((journalRows ?? []).map(r => ({ completed_at: r.date as string })))
+  if (journalStreak >= 7) push(await unlockWithXp('journal_7', 'Diário da Semana', 'Escreveu no diário por 7 dias', '📔', 50, '7 dias de diário'))
+  if (journalStreak >= 30) push(await unlockWithXp('journal_30', 'Diário do Mês', 'Escreveu no diário por 30 dias', '📗', 200, '30 dias de diário'))
+
+  // Sono
+  const { data: sleepRows } = await supabase.from('sleep_logs')
+    .select('date').eq('user_id', uid()).order('date', { ascending: false })
+  const sleepStreak = computeStreak((sleepRows ?? []).map(r => ({ completed_at: r.date as string })))
+  if (sleepStreak >= 7) push(await unlockWithXp('sleep_7', 'Sono Registrado', 'Registrou o sono por 7 dias seguidos', '🌙', 50, '7 dias de sono registrado'))
+  const { data: perfectSleep } = await supabase.from('sleep_logs')
+    .select('id').eq('user_id', uid()).eq('quality', 5).limit(1).maybeSingle()
+  if (perfectSleep) push(await unlockWithXp('sleep_quality', 'Sono de Qualidade', 'Registrou 5/5 de qualidade no sono', '⭐', 30, 'Sono com qualidade máxima'))
+
+  // Leitura
+  const { count: completedMedia } = await supabase.from('media_items')
+    .select('id', { count: 'exact', head: true }).eq('user_id', uid()).eq('status', 'done')
+  if ((completedMedia ?? 0) >= 1) push(await unlockWithXp('reading_first', 'Primeiro Livro', 'Concluiu sua primeira leitura', '📚', 50, 'Primeira leitura concluída'))
+  if ((completedMedia ?? 0) >= 5) push(await unlockWithXp('reading_5', 'Leitor Dedicado', 'Concluiu 5 livros', '🔖', 150, '5 leituras concluídas'))
+
+  // Foco
+  const { count: focusCount } = await supabase.from('focus_sessions')
+    .select('id', { count: 'exact', head: true }).eq('user_id', uid())
+  if ((focusCount ?? 0) >= 1) push(await unlockWithXp('focus_first', 'Primeira Sessão de Foco', 'Completou sua primeira sessão de foco', '🎯', 25, 'Primeira sessão de foco'))
+  if ((focusCount ?? 0) >= 10) push(await unlockWithXp('focus_10', '10 Sessões de Foco', 'Completou 10 sessões de foco', '🧠', 100, '10 sessões de foco'))
+  if ((focusCount ?? 0) >= 50) push(await unlockWithXp('focus_50', 'Mestre do Foco', 'Completou 50 sessões de foco', '🧘', 300, '50 sessões de foco'))
+  const { data: focusRows } = await supabase.from('focus_sessions')
+    .select('date').eq('user_id', uid()).order('date', { ascending: false })
+  const focusDatesUnique = Array.from(new Set((focusRows ?? []).map(r => r.date as string)))
+  const focusStreak = computeStreak(focusDatesUnique.map(d => ({ completed_at: d })))
+  if (focusStreak >= 7) push(await unlockWithXp('focus_streak_7', 'Semana Focada', 'Fez pelo menos uma sessão de foco por 7 dias seguidos', '🔥', 75, '7 dias seguidos de foco'))
+
+  // Finanças
+  const { count: financeCount } = await supabase.from('finance_transactions')
+    .select('id', { count: 'exact', head: true }).eq('user_id', uid())
+  if ((financeCount ?? 0) >= 1) push(await unlockWithXp('finance_first', 'Financeiro', 'Registrou sua primeira transação', '💰', 25, 'Primeira transação registrada'))
+  const { data: financeRows } = await supabase.from('finance_transactions')
+    .select('type, amount, date').eq('user_id', uid())
+  const byMonth: Record<string, number> = {}
+  for (const t of financeRows ?? []) {
+    const ym = String(t.date).slice(0, 7)
+    const delta = t.type === 'income' ? ((t.amount as number) ?? 0) : -((t.amount as number) ?? 0)
+    byMonth[ym] = (byMonth[ym] ?? 0) + delta
+  }
+  if (Object.values(byMonth).some(v => v > 0)) {
+    push(await unlockWithXp('finance_positive', 'Saldo Positivo', 'Terminou um mês com saldo positivo', '📈', 75, 'Mês com saldo positivo'))
+  }
+
+  return unlocked
 }
 
 // ── API builder ───────────────────────────────────────────────────────────────
@@ -212,7 +326,7 @@ function buildApi(): any {
           .eq('user_id', uid()).order('id', { ascending: false })
         return data ?? []
       },
-      check: async () => [],
+      check: async () => checkAllAchievementsMobile(),
     },
 
     // ── Habits ────────────────────────────────────────────────────────────
@@ -321,6 +435,7 @@ function buildApi(): any {
             { onConflict: 'user_id,date' }
           )
         }
+        await checkAllAchievementsMobile()
         return true
       },
 
@@ -465,6 +580,7 @@ function buildApi(): any {
         xp += (data.exercises ?? []).filter(e => e.is_superset).length * 10
         xp = Math.min(xp, 150)
         await grantXpInternal(xp, `Treino: ${data.name}`)
+        await checkAllAchievementsMobile()
         return workout.id
       },
 
@@ -686,7 +802,7 @@ function buildApi(): any {
         return true
       },
 
-      checkMilestones: async () => [],
+      checkMilestones: async () => checkAllAchievementsMobile(),
     },
 
     // ── Goals ─────────────────────────────────────────────────────────────
@@ -768,6 +884,7 @@ function buildApi(): any {
         await supabase.from('goals').update({ is_completed: 1, xp_reward: xp })
           .eq('id', id).eq('user_id', uid())
         await grantXpInternal(xp, `Meta: ${goal.title}`)
+        await checkAllAchievementsMobile()
         return true
       },
     },
@@ -832,9 +949,10 @@ function buildApi(): any {
       },
 
       linkDevice: async (id: number, deviceEventId: string) => {
-        await supabase.from('calendar_events')
+        const { error } = await supabase.from('calendar_events')
           .update({ device_event_id: deviceEventId })
           .eq('id', id).eq('user_id', uid())
+        if (error) throw error
       },
 
       toggleDone: async (id: number) => {
@@ -940,6 +1058,7 @@ function buildApi(): any {
           console.error('sleep save error:', error)
           throw new Error('Erro ao salvar sono: ' + error.message)
         }
+        await checkAllAchievementsMobile()
         return true
       },
 
@@ -1217,6 +1336,7 @@ function buildApi(): any {
         if (data.cover_emoji !== undefined) update.cover_emoji = data.cover_emoji
         if (data.rating !== undefined) update.rating = data.rating
         await supabase.from('media_items').update(update).eq('id', id).eq('user_id', uid())
+        if (data.status === 'done') await checkAllAchievementsMobile()
         return true
       },
 
@@ -1228,12 +1348,13 @@ function buildApi(): any {
 
       logSession: async (data: {
         media_id: number; date: string; minutes_read: number; pages_read: number
-        notes?: string; rating?: number
+        notes?: string; rating?: number; season?: number; episode?: number
       }) => {
         await supabase.from('media_logs').insert({
           user_id: uid(), media_id: data.media_id, date: data.date,
           minutes_read: data.minutes_read, pages_read: data.pages_read,
           notes: data.notes ?? null, rating: data.rating ?? null,
+          season: data.season ?? null, episode: data.episode ?? null,
         })
         if (data.pages_read > 0) {
           const { data: item } = await supabase.from('media_items')
@@ -1317,9 +1438,11 @@ function buildApi(): any {
       getSettings: async () =>
         _electronApi?.notifications.getSettings() ?? loadMobileNotifSettings(),
       saveSettings: async (s: { enabled: boolean; hour: number; minute: number }) => {
-        if (_electronApi) return _electronApi.notifications.saveSettings(s)
-        const result = await saveMobileNotifSettings(s)
-        return result.ok
+        if (_electronApi) {
+          const ok = await _electronApi.notifications.saveSettings(s)
+          return { ok }
+        }
+        return saveMobileNotifSettings(s)
       },
       test: async () =>
         _electronApi?.notifications.test() ?? testMobileNotification(),
@@ -1415,6 +1538,8 @@ function buildApi(): any {
         _electronApi?.rocketLeague.twitchFollowed(userToken, userId) ?? { ok: false, error: 'Desktop only' },
       openUrl: async (url: string) =>
         _electronApi?.rocketLeague.openUrl(url),
+      startggQuery: async (query: string, variables?: Record<string, unknown>) =>
+        _electronApi?.rocketLeague.startggQuery(query, variables) ?? { ok: false, error: 'Desktop only' },
     },
 
     volleyball: {

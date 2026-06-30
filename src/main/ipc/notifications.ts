@@ -41,8 +41,8 @@ function sendDailyReminder(): void {
       body: 'Hora de anotar o dia e completar seus hábitos!',
       silent: false
     }).show()
-  } catch {
-    // ignore if notifications unavailable
+  } catch (err) {
+    console.error('[notifications] falha ao mostrar lembrete diário:', err)
   }
 }
 
@@ -85,8 +85,8 @@ function checkHabitNotifications(): void {
         notifiedHabitsToday.add(habitId)
       }
     }
-  } catch {
-    // DB may not be ready yet
+  } catch (err) {
+    console.error('[notifications] falha ao checar lembretes de hábitos:', err)
   }
 }
 
@@ -122,13 +122,18 @@ export function registerNotificationHandlers(): void {
 
   ipcMain.handle('notifications:test', () => {
     try {
+      if (!Notification.isSupported()) {
+        console.error('[notifications] Notification API não suportada neste sistema')
+        return { sent: false }
+      }
       new Notification({
         title: 'Hábitos — Lembrete diário',
         body: 'Hora de anotar o dia e completar seus hábitos!',
         silent: false
       }).show()
       return { sent: true }
-    } catch {
+    } catch (err) {
+      console.error('[notifications] falha ao enviar notificação de teste:', err)
       return { sent: false }
     }
   })

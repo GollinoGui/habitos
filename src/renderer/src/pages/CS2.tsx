@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, Crosshair, Plus, Trash2, Trophy, Dumbbell, X } from 'lucide-react'
+import SportNotes from '../components/SportNotes'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -135,6 +136,8 @@ export default function CS2(): React.JSX.Element {
           Adicionar
         </button>
       </div>
+
+      <SportNotes sportKey="cs2" color="#facc15" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

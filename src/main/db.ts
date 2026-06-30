@@ -463,6 +463,12 @@ function runMigrations(): void {
   if (!mediaLogCols.find((c: Record<string, unknown>) => c.name === 'rating')) {
     db.run('ALTER TABLE media_logs ADD COLUMN rating INTEGER DEFAULT NULL')
   }
+  if (!mediaLogCols.find((c: Record<string, unknown>) => c.name === 'season')) {
+    db.run('ALTER TABLE media_logs ADD COLUMN season INTEGER DEFAULT NULL')
+  }
+  if (!mediaLogCols.find((c: Record<string, unknown>) => c.name === 'episode')) {
+    db.run('ALTER TABLE media_logs ADD COLUMN episode INTEGER DEFAULT NULL')
+  }
   const btCols = dbAll('PRAGMA table_info(beach_tennis_sessions)')
   if (!btCols.find((c: Record<string, unknown>) => c.name === 'position')) {
     db.run('ALTER TABLE beach_tennis_sessions ADD COLUMN position TEXT DEFAULT NULL')

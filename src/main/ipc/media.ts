@@ -61,11 +61,11 @@ export function registerMediaHandlers(): void {
 
   ipcMain.handle('media:log-session', (_e, data: {
     media_id: number; date: string; minutes_read: number; pages_read: number
-    notes?: string; rating?: number
+    notes?: string; rating?: number; season?: number; episode?: number
   }) => {
     dbRun(
-      'INSERT INTO media_logs (media_id, date, minutes_read, pages_read, notes, rating) VALUES (?, ?, ?, ?, ?, ?)',
-      [data.media_id, data.date, data.minutes_read, data.pages_read, data.notes || null, data.rating ?? null]
+      'INSERT INTO media_logs (media_id, date, minutes_read, pages_read, notes, rating, season, episode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [data.media_id, data.date, data.minutes_read, data.pages_read, data.notes || null, data.rating ?? null, data.season ?? null, data.episode ?? null]
     )
     if (data.pages_read > 0) {
       dbRun('UPDATE media_items SET current_page = current_page + ? WHERE id = ?', [data.pages_read, data.media_id])

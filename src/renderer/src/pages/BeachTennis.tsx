@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, Plus, Trash2, Trophy, Dumbbell, X, Sun, Info } from 'lucide-react'
+import SportNotes from '../components/SportNotes'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -197,6 +198,8 @@ export default function BeachTennis(): React.JSX.Element {
           </div>
         </div>
       )}
+
+      <SportNotes sportKey="beach-tennis" color="#f59e0b" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

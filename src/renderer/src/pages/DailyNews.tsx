@@ -114,7 +114,11 @@ export default function DailyNews(): React.JSX.Element {
     })
   }, [])
 
+  // Guards against out-of-order responses: only the most recent fetch is allowed to write state
+  const requestIdRef = useRef(0)
+
   const fetchNews = useCallback(async (key: string, cats: string[]) => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     setError('')
     try {
@@ -125,6 +129,7 @@ export default function DailyNews(): React.JSX.Element {
       if (json.status !== 'success' || !json.results?.length) {
         throw new Error(json.message || 'Erro ao buscar notícias')
       }
+      if (requestIdRef.current !== requestId) return // a newer request superseded this one
       // Read dailyReadCount directly from localStorage to avoid stale closure
       const preserved = loadDailyReadCount(today)
       const next: SavedNews = {
@@ -136,16 +141,21 @@ export default function DailyNews(): React.JSX.Element {
       }
       updateSaved(next)
     } catch (e) {
+      if (requestIdRef.current !== requestId) return
       setError(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {
-      setLoading(false)
+      if (requestIdRef.current === requestId) setLoading(false)
     }
   }, [today])
 
-  // Auto-fetch if we have a key but no articles for current categories
+  // Single source of truth: whenever the key or the selected categories change, resolve the
+  // cache for that exact category set and fetch only if nothing is cached for it.
   useEffect(() => {
-    if (apiKey && !saved) fetchNews(apiKey, selectedCategories)
-  }, [apiKey, saved])
+    if (!apiKey) return
+    const cached = loadSaved(today, selectedCategories)
+    setSaved(cached)
+    if (!cached) fetchNews(apiKey, selectedCategories)
+  }, [apiKey, selectedCategories, today, fetchNews])
 
   function saveApiKey() {
     const k = keyInput.trim()
@@ -153,7 +163,6 @@ export default function DailyNews(): React.JSX.Element {
     localStorage.setItem(STORAGE_KEY_APIKEY, k)
     setApiKey(k)
     setKeyInput('')
-    fetchNews(k, selectedCategories)
   }
 
   function toggleCategory(id: string) {
@@ -161,15 +170,9 @@ export default function DailyNews(): React.JSX.Element {
       const next = prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
       const resolved = next.length ? next : ['top']
       localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(resolved))
-      setSaved(loadSaved(today, resolved))
       return resolved
     })
   }
-
-  // Fetch when categories change and we have a key
-  useEffect(() => {
-    if (apiKey && !saved) fetchNews(apiKey, selectedCategories)
-  }, [selectedCategories])
 
   function markRead(idx: number) {
     if (!saved) return
@@ -323,7 +326,7 @@ export default function DailyNews(): React.JSX.Element {
         <div className="ml-auto flex items-center gap-3 shrink-0">
           <span className="text-xs text-text-muted">{Math.min(readCount, ARTICLES_NEEDED)}/{ARTICLES_NEEDED} lidas</span>
           <button
-            onClick={() => { setSaved(null) }}
+            onClick={() => fetchNews(apiKey, selectedCategories)}
             title="Atualizar"
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-border transition-colors"
           >

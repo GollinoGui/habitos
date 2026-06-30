@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronLeft, CircleDot, Plus, Trash2, Trophy, Dumbbell, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import SportNotes from '../components/SportNotes'
 
 interface VolleyballSession {
   id: number
@@ -129,6 +130,8 @@ export default function Volleyball(): React.JSX.Element {
           Adicionar
         </button>
       </div>
+
+      <SportNotes sportKey="volleyball" color="#10b981" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -79,7 +79,11 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow!.show()
+    // Launched via Windows startup (--hidden, set by setupAutoLaunch): stay in the
+    // tray instead of popping the window, so boot doesn't interrupt the user.
+    if (!process.argv.includes('--hidden')) {
+      mainWindow!.show()
+    }
   })
 
   mainWindow.on('close', (e) => {
@@ -146,7 +150,7 @@ function setupAutoLaunch(): void {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const AutoLaunch = require('electron-auto-launch')
-      const launcher = new AutoLaunch({ name: 'Hábitos', path: app.getPath('exe') })
+      const launcher = new AutoLaunch({ name: 'Hábitos', path: app.getPath('exe'), isHidden: true })
       launcher.enable()
     } catch (e) {
       console.error('AutoLaunch error:', e)

@@ -84,6 +84,7 @@ export default function Settings(): React.JSX.Element {
   const [notif, setNotif] = useState<NotifSettings>({ enabled: false, hour: 20, minute: 0 })
   const [saved, setSaved] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'sent' | 'blocked'>('idle')
+  const [exactAlarmWarning, setExactAlarmWarning] = useState(false)
   const [theme, setTheme] = useState(getTheme)
   const [accent, setAccent] = useState(getAccent)
   const [hiddenSections, setHiddenSections] = useState<string[]>(getHiddenSections)
@@ -258,11 +259,13 @@ export default function Settings(): React.JSX.Element {
 
   // ── Notifications ─────────────────────────────────────────────────────────
   async function handleNotifSave() {
-    const ok = await window.api.notifications.saveSettings(notif)
-    if (ok) {
+    const result = await window.api.notifications.saveSettings(notif)
+    if (result.ok) {
       setSaved(true)
+      setExactAlarmWarning(result.warning === 'inexact_alarm')
       setTimeout(() => setSaved(false), 2000)
     } else {
+      setExactAlarmWarning(false)
       setTestStatus('blocked')
       setTimeout(() => setTestStatus('idle'), 5000)
     }
@@ -589,6 +592,17 @@ export default function Settings(): React.JSX.Element {
               {isMobileApp
                 ? <>Notificações bloqueadas. Verifique a permissão de notificações do app <span className="font-medium">Hábitos</span> nas configurações do Android.</>
                 : <>Notificações bloqueadas. Verifique em <span className="font-medium">Configurações do Windows → Sistema → Notificações</span>.</>}
+            </p>
+          </div>
+        )}
+        {exactAlarmWarning && (
+          <div className="flex items-start gap-2 p-3 bg-yellow-950/30 border border-yellow-700/40 rounded-lg">
+            <AlertTriangle size={15} className="text-yellow-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-yellow-300">
+              O lembrete foi salvo, mas o Android pode atrasá-lo ou nunca entregá-lo sem a permissão de
+              {' '}<span className="font-medium">alarmes exatos</span>. Vá em{' '}
+              <span className="font-medium">Configurações do Android → Apps → Hábitos → Alarmes e lembretes</span> e ative,
+              ou clique em "Salvar" novamente para tentar liberar pelo app.
             </p>
           </div>
         )}
